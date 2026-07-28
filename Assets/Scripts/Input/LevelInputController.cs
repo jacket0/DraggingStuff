@@ -4,7 +4,7 @@ public class LevelInputController : MonoBehaviour
 {
     [SerializeField] private Camera _camera;
     [SerializeField] private Transform _dragRoot;
-    [SerializeField] private ShelfBoard _shelfBoard;
+    [SerializeField] private LevelSession _levelSession;
     [SerializeField] private LayerMask _slotLayerMask;
 
     private ShelfItem _draggedItem;
@@ -20,7 +20,7 @@ public class LevelInputController : MonoBehaviour
 
     public bool BeginDrag(ShelfItem item, Vector2 pointerPosition)
     {
-        if (item == null || _draggedItem != null)
+        if (!_levelSession.IsPlaying || item == null || _draggedItem != null)
             return false;
 
         ShelfSlot sourceSlot = item.GetComponentInParent<ShelfSlot>();
@@ -71,7 +71,9 @@ public class LevelInputController : MonoBehaviour
             return;
         }
 
-        if (!_shelfBoard.TryMove(_sourceSlot, targetSlot))
+        MoveOutcome outcome = _levelSession.TryMove(_sourceSlot, targetSlot);
+
+        if (!outcome.IsSuccessful)
         {
             CancelDrag();
             return;
