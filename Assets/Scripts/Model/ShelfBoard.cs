@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class ShelfBoard : MonoBehaviour
@@ -6,14 +7,18 @@ public class ShelfBoard : MonoBehaviour
     [SerializeField] private List<Shelf> _shelves;
 
     public IReadOnlyList<Shelf> Shelves => _shelves;
+    public bool IsCleared => _shelves.All(shelf => shelf.IsCleared);
 
-    public bool TryMove(ShelfSlot source, ShelfSlot target)
+    public MoveOutcome TryMove(ShelfSlot source, ShelfSlot target)
     {
+        if (source == null || target == null)
+            return MoveOutcome.Rejected();
+
         if (source.IsEmpty || target.IsEmpty == false)
-            return false;
+            return MoveOutcome.Rejected();
 
         if (source == target)
-            return false;
+            return MoveOutcome.Rejected();
 
         var sourceShelf = source.GetComponentInParent<Shelf>();
         var targetShelf = target.GetComponentInParent<Shelf>();
@@ -21,11 +26,13 @@ public class ShelfBoard : MonoBehaviour
         var item = source.TakeItem();
         target.PlaceItem(item);
 
-        sourceShelf.TryResolveMatch();
+        sourceShelf.TryRevealNextLayer();
 
-        if (sourceShelf != targetShelf)
-            targetShelf.TryResolveMatch();
+        bool hasMatch = targetShelf.TryResolveMatch();
 
-        return true;
+        if (hasMatch)
+            targetShelf.TryRevealNextLayer();
+
+        return MoveOutcome.Successful(hasMatch, IsCleared);
     }
 }

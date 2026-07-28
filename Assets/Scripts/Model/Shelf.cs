@@ -10,12 +10,29 @@ public class Shelf : MonoBehaviour
     private int _activeLayerIndex = 0;
 
     public bool HasActiveLayer => _activeLayerIndex < _shelfLayers.Count;
+    public bool IsCleared => _shelfLayers.All(layer => layer.IsEmpty);
     public ShelfLayer ActiveLayer => HasActiveLayer ? _shelfLayers[_activeLayerIndex] : null;
+    public bool HasNextLayer => _activeLayerIndex + 1 < _shelfLayers.Count;
 
     private void Awake()
     {
         for (int i = 0; i < _shelfLayers.Count; i++)
             _shelfLayers[i].gameObject.SetActive(i == _activeLayerIndex);
+    }
+
+    public bool TryRevealNextLayer()
+    {
+        if (!HasActiveLayer)
+            return false;
+
+        if (!ActiveLayer.IsEmpty)
+            return false;
+
+        if (!HasNextLayer)
+            return false;
+
+        AdvanceToNextLayer();
+        return true;
     }
 
     public bool TryResolveMatch()
@@ -28,9 +45,6 @@ public class Shelf : MonoBehaviour
         if (hasMatch)
             ActiveLayer.ReleaseItems();
         
-        if (ActiveLayer.IsEmpty)
-            AdvanceToNextLayer();
-
         return hasMatch;
     }
 
