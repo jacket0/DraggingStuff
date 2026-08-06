@@ -9,6 +9,8 @@ public class LevelCompletionView : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _label;
     [SerializeField] private GameObject _window;
 
+    private string _winLabel = "Уровень пройден успешно!";
+
     private void Awake()
     {
         _window.SetActive(false);
@@ -28,6 +30,7 @@ public class LevelCompletionView : MonoBehaviour
 
     private void ShowWin()
     {
+        _label.text = _winLabel;
         _window.SetActive(true);
     }
 }
