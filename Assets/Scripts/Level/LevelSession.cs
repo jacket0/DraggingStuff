@@ -5,6 +5,9 @@ using UnityEngine.SceneManagement;
 public class LevelSession : MonoBehaviour
 {
     [SerializeField] private ShelfBoard _shelfBoard;
+    [SerializeField] private LevelBuilder _levelBuilder;
+
+    private bool _shouldCompleteLevel;
 
     public LevelState State { get; private set; }
     public bool IsPlaying => State == LevelState.Playing;
@@ -13,6 +16,7 @@ public class LevelSession : MonoBehaviour
 
     private void Start()
     {
+        _levelBuilder.Build();
         StartLevel();
     }
 
@@ -26,13 +30,20 @@ public class LevelSession : MonoBehaviour
         if (!IsPlaying)
             return MoveOutcome.Rejected();
 
-        MoveOutcome moveOutcome = _shelfBoard.TryMove(source, target);
+        State = LevelState.Resolving;
 
-        if (moveOutcome.IsLevelCompleted)
+        MoveOutcome moveOutcome = _shelfBoard.TryMove(source, target, CompleteResolution);
+
+        if (!moveOutcome.IsSuccessful)
         {
-            State = LevelState.Won;
-            LevelCompleted?.Invoke();
+            State = LevelState.Playing;
+            return moveOutcome;
         }
+
+        _shouldCompleteLevel = moveOutcome.IsLevelCompleted;
+
+        if (!moveOutcome.HasLayerTransition)
+            CompleteResolution();
 
         return moveOutcome;
     }
@@ -41,5 +52,21 @@ public class LevelSession : MonoBehaviour
     {
         Scene currentScene = SceneManager.GetActiveScene();
         SceneManager.LoadScene(currentScene.buildIndex);
+    }
+
+    private void CompleteResolution()
+    {
+        bool isLevelCompleted = _shouldCompleteLevel;
+
+        _shouldCompleteLevel = false;
+
+        if (isLevelCompleted)
+        {
+            State = LevelState.Won;
+            LevelCompleted?.Invoke();
+            return;
+        }
+
+        State = LevelState.Playing;
     }
 }

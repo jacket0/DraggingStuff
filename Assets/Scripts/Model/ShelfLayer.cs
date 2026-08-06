@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class ShelfLayer : MonoBehaviour
 {
-    private const int CellsCount = 3;
+    public const int SlotCount = 3;
 
     [SerializeField] private List<ShelfSlot> _slots;
 
@@ -14,7 +14,7 @@ public class ShelfLayer : MonoBehaviour
 
     public bool HasMatch()
     {
-        if (_slots.Count != CellsCount)
+        if (_slots.Count != SlotCount)
             throw new InvalidOperationException(nameof(_slots));
 
         if (IsEmpty)

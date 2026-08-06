@@ -29,8 +29,9 @@ public class ShelfSlot : MonoBehaviour
             throw new InvalidOperationException(nameof(_shelfItem));
 
         _shelfItem = item;
-        item.transform.SetParent(_itemAnchor);
+        item.transform.SetParent(_itemAnchor, false);
         item.transform.localPosition = Vector3.zero;
         item.transform.localRotation = Quaternion.identity;
+        item.transform.localScale = Vector3.one;
     }
 }

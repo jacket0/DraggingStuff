@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 485221916132092154}
   - component: {fileID: 7533741779176859870}
   m_Layer: 6
-  m_Name: TeddyBearItem
+  m_Name: TeddyBear
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
