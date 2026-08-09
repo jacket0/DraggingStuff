@@ -6,6 +6,7 @@ public class LevelSession : MonoBehaviour
 {
     [SerializeField] private ShelfBoard _shelfBoard;
     [SerializeField] private LevelBuilder _levelBuilder;
+    [SerializeField] private MoveResolutionPlayer _moveResolutionPlayer;
 
     private bool _shouldCompleteLevel;
 
@@ -17,11 +18,13 @@ public class LevelSession : MonoBehaviour
     private void Start()
     {
         _levelBuilder.Build();
+        _shelfBoard.InitializeViews();
         StartLevel();
     }
 
     public void StartLevel()
     {
+        Time.timeScale = 1;
         State = LevelState.Playing;
     }
 
@@ -32,7 +35,7 @@ public class LevelSession : MonoBehaviour
 
         State = LevelState.Resolving;
 
-        MoveOutcome moveOutcome = _shelfBoard.TryMove(source, target, CompleteResolution);
+        MoveOutcome moveOutcome = _shelfBoard.TryMove(source, target);
 
         if (!moveOutcome.IsSuccessful)
         {
@@ -42,16 +45,38 @@ public class LevelSession : MonoBehaviour
 
         _shouldCompleteLevel = moveOutcome.IsLevelCompleted;
 
-        if (!moveOutcome.HasLayerTransition)
-            CompleteResolution();
+        _moveResolutionPlayer.Play(moveOutcome.Match, () =>
+        {
+            _shelfBoard.AdvanceLayers(moveOutcome.ShelvesToAdvance, CompleteResolution);
+        }); 
 
         return moveOutcome;
     }
 
     public void RestartLevel()
     {
+        Time.timeScale = 1;
         Scene currentScene = SceneManager.GetActiveScene();
         SceneManager.LoadScene(currentScene.buildIndex);
+    }
+
+    public bool TryPauseLevel()
+    {
+        if (State != LevelState.Playing)
+            return false;
+
+        State = LevelState.Paused;
+        Time.timeScale = 0;
+        return true;
+    }
+
+    public void ResumeLevel()
+    {
+        if (State != LevelState.Paused)
+            return;
+
+        Time.timeScale = 1;
+        State = LevelState.Playing;
     }
 
     private void CompleteResolution()
