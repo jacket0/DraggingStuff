@@ -10,7 +10,13 @@ public class ShelfBoard : MonoBehaviour
     public IReadOnlyList<Shelf> Shelves => _shelves;
     public bool IsCleared => _shelves.All(shelf => shelf.IsCleared);
 
-    public MoveOutcome TryMove(ShelfSlot source, ShelfSlot target, Action layerTransitionsCompleted)
+    public void InitializeViews()
+    {
+        foreach (var shelf in _shelves)
+            shelf.InitializeView();
+    }
+
+    public MoveOutcome TryMove(ShelfSlot source, ShelfSlot target)
     {
         if (source == null || target == null)
             return MoveOutcome.Rejected();
@@ -26,7 +32,7 @@ public class ShelfBoard : MonoBehaviour
 
         var item = source.TakeItem();
         target.PlaceItem(item);
-        bool hasMatch = targetShelf.TryResolveMatch();
+        targetShelf.TryResolveMatch(out MatchResolution match);
 
         List<Shelf> advancingShelves = new List<Shelf>(2);
 
@@ -36,16 +42,20 @@ public class ShelfBoard : MonoBehaviour
         if (targetShelf != sourceShelf && targetShelf.CanRevealNextLayer)
             advancingShelves.Add(targetShelf);
 
-        bool hasLayerTransition = advancingShelves.Count > 0;
-
-        if (hasLayerTransition)
-            StartLayerTransitions(advancingShelves, layerTransitionsCompleted);
-
-        return MoveOutcome.Successful(hasMatch, IsCleared, hasLayerTransition);
+        return MoveOutcome.Successful(match, IsCleared, advancingShelves);
     }
 
-    private void StartLayerTransitions(IReadOnlyList<Shelf> shelves, Action completed)
+    public void AdvanceLayers(IReadOnlyList<Shelf> shelves, Action completed)
     {
+        if (shelves == null)
+            throw new ArgumentNullException(nameof(shelves));
+
+        if (shelves.Count == 0)
+        {
+            completed?.Invoke();
+            return;
+        }
+
         int remainingTransitions = shelves.Count;
 
         void HandleTransitionCompleted()
@@ -58,8 +68,7 @@ public class ShelfBoard : MonoBehaviour
 
         foreach (Shelf shelf in shelves)
         {
-            shelf.RevealNextLayer(
-                HandleTransitionCompleted);
+            shelf.RevealNextLayer(HandleTransitionCompleted);
         }
     }
 }

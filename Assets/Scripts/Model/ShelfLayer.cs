@@ -27,15 +27,13 @@ public class ShelfLayer : MonoBehaviour
         return _slots.All(slot => slot.Item.Type == itemType);
     }
 
-    public void ReleaseItems()
+    public MatchResolution TakeMatch()
     {
         if (!HasMatch())
             throw new InvalidOperationException();
 
-        foreach (var slot in Slots)
-        {
-            var item = slot.TakeItem();
-            item.Delete();
-        }
+        ShelfItem[] items = _slots.Select(slot => slot.TakeItem()).ToArray(); 
+
+        return new MatchResolution(items);
     }
 }

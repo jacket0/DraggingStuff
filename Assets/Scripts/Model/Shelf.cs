@@ -7,7 +7,7 @@ public class Shelf : MonoBehaviour
 {
     [SerializeField] private List<ShelfLayer> _shelfLayers;
     [SerializeField] private ShelfLayerStackView _layerStackView;
-   
+
     private int _activeLayerIndex = 0;
 
     public IReadOnlyList<ShelfLayer> Layers => _shelfLayers;
@@ -16,24 +16,23 @@ public class Shelf : MonoBehaviour
     public bool HasActiveLayer => _activeLayerIndex < _shelfLayers.Count;
     public bool IsCleared => _shelfLayers.All(layer => layer.IsEmpty);
     public bool HasNextLayer => _activeLayerIndex + 1 < _shelfLayers.Count;
-    public bool CanRevealNextLayer => HasActiveLayer && HasNextLayer && ActiveLayer.IsEmpty; 
+    public bool CanRevealNextLayer => HasActiveLayer && HasNextLayer && ActiveLayer.IsEmpty;
 
-    private void Awake()
+    public void InitializeView()
     {
         _layerStackView.Initialize(_shelfLayers, _activeLayerIndex);
     }
 
-    public bool TryResolveMatch()
+    public bool TryResolveMatch(out MatchResolution match)
     {
-        if (!HasActiveLayer)
+        match = null;
+
+        if (!HasActiveLayer || !ActiveLayer.HasMatch())
             return false;
 
-        bool hasMatch = ActiveLayer.HasMatch();
+        match = ActiveLayer.TakeMatch();
 
-        if (hasMatch)
-            ActiveLayer.ReleaseItems();
-        
-        return hasMatch;
+        return true;
     }
 
     public void RevealNextLayer(Action completed)
@@ -41,10 +40,8 @@ public class Shelf : MonoBehaviour
         if (!CanRevealNextLayer)
             throw new InvalidOperationException();
 
-        int completedLayerIndex = _activeLayerIndex;
-
         _activeLayerIndex++;
 
-        _layerStackView.Advance(completedLayerIndex, _activeLayerIndex, completed);
+        _layerStackView.Advance(_activeLayerIndex, completed);
     }
 }

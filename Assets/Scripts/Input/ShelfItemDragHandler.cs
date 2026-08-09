@@ -17,10 +17,13 @@ public class ShelfItemDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandl
     {
         _dragController = GetComponentInParent<ShelfItemDragController>();
 
-        if (_dragController == null )
+        if (_dragController == null)
             return;
 
-        _isDragging = _dragController.TryBeginDrag(_item, eventData.position);
+        _isDragging = _dragController.TryBeginDrag(_item, eventData.pressPosition);
+
+        if (_isDragging)
+            _dragController.UpdateDrag(eventData.position);
     }
 
     public void OnDrag(PointerEventData eventData)

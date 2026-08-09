@@ -3,5 +3,7 @@ public enum LevelState
     Preparing,
     Playing,
     Resolving,
-    Won
+    Paused,
+    Won,
+    Lost
 }

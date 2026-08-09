@@ -9,7 +9,7 @@ public class ShelfItemDragController : MonoBehaviour
     private ShelfSlot _sourceSlot;
     private bool _isDragging;
 
-    public bool TryBeginDrag(ShelfItem item, Vector2 pointerPosition)
+    public bool TryBeginDrag(ShelfItem item, Vector2 pressScreenPosition)
     {
         if (!_levelSession.IsPlaying || item == null || _isDragging)
             return false;
@@ -19,7 +19,7 @@ public class ShelfItemDragController : MonoBehaviour
         if (sourceSlot == null || sourceSlot.Item != item)
             return false;
 
-        if (!_dragMover.TryBeginMove(item, pointerPosition))
+        if (!_dragMover.TryBeginMove(item, pressScreenPosition))
             return false;
 
         _sourceSlot = sourceSlot;

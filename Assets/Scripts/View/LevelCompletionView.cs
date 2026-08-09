@@ -1,36 +1,35 @@
-using TMPro;
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class LevelCompletionView : MonoBehaviour
 {
-    [SerializeField] private LevelSession _levelSession;
-    [SerializeField] private Button _restart;
-    [SerializeField] private TextMeshProUGUI _label;
-    [SerializeField] private GameObject _window;
+    [SerializeField] private Button _restartButton;
 
-    private string _winLabel = "Уровень пройден успешно!";
-
-    private void Awake()
-    {
-        _window.SetActive(false);
-    }
+    public event Action RestartLevel;
 
     private void OnEnable()
     {
-        _levelSession.LevelCompleted += ShowWin;
-        _restart.onClick.AddListener(_levelSession.RestartLevel);
+        _restartButton.onClick.AddListener(RestartButtonClicked);
     }
 
     private void OnDisable()
     {
-        _levelSession.LevelCompleted -= ShowWin;
-        _restart.onClick.RemoveListener(_levelSession.RestartLevel);
+        _restartButton.onClick.RemoveListener(RestartButtonClicked);
     }
 
-    private void ShowWin()
+    public void Show()
     {
-        _label.text = _winLabel;
-        _window.SetActive(true);
+        gameObject.SetActive(true);
+    }
+
+    public void Hide()
+    {
+        gameObject.SetActive(false);
+    }
+
+    private void RestartButtonClicked()
+    {
+        RestartLevel?.Invoke();   
     }
 }
