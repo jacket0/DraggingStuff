@@ -21,14 +21,10 @@ public class LevelBuilder : MonoBehaviour
             throw new InvalidOperationException();
 
         if (_shelfBoard.Shelves.Count != _levelDefinition.Shelves.Count)
-            throw new InvalidOperationException();
+            throw new InvalidOperationException($"Количество полок не совпадает. В сцене: {_shelfBoard.Shelves.Count}, в конфиге: {_levelDefinition.Shelves.Count}.");
 
-        for (int shelfIndex = 0;
-             shelfIndex < _shelfBoard.Shelves.Count;
-             shelfIndex++)
-        {
-            ValidateShelf(shelfIndex);
-        }
+        for (int i = 0; i < _shelfBoard.Shelves.Count; i++)
+            ValidateShelf(i);
     }
 
     private void ValidateShelf(int shelfIndex)
@@ -37,12 +33,10 @@ public class LevelBuilder : MonoBehaviour
         ShelfDefinition definition = _levelDefinition.Shelves[shelfIndex];
 
         if (shelf.Layers.Count != definition.Layers.Count)
-            throw new InvalidOperationException();
+            throw new InvalidOperationException($"Полка {shelfIndex}: в сцене {shelf.Layers.Count} слоёв, в конфиге {definition.Layers.Count}.");
 
         for (int layerIndex = 0; layerIndex < shelf.Layers.Count; layerIndex++)
-        {
             ValidateLayer(shelfIndex, layerIndex);
-        }
     }
 
     private void ValidateLayer(int shelfIndex, int layerIndex)
@@ -51,15 +45,13 @@ public class LevelBuilder : MonoBehaviour
         ShelfLayerDefinition definition = _levelDefinition.Shelves[shelfIndex].Layers[layerIndex];
 
         if (layer.Slots.Count != definition.ItemPrefabs.Count)
-            throw new InvalidOperationException();
+            throw new InvalidOperationException($"Полка {shelfIndex}, слой {layerIndex}: в сцене {layer.Slots.Count} слотов, в конфиге {definition.ItemPrefabs.Count}.");
 
         if (layer.Slots.Count != ShelfLayer.SlotCount)
-            throw new InvalidOperationException();
+            throw new InvalidOperationException($"Полка {shelfIndex}, слой {layerIndex}: требуется {ShelfLayer.SlotCount} слота, найдено {layer.Slots.Count}.");
 
         for (int slotIndex = 0; slotIndex < layer.Slots.Count; slotIndex++)
-        {
             ValidateSlot(layer.Slots[slotIndex], shelfIndex, layerIndex, slotIndex);
-        }
     }
 
     private void ValidateSlot(ShelfSlot slot, int shelfIndex, int layerIndex, int slotIndex)
