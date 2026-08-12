@@ -14,6 +14,7 @@ public class LevelSession : MonoBehaviour
     public bool IsPlaying => State == LevelState.Playing;
 
     public event Action LevelCompleted;
+    public event Action<MatchResolution> MatchSucceeded;
 
     private void Start()
     {
@@ -44,6 +45,9 @@ public class LevelSession : MonoBehaviour
         }
 
         _shouldCompleteLevel = moveOutcome.IsLevelCompleted;
+
+        if (moveOutcome.HasMatch)
+            MatchSucceeded?.Invoke(moveOutcome.Match);
 
         _moveResolutionPlayer.Play(moveOutcome.Match, () =>
         {
@@ -88,6 +92,7 @@ public class LevelSession : MonoBehaviour
         if (isLevelCompleted)
         {
             State = LevelState.Won;
+
             LevelCompleted?.Invoke();
             return;
         }

@@ -31,7 +31,7 @@ MonoBehaviour:
     buildNumber: 6
   Simulation:
     device: 0
-    language: tr
+    language: en
     enableInterAdv: 1
     advIntervalSimulation: 60
     durationAdv: 0.5

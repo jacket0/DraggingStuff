@@ -36,4 +36,9 @@ public class ShelfLayer : MonoBehaviour
 
         return new MatchResolution(items);
     }
+
+    public bool IsContainsSlot(ShelfSlot slot)
+    {
+        return slot != null && _slots.Contains(slot);
+    }
 }

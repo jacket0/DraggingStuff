@@ -44,4 +44,9 @@ public class Shelf : MonoBehaviour
 
         _layerStackView.Advance(_activeLayerIndex, completed);
     }
+
+    public bool IsContainsActiveSlot(ShelfSlot slot)
+    {
+        return HasActiveLayer && ActiveLayer.IsContainsSlot(slot);
+    }    
 }

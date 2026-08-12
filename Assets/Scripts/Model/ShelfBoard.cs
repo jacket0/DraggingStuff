@@ -18,17 +18,23 @@ public class ShelfBoard : MonoBehaviour
 
     public MoveOutcome TryMove(ShelfSlot source, ShelfSlot target)
     {
-        if (source == null || target == null)
+        if (source == null || target == null || source == target)
             return MoveOutcome.Rejected();
 
         if (source.IsEmpty || target.IsEmpty == false)
             return MoveOutcome.Rejected();
 
-        if (source == target)
+        if (!TryGetOwningShelf(source, out Shelf sourceShelf))
             return MoveOutcome.Rejected();
 
-        var sourceShelf = source.GetComponentInParent<Shelf>();
-        var targetShelf = target.GetComponentInParent<Shelf>();
+        if (!TryGetOwningShelf(target, out Shelf targetShelf))
+            return MoveOutcome.Rejected();
+
+        if(!sourceShelf.IsContainsActiveSlot(source))
+            return MoveOutcome.Rejected();
+
+        if (!targetShelf.IsContainsActiveSlot(target))
+            return MoveOutcome.Rejected();
 
         var item = source.TakeItem();
         target.PlaceItem(item);
@@ -70,5 +76,11 @@ public class ShelfBoard : MonoBehaviour
         {
             shelf.RevealNextLayer(HandleTransitionCompleted);
         }
+    }
+
+    private bool TryGetOwningShelf(ShelfSlot slot, out Shelf shelf)
+    {
+        shelf = slot != null ? slot.GetComponentInParent<Shelf>() : null;
+        return shelf != null && _shelves.Contains(shelf);
     }
 }
