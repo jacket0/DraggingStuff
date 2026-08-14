@@ -24,7 +24,7 @@ public class ShelfItemDragMover : MonoBehaviour
         if (item == null || _draggedItem != null)
             return false;
 
-        Vector3 liftedItemPosition = item.transform.position - _camera.transform.forward * _dragOffset;
+        Vector3 liftedItemPosition = CalculateLiftedItemPosition(item.transform.position);
 
         _dragPlane = new Plane(_camera.transform.forward, liftedItemPosition);
 
@@ -117,5 +117,17 @@ public class ShelfItemDragMover : MonoBehaviour
 
         dragPoint = default;
         return false;
+    }
+
+    private Vector3 CalculateLiftedItemPosition(Vector3 itemWorldPosition)
+    {
+        Vector3 itemScreenPosition = _camera.WorldToScreenPoint(itemWorldPosition);
+        float minimumDepth = _camera.nearClipPlane + 0.01f;
+
+        itemScreenPosition.z = Mathf.Max(
+            itemScreenPosition.z - _dragOffset,
+            minimumDepth);
+
+        return _camera.ScreenToWorldPoint(itemScreenPosition);
     }
 }

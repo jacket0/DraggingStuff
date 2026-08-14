@@ -11,6 +11,7 @@ public class ShelfLayerStackView : MonoBehaviour
     private IReadOnlyList<ShelfLayer> _layers;
     private Vector3[] _initialLocalPositions;
     private ShelfLayerView[] _layerViews;
+    private Sequence _activeTransition;
 
     public void Initialize(IReadOnlyList<ShelfLayer> layers, int activeLayerIndex)
     {
@@ -52,19 +53,40 @@ public class ShelfLayerStackView : MonoBehaviour
 
     public void Advance(int activeLayerIndex, Action completed)
     {
+        _activeTransition?.Complete();
+
         ApplyLayerStates(activeLayerIndex);
 
-        Sequence sequence = DOTween.Sequence();
+        Sequence transition = DOTween.Sequence();
 
         for (int i = activeLayerIndex; i < _layers.Count; i++)
         {
             int positionIndex = i - activeLayerIndex;
 
-            sequence.Join(_layers[i].transform.DOLocalMove(_initialLocalPositions[positionIndex], _moveDuration).SetEase(_moveEase));
+            transition.Join(_layers[i].transform.DOLocalMove(_initialLocalPositions[positionIndex], _moveDuration).SetEase(_moveEase));
         }
 
-        sequence.OnComplete(() => completed?.Invoke());
+        _activeTransition = transition;
+
+        transition.OnComplete(() =>
+        {
+            if (_activeTransition == transition)
+                _activeTransition = null;
+
+            completed?.Invoke();
+        });
+
+        transition.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
     }
+
+    public void HideLayer(int index)
+    {
+        if (index < 0 || index >= _layerViews.Length)
+            throw new ArgumentOutOfRangeException(nameof(index));
+
+        _layerViews[index].Hide();
+    }
+
 
     private void ApplyLayerStates(int activeLayerIndex)
     {

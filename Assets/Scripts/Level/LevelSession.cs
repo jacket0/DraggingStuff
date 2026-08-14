@@ -8,8 +8,6 @@ public class LevelSession : MonoBehaviour
     [SerializeField] private LevelBuilder _levelBuilder;
     [SerializeField] private MoveResolutionPlayer _moveResolutionPlayer;
 
-    private bool _shouldCompleteLevel;
-
     public LevelState State { get; private set; }
     public bool IsPlaying => State == LevelState.Playing;
 
@@ -34,25 +32,15 @@ public class LevelSession : MonoBehaviour
         if (!IsPlaying)
             return MoveOutcome.Rejected();
 
-        State = LevelState.Resolving;
-
         MoveOutcome moveOutcome = _shelfBoard.TryMove(source, target);
 
         if (!moveOutcome.IsSuccessful)
-        {
-            State = LevelState.Playing;
             return moveOutcome;
-        }
-
-        _shouldCompleteLevel = moveOutcome.IsLevelCompleted;
 
         if (moveOutcome.HasMatch)
             MatchSucceeded?.Invoke(moveOutcome.Match);
 
-        _moveResolutionPlayer.Play(moveOutcome.Match, () =>
-        {
-            _shelfBoard.AdvanceLayers(moveOutcome.ShelvesToAdvance, CompleteResolution);
-        }); 
+        PlayMoveResolution(moveOutcome);
 
         return moveOutcome;
     }
@@ -83,20 +71,32 @@ public class LevelSession : MonoBehaviour
         State = LevelState.Playing;
     }
 
-    private void CompleteResolution()
+    private void PlayMoveResolution(MoveOutcome moveOutcome)
     {
-        bool isLevelCompleted = _shouldCompleteLevel;
-
-        _shouldCompleteLevel = false;
-
-        if (isLevelCompleted)
+        if (!moveOutcome.HasMatch)
         {
-            State = LevelState.Won;
-
-            LevelCompleted?.Invoke();
+            AdvanceLayers(moveOutcome);
             return;
         }
 
-        State = LevelState.Playing;
+        _moveResolutionPlayer.Play(moveOutcome.Match, () => AdvanceLayers(moveOutcome));
+        _shelfBoard.HideLayersToAdvice(moveOutcome.ShelvesToAdvance);
+    }
+
+    private void AdvanceLayers(MoveOutcome moveOutcome)
+    {
+        _shelfBoard.AdvanceLayers(moveOutcome.ShelvesToAdvance, () => HandleMoveResolutionCompleted(moveOutcome.IsLevelCompleted));
+    }
+
+    private void HandleMoveResolutionCompleted(bool isLevelCompleted)
+    {
+        if (!isLevelCompleted)
+            return;
+
+        if (State != LevelState.Playing)
+            return;
+
+        State = LevelState.Won;
+        LevelCompleted?.Invoke();
     }
 }

@@ -43,7 +43,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 0
   alignment: 0
@@ -108,7 +108,28 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
-    sprites: []
+    sprites:
+    - serializedVersion: 2
+      name: ScoreCounterBackground
+      rect:
+        serializedVersion: 2
+        x: 70
+        y: 111
+        width: 884
+        height: 283
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 447a221e9ed366c45a718dbd96499895
+      internalID: 767126597
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline:
     - - {x: 324, y: -141}
       - {x: 389, y: -102}
@@ -136,7 +157,8 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      ScoreCounterBackground: 767126597
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
