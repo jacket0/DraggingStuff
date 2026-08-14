@@ -24,14 +24,6 @@ public class MoveResolutionPlayer : MonoBehaviour
 
     [SerializeField, Min(0f)] private float _postExplosionDelay = 0.1f;
 
-    private Sequence _resolutionSequence;
-
-    private void OnDisable()
-    {
-        _resolutionSequence?.Kill();
-        _resolutionSequence = null;
-    }
-
     public void Play(MatchResolution match, Action completed)
     {
         if (match == null)
@@ -44,24 +36,25 @@ public class MoveResolutionPlayer : MonoBehaviour
         Vector3 mergePosition = centerItem.transform.position;
         Vector3 effectPosition = GetEffectPosition(centerItem);
 
-        _resolutionSequence?.Kill();
-        _resolutionSequence = DOTween.Sequence();
+        Sequence resolutionSequence = DOTween.Sequence();
 
         foreach (var item in match.Items)
         {
             Sequence sequence = CreateItemAnimation(item, centerItem, mergePosition);
-            _resolutionSequence.Insert(0f, sequence);
+            resolutionSequence.Insert(0f, sequence);
         }
 
-        _resolutionSequence.InsertCallback(_preparatoryDuration, _matchAudioPlayer.PlayMerge);
-        _resolutionSequence.AppendCallback(() => PlayExplosion(match, effectPosition));
-        _resolutionSequence.AppendInterval(_postExplosionDelay);
+        resolutionSequence.InsertCallback(_preparatoryDuration, _matchAudioPlayer.PlayMerge);
+        resolutionSequence.AppendCallback(() => PlayExplosion(match, effectPosition));
+        resolutionSequence.AppendInterval(_postExplosionDelay);
 
-        _resolutionSequence.OnComplete(() =>
+        resolutionSequence.OnComplete(() =>
         {
-            _resolutionSequence = null;
+            resolutionSequence = null;
             completed?.Invoke();
         });
+
+        resolutionSequence.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
     }
 
     private Sequence CreateItemAnimation(ShelfItem item, ShelfItem centerItem, Vector3 mergePosition)

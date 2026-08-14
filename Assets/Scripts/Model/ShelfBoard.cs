@@ -78,6 +78,20 @@ public class ShelfBoard : MonoBehaviour
         }
     }
 
+    public void HideLayersToAdvice(IReadOnlyList<Shelf> shelves)
+    {
+        if (shelves == null)
+            throw new ArgumentNullException(nameof(shelves));
+
+        foreach (Shelf shelf in shelves)
+        {
+            if (shelf == null)
+                throw new InvalidOperationException(nameof(shelf));
+
+            shelf.HideActiveLayer();
+        }
+    }
+
     private bool TryGetOwningShelf(ShelfSlot slot, out Shelf shelf)
     {
         shelf = slot != null ? slot.GetComponentInParent<Shelf>() : null;

@@ -49,4 +49,12 @@ public class Shelf : MonoBehaviour
     {
         return HasActiveLayer && ActiveLayer.IsContainsSlot(slot);
     }    
+
+    public void HideActiveLayer()
+    {
+        if (!HasActiveLayer)
+            throw new InvalidOperationException();
+
+        _layerStackView.HideLayer(_activeLayerIndex);
+    }
 }
