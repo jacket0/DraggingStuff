@@ -78,7 +78,7 @@ public class ShelfBoard : MonoBehaviour
         }
     }
 
-    public void HideLayersToAdvice(IReadOnlyList<Shelf> shelves)
+    public void HideActiveLayers(IReadOnlyList<Shelf> shelves)
     {
         if (shelves == null)
             throw new ArgumentNullException(nameof(shelves));

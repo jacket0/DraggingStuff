@@ -1,11 +1,16 @@
+using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class LevelUiController : MonoBehaviour
 {
+    private const string MainMenuSceneName = "MainMenu";
+
     [SerializeField] private PauseWindowView _pauseWindowView;
     [SerializeField] private LevelHudView _levelHudView;
     [SerializeField] private LevelCompletionView _levelCompletionView;
     [SerializeField] private LevelSession _levelSession;
+    [SerializeField] private ScoreSystem _scoreSystem;
 
     private void Start()
     {
@@ -19,8 +24,10 @@ public class LevelUiController : MonoBehaviour
         _levelHudView.PauseRequested += HandlePauseRequested;
         _pauseWindowView.ResumeRequested += HandleResumeRequested;
         _pauseWindowView.RestartRequested += HandleRestartRequested;
-        _levelCompletionView.RestartLevel += HandleRestartRequested;
+        _levelCompletionView.RestartRequested += HandleRestartRequested;
         _levelSession.LevelCompleted += HandleLevelCompleted;
+        _levelCompletionView.MenuRequested += HandleMenuRequest;
+        _pauseWindowView.MenuRequested += HandleMenuRequest;
     }
 
     private void OnDisable()
@@ -28,9 +35,10 @@ public class LevelUiController : MonoBehaviour
         _levelHudView.PauseRequested -= HandlePauseRequested;
         _pauseWindowView.ResumeRequested -= HandleResumeRequested;
         _pauseWindowView.RestartRequested -= HandleRestartRequested;
-        _levelCompletionView.RestartLevel -= HandleRestartRequested;
+        _levelCompletionView.RestartRequested -= HandleRestartRequested;
         _levelSession.LevelCompleted -= HandleLevelCompleted;
-
+        _levelCompletionView.MenuRequested -= HandleMenuRequest;
+        _pauseWindowView.MenuRequested -= HandleMenuRequest;
     }
 
     private void HandlePauseRequested()
@@ -54,6 +62,12 @@ public class LevelUiController : MonoBehaviour
     {
         _levelHudView.Hide();
         _pauseWindowView.Hide();
-        _levelCompletionView.Show();
+        _levelCompletionView.Show(_scoreSystem.CurrentScore);
+    }
+
+    private void HandleMenuRequest()
+    {
+        Time.timeScale = 1;
+        SceneManager.LoadScene(MainMenuSceneName);
     }
 }
