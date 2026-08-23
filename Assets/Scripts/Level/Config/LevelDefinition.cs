@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "LevelDefinition", menuName = "Game/Level Definition")]
+[CreateAssetMenu(fileName = "LevelDefinition", menuName = "Game/Level/Level Definition")]
 public class LevelDefinition : ScriptableObject
 {
     [SerializeField] private List<ShelfDefinition> _shelves;

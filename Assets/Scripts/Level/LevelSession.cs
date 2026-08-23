@@ -7,16 +7,21 @@ public class LevelSession : MonoBehaviour
     [SerializeField] private ShelfBoard _shelfBoard;
     [SerializeField] private LevelBuilder _levelBuilder;
     [SerializeField] private MoveResolutionPlayer _moveResolutionPlayer;
+    [SerializeField] private LevelSelectionState _levelSelection;
+    [SerializeField] private LevelEntry _fallbackLevel;
 
     public LevelState State { get; private set; }
     public bool IsPlaying => State == LevelState.Playing;
+    public LevelEntry CurrentLevel { get; private set; }
 
     public event Action LevelCompleted;
     public event Action<MatchResolution> MatchSucceeded;
 
     private void Start()
     {
-        _levelBuilder.Build();
+        CurrentLevel = ResolveCurrentLevel();
+
+        _levelBuilder.Build(CurrentLevel.Definition);
         _shelfBoard.InitializeViews();
         StartLevel();
     }
@@ -80,7 +85,7 @@ public class LevelSession : MonoBehaviour
         }
 
         _moveResolutionPlayer.Play(moveOutcome.Match, () => AdvanceLayers(moveOutcome));
-        _shelfBoard.HideLayersToAdvice(moveOutcome.ShelvesToAdvance);
+        _shelfBoard.HideActiveLayers(moveOutcome.ShelvesToAdvance);
     }
 
     private void AdvanceLayers(MoveOutcome moveOutcome)
@@ -98,5 +103,23 @@ public class LevelSession : MonoBehaviour
 
         State = LevelState.Won;
         LevelCompleted?.Invoke();
+    }
+
+    private LevelEntry ResolveCurrentLevel()
+    {
+        LevelEntry currentLevel;
+
+        if (_levelSelection != null && _levelSelection.TryGetSelected(out LevelEntry selectionEntry))
+            currentLevel = selectionEntry;
+        else
+            currentLevel = _fallbackLevel;
+
+        if (currentLevel == null)
+            throw new InvalidOperationException(nameof(currentLevel));
+
+        if (currentLevel.Definition == null)
+            throw new InvalidCastException(nameof(currentLevel.Definition));
+
+        return currentLevel;
     }
 }

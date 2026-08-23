@@ -4,46 +4,42 @@ using UnityEngine;
 public class LevelBuilder : MonoBehaviour
 {
     [SerializeField] private ShelfBoard _shelfBoard;
-    [SerializeField] private LevelDefinition _levelDefinition;
 
-    public void Build()
+    public void Build(LevelDefinition levelDefinition)
     {
-        ValidateConfig();
-        FillBoard();
+        if (levelDefinition == null)
+            throw new ArgumentNullException(nameof(levelDefinition));
+
+        ValidateConfig(levelDefinition);
+        FillBoard(levelDefinition);
     }
 
-    private void ValidateConfig()
+    private void ValidateConfig(LevelDefinition levelDefinition)
     {
         if (_shelfBoard == null)
             throw new InvalidOperationException();
 
-        if (_levelDefinition == null)
+        if (levelDefinition == null)
             throw new InvalidOperationException();
 
-        if (_shelfBoard.Shelves.Count != _levelDefinition.Shelves.Count)
-            throw new InvalidOperationException($"Количество полок не совпадает. В сцене: {_shelfBoard.Shelves.Count}, в конфиге: {_levelDefinition.Shelves.Count}.");
+        if (_shelfBoard.Shelves.Count != levelDefinition.Shelves.Count)
+            throw new InvalidOperationException($"Количество полок не совпадает. В сцене: {_shelfBoard.Shelves.Count}, в конфиге: {levelDefinition.Shelves.Count}.");
 
         for (int i = 0; i < _shelfBoard.Shelves.Count; i++)
-            ValidateShelf(i);
+            ValidateShelf(_shelfBoard.Shelves[i], levelDefinition.Shelves[i], i);
     }
 
-    private void ValidateShelf(int shelfIndex)
+    private void ValidateShelf(Shelf shelf, ShelfDefinition definition, int shelfIndex)
     {
-        Shelf shelf = _shelfBoard.Shelves[shelfIndex];
-        ShelfDefinition definition = _levelDefinition.Shelves[shelfIndex];
-
         if (shelf.Layers.Count != definition.Layers.Count)
             throw new InvalidOperationException($"Полка {shelfIndex}: в сцене {shelf.Layers.Count} слоёв, в конфиге {definition.Layers.Count}.");
 
         for (int layerIndex = 0; layerIndex < shelf.Layers.Count; layerIndex++)
-            ValidateLayer(shelfIndex, layerIndex);
+            ValidateLayer(shelf.Layers[layerIndex], definition.Layers[layerIndex], shelfIndex, layerIndex);
     }
 
-    private void ValidateLayer(int shelfIndex, int layerIndex)
+    private void ValidateLayer(ShelfLayer layer, ShelfLayerDefinition definition, int shelfIndex, int layerIndex)
     {
-        ShelfLayer layer = _shelfBoard.Shelves[shelfIndex].Layers[layerIndex];
-        ShelfLayerDefinition definition = _levelDefinition.Shelves[shelfIndex].Layers[layerIndex];
-
         if (layer.Slots.Count != definition.ItemPrefabs.Count)
             throw new InvalidOperationException($"Полка {shelfIndex}, слой {layerIndex}: в сцене {layer.Slots.Count} слотов, в конфиге {definition.ItemPrefabs.Count}.");
 
@@ -63,11 +59,11 @@ public class LevelBuilder : MonoBehaviour
             throw new InvalidOperationException($"В шкафу {shelfIndex}, в слое {layerIndex}, слот {slotIndex} уже содержит предмет.");
     }
 
-    private void FillBoard()
+    private void FillBoard(LevelDefinition levelDefinition)
     {
         for (int i = 0; i < _shelfBoard.Shelves.Count; i++)
         {
-            FillShelf(_shelfBoard.Shelves[i], _levelDefinition.Shelves[i]);
+            FillShelf(_shelfBoard.Shelves[i], levelDefinition.Shelves[i]);
         }
     }
 
