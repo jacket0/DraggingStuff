@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6be268c558b693746b386fc085dd7b1a, type: 3}
   m_Name: Hint
   m_EditorClassIdentifier: 
-  _id: 2
-  _icon: {fileID: 21300000, guid: beed9686caced324f95d5ae26b6788ba, type: 3}
+  _id: hint
+  _icon: {fileID: 21300000, guid: b582808231235f84abf6b93107f5422e, type: 3}
   _initialAmount: 1
   _maxAmount: 3
-  _cooldownDuration: 5
-  _maxUsesPerLevel: 2
+  _cooldownDuration: 0
+  _hasLevelUseLimit: 0
+  _maxLevelUses: 2

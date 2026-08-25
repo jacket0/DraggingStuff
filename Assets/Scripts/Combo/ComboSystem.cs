@@ -1,9 +1,11 @@
 using System;
 using UnityEngine;
 
-public class ComboSystem : MonoBehaviour
+public class ComboSystem : MonoBehaviour, IComboTimerModifierTarget
 {
     [SerializeField, Min(0.01f)] private float _comboDuration = 4f;
+
+    private readonly MultiplierModifierCollection _timerSpeedModifiers = new MultiplierModifierCollection();
 
     private int _currentCount;
     private float _remainingTime;
@@ -15,7 +17,7 @@ public class ComboSystem : MonoBehaviour
 
     private void Update()
     {
-        float comboDeltaTime = Time.deltaTime;
+        float comboDeltaTime = Time.deltaTime * _timerSpeedModifiers.CombinedMultiplier;
         bool stateChanged = false;
 
         if (_currentCount > 0 &&  comboDeltaTime > 0f)
@@ -40,6 +42,11 @@ public class ComboSystem : MonoBehaviour
         _comboDuration = Mathf.Max(0.01f, _comboDuration);
     }
 
+    public IDisposable AddTimerSpeedMultiplier(float multiplier)
+    {
+        return _timerSpeedModifiers.AddMultiplier(multiplier);
+    }
+
     public int RegisterMatch()
     {
         _currentCount++;
@@ -51,13 +58,6 @@ public class ComboSystem : MonoBehaviour
         ComboIncreased?.Invoke(comboState);
 
         return _currentCount;
-    }
-
-    public void ResetState()
-    {
-        _currentCount = 0;
-        _remainingTime = 0f;
-        StateChanged?.Invoke(CreateState());
     }
 
     private ComboState CreateState()

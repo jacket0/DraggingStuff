@@ -1,15 +1,14 @@
 using System;
 using UnityEngine;
 
-public abstract class BonusEffect : MonoBehaviour
+public abstract class BonusEffect : MonoBehaviour, IBonusEffect
 {
     [SerializeField] private BonusDefinition _definition;
 
     public BonusDefinition Definition => _definition;
-    public BonusId Id => _definition != null ? _definition.Id : BonusId.None;
     public bool IsActive { get; private set; }
 
-    public event Action<BonusId> Completed;
+    public event Action<IBonusEffect> Completed;
 
     public bool CanActivate()
     {
@@ -19,10 +18,10 @@ public abstract class BonusEffect : MonoBehaviour
     public void Activate()
     {
         if (_definition == null)
-            throw new InvalidOperationException($"{name} has no bonus definition.");
+            throw new InvalidOperationException(nameof(_definition));
 
         if (IsActive)
-            throw new InvalidOperationException($"Bonus {Id} is already active.");
+            throw new InvalidOperationException($"Бонус {_definition.Id} уже активен.");
 
         IsActive = true;
         ActivateEffect();
@@ -34,7 +33,7 @@ public abstract class BonusEffect : MonoBehaviour
             return;
 
         IsActive = false;
-        Completed?.Invoke(Id);
+        Completed?.Invoke(this);
     }
 
     protected abstract void ActivateEffect();
