@@ -1,15 +1,14 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BonusUseController : MonoBehaviour
+public class BonusUseController : MonoBehaviour, IBonusUseService, IBonusRuntimeStateSource
 {
     [SerializeField] private LevelSession _session;
     [SerializeField] private BonusInventoryService _inventory;
     [SerializeField] private List<BonusEffect> _effects = new List<BonusEffect>();
 
-    private readonly Dictionary<BonusId, BonusRuntime> _runtimes = new Dictionary<BonusId, BonusRuntime>();
+    private readonly Dictionary<BonusDefinition, BonusRuntime> _runtimes = new Dictionary<BonusDefinition, BonusRuntime>();
 
     public event Action<BonusRuntimeState> RuntimeStateChanged;
 
@@ -36,17 +35,20 @@ public class BonusUseController : MonoBehaviour
     {
         foreach (var runtime in _runtimes.Values)
         {
-            if (runtime.Effect!=null)
+            if (runtime.Effect != null)
                 runtime.Effect.Completed -= HandleEffectCompleted;
         }
     }
 
-    public BonusUseResult TryUse(BonusId id)
+    public BonusUseResult TryUse(BonusDefinition definition)
     {
+        if (definition == null)
+            throw new ArgumentNullException(nameof(definition));
+
         if (!_session.IsPlaying)
             return BonusUseResult.LevelUnavailable;
 
-        if (!_runtimes.TryGetValue(id, out var runtime))
+        if (!_runtimes.TryGetValue(definition, out var runtime))
             return BonusUseResult.NotRegistered;
 
         switch (runtime.Phase)
@@ -61,13 +63,13 @@ public class BonusUseController : MonoBehaviour
                 return BonusUseResult.UsageLimit;
         }
 
-        if (_inventory.GetAmount(id) <= 0)
+        if (_inventory.GetAmount(definition) <= 0)
             return BonusUseResult.NotEnough;
 
         if (!runtime.Effect.CanActivate())
             return BonusUseResult.EffectUnavailable;
 
-        if (!_inventory.TryConsume(id))
+        if (!_inventory.TryConsume(definition))
             return BonusUseResult.NotEnough;
 
         runtime.Activate();
@@ -77,10 +79,13 @@ public class BonusUseController : MonoBehaviour
         return BonusUseResult.Applied;
     }
 
-    public BonusRuntimeState GetSate(BonusId id)
+    public BonusRuntimeState GetState(BonusDefinition definition)
     {
-        if (!_runtimes.TryGetValue(id, out BonusRuntime runtime))
-            throw new InvalidOperationException($"Бонус {id} не существует");
+        if (definition == null)
+            throw new ArgumentNullException(nameof(definition));
+
+        if (!_runtimes.TryGetValue(definition, out BonusRuntime runtime))
+            throw new InvalidOperationException($"Бонус {definition.Id} не существует");
 
         return runtime.CreateState();
     }
@@ -94,23 +99,23 @@ public class BonusUseController : MonoBehaviour
 
             if (effect.Definition == null)
                 throw new InvalidOperationException(nameof(effect.Definition));
-            
-            if (effect.Id == BonusId.None)
-                throw new InvalidOperationException(nameof(effect.name));
 
-            if (_runtimes.ContainsKey(effect.Id))
-                throw new InvalidOperationException($"Бонус {effect.Id} уже существует");
+            if (_runtimes.ContainsKey(effect.Definition))
+                throw new InvalidOperationException($"Бонус {effect.Definition.Id} уже существует");
 
             BonusRuntime runtime = new BonusRuntime(effect);
-            _runtimes.Add(effect.Id, runtime);
+            _runtimes.Add(effect.Definition, runtime);
             effect.Completed += HandleEffectCompleted;
         }
     }
 
-    private void HandleEffectCompleted(BonusId id)
+    private void HandleEffectCompleted(IBonusEffect effect)
     {
-        if (_runtimes.TryGetValue(id, out BonusRuntime runtime))
-            throw new InvalidOperationException($"Бонус {id} не существует");
+        if (effect == null)
+            throw new ArgumentNullException(nameof(effect));
+
+        if (!_runtimes.TryGetValue(effect.Definition, out BonusRuntime runtime))
+            throw new InvalidOperationException($"Бонус {effect.Definition.Id} не существует");
 
         runtime.CompleteActivation();
         RuntimeStateChanged?.Invoke(runtime.CreateState());

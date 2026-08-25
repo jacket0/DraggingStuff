@@ -2,28 +2,16 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BonusInventoryService : MonoBehaviour
+public class BonusInventoryService : MonoBehaviour, IBonusInventory
 {
-    private const string StorageKey = "bonus.inventory.v1";
-
     [SerializeField] private BonusCatalog _catalog;
+    [SerializeField] private BonusInventoryStorageAsset _storageAsset;
 
-    private readonly Dictionary<BonusId, int> _amounts = new Dictionary<BonusId, int>();
+    private readonly Dictionary<BonusDefinition, int> _amounts = new Dictionary<BonusDefinition, int>();
 
-    public event Action<BonusId, int> AmountChanged;
+    public event Action<BonusDefinition, int> AmountChanged;
 
-    [Serializable]
-    private class BonusInventoryData
-    {
-        public List<BonusAmountData> Amounts = new List<BonusAmountData>();
-    }
-
-    [Serializable]
-    private class BonusAmountData
-    {
-        public BonusId Id;
-        public int Amount;
-    }
+    private IBonusInventoryStorage InventoryStorage => _storageAsset;
 
     private void Awake()
     {
@@ -33,139 +21,95 @@ public class BonusInventoryService : MonoBehaviour
         LoadAmounts();
     }
 
-    public int GetAmount(BonusId bonusId)
+    public int GetAmount(BonusDefinition definition)
     {
-        if (!_amounts.TryGetValue(bonusId, out int amount))
+        if (definition == null)
+            throw new ArgumentNullException(nameof(definition));
+
+        if (!_amounts.TryGetValue(definition, out int amount))
             throw new InvalidOperationException(nameof(amount));
 
         return amount;
     }
 
-    public bool TryConsume(BonusId bonusId)
+    public bool TryConsume(BonusDefinition definition)
     {
-        int currentAmount = GetAmount(bonusId);
+        int currentAmount = GetAmount(definition);
 
         if (currentAmount <= 0)
             return false;
 
-        SetAmount(bonusId, currentAmount - 1);
+        SetAmount(definition, currentAmount - 1);
         return true;
     }
 
-    public bool TryGrant(BonusId bonusId)
+    public bool TryGrant(BonusDefinition definition)
     {
-        BonusDefinition definition = GetDefinition(bonusId);
-        int currentAmount = GetAmount(bonusId);
+        int currentAmount = GetAmount(definition);
 
         if (currentAmount >= definition.MaxAmount)
             return false;
 
-        SetAmount(bonusId, currentAmount + 1);
+        SetAmount(definition, currentAmount + 1);
         return true;
     }
 
-    private BonusDefinition GetDefinition(BonusId bonusId)
+    private void SetAmount(BonusDefinition definition, int amount)
     {
-        if (!_catalog.TryGetDefinition(bonusId, out BonusDefinition definition))
-            throw new InvalidOperationException(nameof(definition));
+        _amounts[definition] = amount;
 
-        return definition;
-    }
-
-    private void SetAmount(BonusId bonusId, int amount)
-    {
-        _amounts[bonusId] = amount;
-
-        Save();
-        AmountChanged?.Invoke(bonusId, amount);
+        SaveAmounts();
+        AmountChanged?.Invoke(definition, amount);
     }
 
     private void LoadAmounts()
     {
-        BonusInventoryData data = LoadData(out bool shouldRewriteStorage);
+        BonusInventoryData data = InventoryStorage.Load();
+        bool isStorageRequiresUpdate = false;
         _amounts.Clear();
 
         foreach (var storedAmount in data.Amounts)
         {
             if (storedAmount == null)
             {
-                shouldRewriteStorage = true;
+                isStorageRequiresUpdate = true;
                 continue;
             }
 
-            if (!_catalog.TryGetDefinition(storedAmount.Id, out var defininition))
+            if (!_catalog.TryGetDefinition(storedAmount.Id, out BonusDefinition definition))
             {
-                shouldRewriteStorage = true;
+                isStorageRequiresUpdate = true;
                 continue;
             }
 
-            if (_amounts.ContainsKey(storedAmount.Id))
+            if (_amounts.ContainsKey(definition))
             {
-                shouldRewriteStorage = true;
+                isStorageRequiresUpdate = true;
                 continue;
             }
 
-            int normalizedAmount = Mathf.Clamp(storedAmount.Amount, 0, defininition.MaxAmount);
+            int normalizedAmount = Mathf.Clamp(storedAmount.Amount, 0, definition.MaxAmount);
 
             if (normalizedAmount != storedAmount.Amount)
-                shouldRewriteStorage = true;
+                isStorageRequiresUpdate = true;
 
-            _amounts.Add(storedAmount.Id, normalizedAmount);
+            _amounts.Add(definition, normalizedAmount);
         }
 
         foreach (var definition in _catalog.Definitions)
         {
-            if (_amounts.ContainsKey(definition.Id))
+            if (_amounts.ContainsKey(definition))
                 continue;
 
-            _amounts.Add(definition.Id, definition.InitialAmount);
-            shouldRewriteStorage = true;
+            _amounts.Add(definition, definition.InitialAmount);
+            isStorageRequiresUpdate = true;
         }
 
-        if (shouldRewriteStorage)
-            Save();
+        if (isStorageRequiresUpdate)
+            SaveAmounts();
     }
 
-    private BonusInventoryData LoadData(out bool shouldRewriteStorage)
-    {
-        shouldRewriteStorage = false;
-
-        if (!PlayerPrefs.HasKey(StorageKey))
-        {
-            shouldRewriteStorage = true;
-            return new BonusInventoryData();
-        }
-
-        string json = PlayerPrefs.GetString(StorageKey);
-
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            shouldRewriteStorage = true;
-            return new BonusInventoryData();
-        }
-
-        try
-        {
-            BonusInventoryData data = JsonUtility.FromJson<BonusInventoryData>(json);
-
-            if (data == null || data.Amounts == null)
-            {
-                shouldRewriteStorage = true;
-                return new BonusInventoryData();
-            }
-
-            return data;
-        }
-        catch (ArgumentException exception)
-        {
-            Debug.LogWarning($"Не удалось загрузить инвентарь: {exception.Message}");
-
-            shouldRewriteStorage = true;
-            return new BonusInventoryData();
-        }
-    }
-
-    private void Save()
+    private void SaveAmounts()
     {
         BonusInventoryData data = new BonusInventoryData();
 
@@ -174,13 +118,10 @@ public class BonusInventoryService : MonoBehaviour
             data.Amounts.Add(new BonusAmountData
             {
                 Id = definition.Id,
-                Amount = _amounts[definition.Id]
+                Amount = _amounts[definition]
             });
         }
-
-        string json = JsonUtility.ToJson(data);
-
-        PlayerPrefs.SetString(StorageKey, json);
-        PlayerPrefs.Save();
+    
+        InventoryStorage.Save(data);
     }
 }

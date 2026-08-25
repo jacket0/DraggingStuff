@@ -1,23 +1,21 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class BonusRuntime
 {
-    public BonusEffect Effect { get; }
+    public IBonusEffect Effect { get; }
     public BonusRuntimePhase Phase { get; private set; }
     public int CurrentLevelUses { get; private set; }
     public float RemainingCooldown { get; private set; }
 
     public BonusDefinition Definition => Effect.Definition;
-    public BonusId Id => Definition.Id;
+    private bool HasReachedLevelUseLimit => Definition.HasLevelUseLimit && CurrentLevelUses >= Definition.MaxLevelUses;
 
-    public BonusRuntime(BonusEffect effect)
+    public BonusRuntime(IBonusEffect effect)
     {
         Effect = effect ?? throw new ArgumentNullException(nameof(effect));
 
-        if (effect.Definition == null) 
+        if (effect.Definition == null)
             throw new InvalidOperationException(nameof(effect.Definition));
 
         Phase = BonusRuntimePhase.Ready;
@@ -26,10 +24,10 @@ public class BonusRuntime
     public void Activate()
     {
         if (Phase != BonusRuntimePhase.Ready)
-            throw new InvalidOperationException($"Бонус {Id} не может активироваться из {Phase}.");
+            throw new InvalidOperationException($"Бонус {Definition.Id} не может активироваться из {Phase}.");
 
-        if (CurrentLevelUses >= Definition.MaxLevelUses)
-            throw new InvalidOperationException($"Бонус {Id} достиг максимального предела");
+        if (HasReachedLevelUseLimit)
+            throw new InvalidOperationException($"Бонус {Definition.Id} исчерпал лимит применений на уровне.");
 
         CurrentLevelUses++;
         RemainingCooldown = 0f;
@@ -39,11 +37,11 @@ public class BonusRuntime
     public void CompleteActivation()
     {
         if (Phase != BonusRuntimePhase.Active)
-            throw new InvalidOperationException($"Бонус {Id} не может быть завершен во время {Phase}");
+            throw new InvalidOperationException($"Бонус {Definition.Id} не может быть завершен во время {Phase}");
 
         RemainingCooldown = 0f;
 
-        if (CurrentLevelUses >= Definition?.MaxLevelUses)
+        if (HasReachedLevelUseLimit)
         {
             Phase = BonusRuntimePhase.Limited;
             return;
@@ -64,12 +62,12 @@ public class BonusRuntime
         if (Phase != BonusRuntimePhase.Recharging)
             return false;
 
-        if (deltaTime < 0f)
+        if (deltaTime <= 0f)
             return false;
 
         RemainingCooldown = Mathf.Max(0f, RemainingCooldown - deltaTime);
 
-        if (RemainingCooldown < 0f)
+        if (RemainingCooldown <= 0f)
             Phase = BonusRuntimePhase.Ready;
 
         return true;
@@ -77,11 +75,11 @@ public class BonusRuntime
 
     public BonusRuntimeState CreateState()
     {
-        float cooldownRemainigRatio = 0f;
+        float cooldownRemainingRatio = 0f;
 
         if (Phase == BonusRuntimePhase.Recharging && Definition.CooldownDuration > 0f)
-            cooldownRemainigRatio = Mathf.Clamp01(RemainingCooldown /  Definition.CooldownDuration);
+            cooldownRemainingRatio = Mathf.Clamp01(RemainingCooldown / Definition.CooldownDuration);
 
-        return new BonusRuntimeState(Id, Phase, CurrentLevelUses, Definition.MaxLevelUses, RemainingCooldown, cooldownRemainigRatio); 
+        return new BonusRuntimeState(Definition, Phase, CurrentLevelUses, Definition.HasLevelUseLimit, Definition.MaxLevelUses, RemainingCooldown, cooldownRemainingRatio);
     }
 }

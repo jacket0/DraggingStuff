@@ -12,32 +12,23 @@ public class ShelfBoard : MonoBehaviour
 
     public void InitializeViews()
     {
-        foreach (var shelf in _shelves)
+        foreach (Shelf shelf in _shelves)
             shelf.InitializeView();
+    }
+
+    public bool CanMove(ShelfSlot source, ShelfSlot target)
+    {
+        return TryGetValidMoveShelves(source, target, out _, out _);
     }
 
     public MoveOutcome TryMove(ShelfSlot source, ShelfSlot target)
     {
-        if (source == null || target == null || source == target)
+        if (!TryGetValidMoveShelves(source, target, out Shelf sourceShelf, out Shelf targetShelf))
             return MoveOutcome.Rejected();
 
-        if (source.IsEmpty || target.IsEmpty == false)
-            return MoveOutcome.Rejected();
-
-        if (!TryGetOwningShelf(source, out Shelf sourceShelf))
-            return MoveOutcome.Rejected();
-
-        if (!TryGetOwningShelf(target, out Shelf targetShelf))
-            return MoveOutcome.Rejected();
-
-        if(!sourceShelf.IsContainsActiveSlot(source))
-            return MoveOutcome.Rejected();
-
-        if (!targetShelf.IsContainsActiveSlot(target))
-            return MoveOutcome.Rejected();
-
-        var item = source.TakeItem();
+        ShelfItem item = source.TakeItem();
         target.PlaceItem(item);
+
         targetShelf.TryResolveMatch(out MatchResolution match);
 
         List<Shelf> advancingShelves = new List<Shelf>(2);
@@ -73,9 +64,7 @@ public class ShelfBoard : MonoBehaviour
         }
 
         foreach (Shelf shelf in shelves)
-        {
             shelf.RevealNextLayer(HandleTransitionCompleted);
-        }
     }
 
     public void HideActiveLayers(IReadOnlyList<Shelf> shelves)
@@ -90,6 +79,32 @@ public class ShelfBoard : MonoBehaviour
 
             shelf.HideActiveLayer();
         }
+    }
+
+    private bool TryGetValidMoveShelves(ShelfSlot source, ShelfSlot target, out Shelf sourceShelf, out Shelf targetShelf)
+    {
+        sourceShelf = null;
+        targetShelf = null;
+
+        if (source == null || target == null || source == target)
+            return false;
+
+        if (source.IsEmpty || !target.IsEmpty)
+            return false;
+
+        if (!TryGetOwningShelf(source, out sourceShelf))
+            return false;
+
+        if (!TryGetOwningShelf(target, out targetShelf))
+            return false;
+
+        if (!sourceShelf.IsContainsActiveSlot(source))
+            return false;
+
+        if (!targetShelf.IsContainsActiveSlot(target))
+            return false;
+
+        return true;
     }
 
     private bool TryGetOwningShelf(ShelfSlot slot, out Shelf shelf)
