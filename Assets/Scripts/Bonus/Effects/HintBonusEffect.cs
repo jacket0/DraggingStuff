@@ -63,7 +63,7 @@ public sealed class HintBonusEffect : BonusEffect
         CompleteEffect();
     }
 
-    private void HandleDragStarting(ShelfItem item)
+    private void HandleDragStarting(ShelfItem _)
     {
         if (Presenter.IsPlaying)
             Presenter.Stop();

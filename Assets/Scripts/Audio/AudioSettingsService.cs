@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -21,11 +22,13 @@ public class AudioSettingsService : MonoBehaviour
     [SerializeField] private AudioMixer _audioMixer;
     [SerializeField] private string _sfxParameter = "SfxVolume";
     [SerializeField] private string _musicParameter = "MusicVolume";
+    [SerializeField, Min(0f)] private float _sfxMuteFadeDuration = 0.2f;
 
     private float _sfxVolume;
     private float _musicVolume;
     private bool _isSfxMuted;
     private bool _isMusicMuted;
+    private Coroutine _sfxMuteFade;
 
     public event Action SettingsChanged;
 
@@ -56,6 +59,7 @@ public class AudioSettingsService : MonoBehaviour
         _sfxVolume = Mathf.Clamp01(value);
         _isSfxMuted = _sfxVolume <= Epsilon;
 
+        StopSfxMuteFade();
         ApplySfx();
         Save();
         SettingsChanged?.Invoke();
@@ -78,10 +82,17 @@ public class AudioSettingsService : MonoBehaviour
         if (!_isSfxMuted && _sfxVolume <= Epsilon)
             _sfxVolume = DefaultSfxVolume;
 
-        ApplySfx();
+        StopSfxMuteFade();
+
+        if (_isSfxMuted)
+            _sfxMuteFade = StartCoroutine(FadeSfxToMuted());
+        else
+            ApplySfx();
+
         Save();
         SettingsChanged?.Invoke();
     }
+
     public void ToggleMusicMute()
     {
         _isMusicMuted = !_isMusicMuted;
@@ -102,6 +113,41 @@ public class AudioSettingsService : MonoBehaviour
     private void ApplySfx()
     {
         SetMixerVolume(_sfxParameter, _sfxVolume, _isSfxMuted);
+    }
+
+    private IEnumerator FadeSfxToMuted()
+    {
+        if (_sfxMuteFadeDuration <= 0f)
+        {
+            ApplySfx();
+            _sfxMuteFade = null;
+            yield break;
+        }
+
+        if (!_audioMixer.GetFloat(_sfxParameter, out float initialDecibels))
+            initialDecibels = Mathf.Log10(Mathf.Max(_sfxVolume, Epsilon)) * 20f;
+
+        float elapsedTime = 0f;
+
+        while (elapsedTime < _sfxMuteFadeDuration)
+        {
+            elapsedTime += Time.unscaledDeltaTime;
+            float progress = Mathf.Clamp01(elapsedTime / _sfxMuteFadeDuration);
+            _audioMixer.SetFloat(_sfxParameter, Mathf.Lerp(initialDecibels, MutedDecibels, progress * progress));
+            yield return null;
+        }
+
+        _audioMixer.SetFloat(_sfxParameter, MutedDecibels);
+        _sfxMuteFade = null;
+    }
+
+    private void StopSfxMuteFade()
+    {
+        if (_sfxMuteFade == null)
+            return;
+
+        StopCoroutine(_sfxMuteFade);
+        _sfxMuteFade = null;
     }
 
     private void SetMixerVolume(string parameter, float volume, bool muted)

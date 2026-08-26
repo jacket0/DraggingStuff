@@ -14,7 +14,7 @@ public class ShelfItemDragController : MonoBehaviour
 
     public bool TryBeginDrag(ShelfItem item, Vector2 pressScreenPosition)
     {
-        if (!_levelSession.IsPlaying || item == null || _isDragging)
+        if (!_levelSession.CanInteract || item == null || _isDragging)
             return false;
 
         ShelfSlot sourceSlot = item.GetComponentInParent<ShelfSlot>();
@@ -22,9 +22,11 @@ public class ShelfItemDragController : MonoBehaviour
         if (sourceSlot == null || sourceSlot.Item != item)
             return false;
 
+        Vector3 positionBeforeDragStarting = item.transform.position;
         DragStarting?.Invoke(item);
+        bool snapToPointer = (item.transform.position - positionBeforeDragStarting).sqrMagnitude > Mathf.Epsilon;
 
-        if (!_dragMover.TryBeginMove(item, pressScreenPosition))
+        if (!_dragMover.TryBeginMove(item, pressScreenPosition, snapToPointer))
             return false;
 
         _sourceSlot = sourceSlot;

@@ -45,7 +45,7 @@ public class BonusUseController : MonoBehaviour, IBonusUseService, IBonusRuntime
         if (definition == null)
             throw new ArgumentNullException(nameof(definition));
 
-        if (!_session.IsPlaying)
+        if (!_session.CanInteract)
             return BonusUseResult.LevelUnavailable;
 
         if (!_runtimes.TryGetValue(definition, out var runtime))
