@@ -19,7 +19,7 @@ public class ShelfItemDragMover : MonoBehaviour
     private Vector3 _pointerOffset;
     private Tween _movementTween;
 
-    public bool TryBeginMove(ShelfItem item, Vector2 pointerPosition)
+    public bool TryBeginMove(ShelfItem item, Vector2 pointerPosition, bool snapToPointer = false)
     {
         if (item == null || _draggedItem != null)
             return false;
@@ -39,7 +39,7 @@ public class ShelfItemDragMover : MonoBehaviour
         _originalLocalRotation = item.transform.localRotation;
         _originalLocalScale = item.transform.localScale;
 
-        _pointerOffset = liftedItemPosition - dragPoint;
+        _pointerOffset = snapToPointer ? Vector3.zero : liftedItemPosition - dragPoint;
         _dragRoot.position = dragPoint + _pointerOffset;
 
         item.transform.SetParent(_dragRoot, true);

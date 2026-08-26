@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -10,8 +11,11 @@ public class LevelSession : MonoBehaviour
     [SerializeField] private LevelSelectionState _levelSelection;
     [SerializeField] private LevelEntry _fallbackLevel;
 
+    private bool _isResolvingMove;
+
     public LevelState State { get; private set; }
     public bool IsPlaying => State == LevelState.Playing;
+    public bool CanInteract => IsPlaying && !_isResolvingMove;
     public LevelEntry CurrentLevel { get; private set; }
 
     public event Action LevelCompleted;
@@ -29,18 +33,21 @@ public class LevelSession : MonoBehaviour
     public void StartLevel()
     {
         Time.timeScale = 1;
+        _isResolvingMove = false;
         State = LevelState.Playing;
     }
 
     public MoveOutcome TryMove(ShelfSlot source, ShelfSlot target)
     {
-        if (!IsPlaying)
+        if (!CanInteract)
             return MoveOutcome.Rejected();
 
         MoveOutcome moveOutcome = _shelfBoard.TryMove(source, target);
 
         if (!moveOutcome.IsSuccessful)
             return moveOutcome;
+
+        _isResolvingMove = true;
 
         if (moveOutcome.HasMatch)
             MatchSucceeded?.Invoke(moveOutcome.Match);
@@ -80,17 +87,36 @@ public class LevelSession : MonoBehaviour
     {
         if (!moveOutcome.HasMatch)
         {
-            AdvanceLayers(moveOutcome);
+            AdvanceLayers(moveOutcome.ShelvesToAdvance);
             return;
         }
 
-        _moveResolutionPlayer.Play(moveOutcome.Match, () => AdvanceLayers(moveOutcome));
+        _moveResolutionPlayer.Play(moveOutcome.Match, () => AdvanceLayers(moveOutcome.ShelvesToAdvance));
         _shelfBoard.HideActiveLayers(moveOutcome.ShelvesToAdvance);
     }
 
-    private void AdvanceLayers(MoveOutcome moveOutcome)
+    private void AdvanceLayers(IReadOnlyList<Shelf> shelves)
     {
-        _shelfBoard.AdvanceLayers(moveOutcome.ShelvesToAdvance, () => HandleMoveResolutionCompleted(moveOutcome.IsLevelCompleted));
+        _shelfBoard.AdvanceLayers(shelves, ResolveRevealedMatches);
+    }
+
+    private void ResolveRevealedMatches()
+    {
+        if (_shelfBoard.TryResolveActiveMatch(out Shelf matchedShelf, out MatchResolution match))
+        {
+            MatchSucceeded?.Invoke(match);
+
+            IReadOnlyList<Shelf> shelvesToAdvance = matchedShelf.CanRevealNextLayer
+                ? new[] { matchedShelf }
+                : Array.Empty<Shelf>();
+
+            _moveResolutionPlayer.Play(match, () => AdvanceLayers(shelvesToAdvance));
+            _shelfBoard.HideActiveLayers(shelvesToAdvance);
+            return;
+        }
+
+        _isResolvingMove = false;
+        HandleMoveResolutionCompleted(_shelfBoard.IsCleared);
     }
 
     private void HandleMoveResolutionCompleted(bool isLevelCompleted)

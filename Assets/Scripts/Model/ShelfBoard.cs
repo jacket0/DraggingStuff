@@ -42,6 +42,22 @@ public class ShelfBoard : MonoBehaviour
         return MoveOutcome.Successful(match, IsCleared, advancingShelves);
     }
 
+    public bool TryResolveActiveMatch(out Shelf matchedShelf, out MatchResolution match)
+    {
+        foreach (Shelf shelf in _shelves)
+        {
+            if (!shelf.TryResolveMatch(out match))
+                continue;
+
+            matchedShelf = shelf;
+            return true;
+        }
+
+        matchedShelf = null;
+        match = null;
+        return false;
+    }
+
     public void AdvanceLayers(IReadOnlyList<Shelf> shelves, Action completed)
     {
         if (shelves == null)
