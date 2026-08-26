@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class LevelProgressService : MonoBehaviour
 {
-    private const string ProgressStorageKey = "level.progress.v1";
+    private const string ProgressStorageKey = "level.progress.v2";
     private const int FirstCatalogIndex = 0;
 
     [SerializeField] private LevelCatalog _catalog;
@@ -122,7 +122,7 @@ public class LevelProgressService : MonoBehaviour
         }
         catch (ArgumentException ec)
         {
-            Debug.LogWarning($"Ошибка чтения: {ec.Message}");
+            Debug.LogWarning($"РћС€РёР±РєР° С‡С‚РµРЅРёСЏ: {ec.Message}");
             return new ProgressData();
         }
     }

@@ -27,7 +27,7 @@ public class PlayerPrefsBonusInventoryStorage : BonusInventoryStorageAsset
         }
         catch (ArgumentException exception)
         {
-            Debug.LogWarning($"Не удалось загрузить инвентарь бонусов: {exception.Message}");
+            Debug.LogWarning($"РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РёРЅРІРµРЅС‚Р°СЂСЊ Р±РѕРЅСѓСЃРѕРІ: {exception.Message}");
 
             return new BonusInventoryData();
         }

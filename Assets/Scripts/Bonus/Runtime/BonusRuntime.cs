@@ -24,10 +24,10 @@ public class BonusRuntime
     public void Activate()
     {
         if (Phase != BonusRuntimePhase.Ready)
-            throw new InvalidOperationException($"Бонус {Definition.Id} не может активироваться из {Phase}.");
+            throw new InvalidOperationException($"Р‘РѕРЅСѓСЃ {Definition.Id} РЅРµ РјРѕР¶РµС‚ Р°РєС‚РёРІРёСЂРѕРІР°С‚СЊСЃСЏ РёР· {Phase}.");
 
         if (HasReachedLevelUseLimit)
-            throw new InvalidOperationException($"Бонус {Definition.Id} исчерпал лимит применений на уровне.");
+            throw new InvalidOperationException($"Р‘РѕРЅСѓСЃ {Definition.Id} РёСЃС‡РµСЂРїР°Р» Р»РёРјРёС‚ РїСЂРёРјРµРЅРµРЅРёР№ РЅР° СѓСЂРѕРІРЅРµ.");
 
         CurrentLevelUses++;
         RemainingCooldown = 0f;
@@ -37,7 +37,7 @@ public class BonusRuntime
     public void CompleteActivation()
     {
         if (Phase != BonusRuntimePhase.Active)
-            throw new InvalidOperationException($"Бонус {Definition.Id} не может быть завершен во время {Phase}");
+            throw new InvalidOperationException($"Р‘РѕРЅСѓСЃ {Definition.Id} РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ Р·Р°РІРµСЂС€РµРЅ РІРѕ РІСЂРµРјСЏ {Phase}");
 
         RemainingCooldown = 0f;
 

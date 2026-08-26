@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class ShelfItemDragController : MonoBehaviour
@@ -9,6 +10,8 @@ public class ShelfItemDragController : MonoBehaviour
     private ShelfSlot _sourceSlot;
     private bool _isDragging;
 
+    public event Action<ShelfItem> DragStarting;
+
     public bool TryBeginDrag(ShelfItem item, Vector2 pressScreenPosition)
     {
         if (!_levelSession.IsPlaying || item == null || _isDragging)
@@ -18,6 +21,8 @@ public class ShelfItemDragController : MonoBehaviour
 
         if (sourceSlot == null || sourceSlot.Item != item)
             return false;
+
+        DragStarting?.Invoke(item);
 
         if (!_dragMover.TryBeginMove(item, pressScreenPosition))
             return false;

@@ -373,6 +373,7 @@ GameObject:
   - component: {fileID: 641854842371782518}
   - component: {fileID: 850370519323830009}
   - component: {fileID: -908241019405524593}
+  - component: {fileID: 8800000000000000010}
   m_Layer: 5
   m_Name: LevelCardButton
   m_TagString: Untagged
@@ -667,3 +668,18 @@ MonoBehaviour:
   _russianText: "\u0420\u0415\u041A\u041E\u0420\u0414: 0"
   _englishText: 'RECORD: 0'
   _turkishText: 'REKOR: 0'
+--- !u!114 &8800000000000000010
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7408073914117249499}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e17b6d3a42f84c0fb9d163ae7c5b2081, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _clickClip: {fileID: 8300000, guid: bd182b7277f1228439565114bed13857, type: 3}
+  _outputAudioMixerGroup: {fileID: -2202310126120427073, guid: b541543115fcfbe4893c0262ea97557e, type: 2}
+  _volume: 0.6
