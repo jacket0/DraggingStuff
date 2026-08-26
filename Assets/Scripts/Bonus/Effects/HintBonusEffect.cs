@@ -5,14 +5,24 @@ public sealed class HintBonusEffect : BonusEffect
 {
     [SerializeField] private MoveSuggestionProvider _suggestionProvider;
     [SerializeField] private HintPresenter _presenter;
+    [SerializeField] private ShelfItemDragController _dragController;
 
     private MoveSuggestion _preparedSuggestion;
 
     private IMoveSuggestionProvider SuggestionProvider => _suggestionProvider;
     private IHintPresenter Presenter => _presenter;
 
+    private void OnEnable()
+    {
+        if (_dragController != null)
+            _dragController.DragStarting += HandleDragStarting;
+    }
+
     private void OnDisable()
     {
+        if (_dragController != null)
+            _dragController.DragStarting -= HandleDragStarting;
+
         _preparedSuggestion = null;
 
         if (_presenter != null)
@@ -40,7 +50,7 @@ public sealed class HintBonusEffect : BonusEffect
     protected override void ActivateEffect()
     {
         if (_preparedSuggestion == null)
-            throw new InvalidOperationException("Для запуска бонуса не подготовлена подсказка.");
+            throw new InvalidOperationException("Р”Р»СЏ Р·Р°РїСѓСЃРєР° Р±РѕРЅСѓСЃР° РЅРµ РїРѕРґРіРѕС‚РѕРІР»РµРЅР° РїРѕРґСЃРєР°Р·РєР°.");
 
         MoveSuggestion suggestion = _preparedSuggestion;
         _preparedSuggestion = null;
@@ -51,5 +61,11 @@ public sealed class HintBonusEffect : BonusEffect
     private void HandlePresentationCompleted()
     {
         CompleteEffect();
+    }
+
+    private void HandleDragStarting(ShelfItem item)
+    {
+        if (Presenter.IsPlaying)
+            Presenter.Stop();
     }
 }

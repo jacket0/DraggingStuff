@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: LevelEntry_06
   m_EditorClassIdentifier: 
   _number: 6
-  _sceneName: 
-  _definition: {fileID: 0}
-  _avilable: 0
+  _sceneName: SimpleLevel
+  _definition: {fileID: 11400000, guid: d602c458afb15e97d54c302f6b8e0d44, type: 2}
+  _available: 1

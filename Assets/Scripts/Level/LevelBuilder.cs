@@ -23,7 +23,7 @@ public class LevelBuilder : MonoBehaviour
             throw new InvalidOperationException();
 
         if (_shelfBoard.Shelves.Count != levelDefinition.Shelves.Count)
-            throw new InvalidOperationException($"Количество полок не совпадает. В сцене: {_shelfBoard.Shelves.Count}, в конфиге: {levelDefinition.Shelves.Count}.");
+            throw new InvalidOperationException($"РљРѕР»РёС‡РµСЃС‚РІРѕ РїРѕР»РѕРє РЅРµ СЃРѕРІРїР°РґР°РµС‚. Р’ СЃС†РµРЅРµ: {_shelfBoard.Shelves.Count}, РІ РєРѕРЅС„РёРіРµ: {levelDefinition.Shelves.Count}.");
 
         for (int i = 0; i < _shelfBoard.Shelves.Count; i++)
             ValidateShelf(_shelfBoard.Shelves[i], levelDefinition.Shelves[i], i);
@@ -32,7 +32,7 @@ public class LevelBuilder : MonoBehaviour
     private void ValidateShelf(Shelf shelf, ShelfDefinition definition, int shelfIndex)
     {
         if (shelf.Layers.Count != definition.Layers.Count)
-            throw new InvalidOperationException($"Полка {shelfIndex}: в сцене {shelf.Layers.Count} слоёв, в конфиге {definition.Layers.Count}.");
+            throw new InvalidOperationException($"РџРѕР»РєР° {shelfIndex}: РІ СЃС†РµРЅРµ {shelf.Layers.Count} СЃР»РѕС‘РІ, РІ РєРѕРЅС„РёРіРµ {definition.Layers.Count}.");
 
         for (int layerIndex = 0; layerIndex < shelf.Layers.Count; layerIndex++)
             ValidateLayer(shelf.Layers[layerIndex], definition.Layers[layerIndex], shelfIndex, layerIndex);
@@ -41,10 +41,10 @@ public class LevelBuilder : MonoBehaviour
     private void ValidateLayer(ShelfLayer layer, ShelfLayerDefinition definition, int shelfIndex, int layerIndex)
     {
         if (layer.Slots.Count != definition.ItemPrefabs.Count)
-            throw new InvalidOperationException($"Полка {shelfIndex}, слой {layerIndex}: в сцене {layer.Slots.Count} слотов, в конфиге {definition.ItemPrefabs.Count}.");
+            throw new InvalidOperationException($"РџРѕР»РєР° {shelfIndex}, СЃР»РѕР№ {layerIndex}: РІ СЃС†РµРЅРµ {layer.Slots.Count} СЃР»РѕС‚РѕРІ, РІ РєРѕРЅС„РёРіРµ {definition.ItemPrefabs.Count}.");
 
         if (layer.Slots.Count != ShelfLayer.SlotCount)
-            throw new InvalidOperationException($"Полка {shelfIndex}, слой {layerIndex}: требуется {ShelfLayer.SlotCount} слота, найдено {layer.Slots.Count}.");
+            throw new InvalidOperationException($"РџРѕР»РєР° {shelfIndex}, СЃР»РѕР№ {layerIndex}: С‚СЂРµР±СѓРµС‚СЃСЏ {ShelfLayer.SlotCount} СЃР»РѕС‚Р°, РЅР°Р№РґРµРЅРѕ {layer.Slots.Count}.");
 
         for (int slotIndex = 0; slotIndex < layer.Slots.Count; slotIndex++)
             ValidateSlot(layer.Slots[slotIndex], shelfIndex, layerIndex, slotIndex);
@@ -53,10 +53,10 @@ public class LevelBuilder : MonoBehaviour
     private void ValidateSlot(ShelfSlot slot, int shelfIndex, int layerIndex, int slotIndex)
     {
         if (slot == null)
-            throw new InvalidOperationException($"В шкафу {shelfIndex}, в слое {layerIndex}, слот {slotIndex} пуст.");
+            throw new InvalidOperationException($"Р’ С€РєР°С„Сѓ {shelfIndex}, РІ СЃР»РѕРµ {layerIndex}, СЃР»РѕС‚ {slotIndex} РїСѓСЃС‚.");
 
         if (!slot.IsEmpty)
-            throw new InvalidOperationException($"В шкафу {shelfIndex}, в слое {layerIndex}, слот {slotIndex} уже содержит предмет.");
+            throw new InvalidOperationException($"Р’ С€РєР°С„Сѓ {shelfIndex}, РІ СЃР»РѕРµ {layerIndex}, СЃР»РѕС‚ {slotIndex} СѓР¶Рµ СЃРѕРґРµСЂР¶РёС‚ РїСЂРµРґРјРµС‚.");
     }
 
     private void FillBoard(LevelDefinition levelDefinition)

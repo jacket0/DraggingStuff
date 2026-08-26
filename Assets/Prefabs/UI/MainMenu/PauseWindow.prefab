@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 1939933032599756280}
   - component: {fileID: 4315308979474460398}
   - component: {fileID: 4287631956383119449}
+  - component: {fileID: 8800000000000000007}
   m_Layer: 5
   m_Name: MainMenuButton
   m_TagString: Untagged
@@ -301,6 +302,7 @@ GameObject:
   - component: {fileID: 8030408444300680989}
   - component: {fileID: 4490205270204762570}
   - component: {fileID: 5861466309155561356}
+  - component: {fileID: 8800000000000000008}
   m_Layer: 5
   m_Name: RestartButton
   m_TagString: Untagged
@@ -815,6 +817,7 @@ GameObject:
   - component: {fileID: 2343774957187285905}
   - component: {fileID: 3036342465416363204}
   - component: {fileID: 365923704130558163}
+  - component: {fileID: 365923704130558164}
   m_Layer: 5
   m_Name: AudioTitle
   m_TagString: Untagged
@@ -958,6 +961,21 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &365923704130558164
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3293589909692808579}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 609c86342e89b284ca6caf60646da1ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _russianText: "\u0413\u0420\u041E\u041C\u041A\u041E\u0421\u0422\u042C"
+  _englishText: VOLUME
+  _turkishText: SES
 --- !u!1 &3892000024157975360
 GameObject:
   m_ObjectHideFlags: 0
@@ -972,6 +990,7 @@ GameObject:
   - component: {fileID: 3043769124104315664}
   - component: {fileID: 1506939317465726343}
   - component: {fileID: 8969089717361948079}
+  - component: {fileID: 8800000000000000009}
   m_Layer: 5
   m_Name: ResumeButton
   m_TagString: Untagged
@@ -2168,3 +2187,48 @@ MonoBehaviour:
   m_FlexibleWidth: 1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &8800000000000000007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 63722173199206419}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e17b6d3a42f84c0fb9d163ae7c5b2081, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _clickClip: {fileID: 8300000, guid: bd182b7277f1228439565114bed13857, type: 3}
+  _outputAudioMixerGroup: {fileID: -2202310126120427073, guid: b541543115fcfbe4893c0262ea97557e, type: 2}
+  _volume: 0.6
+--- !u!114 &8800000000000000008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 632105783928881991}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e17b6d3a42f84c0fb9d163ae7c5b2081, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _clickClip: {fileID: 8300000, guid: bd182b7277f1228439565114bed13857, type: 3}
+  _outputAudioMixerGroup: {fileID: -2202310126120427073, guid: b541543115fcfbe4893c0262ea97557e, type: 2}
+  _volume: 0.6
+--- !u!114 &8800000000000000009
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3892000024157975360}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e17b6d3a42f84c0fb9d163ae7c5b2081, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _clickClip: {fileID: 8300000, guid: bd182b7277f1228439565114bed13857, type: 3}
+  _outputAudioMixerGroup: {fileID: -2202310126120427073, guid: b541543115fcfbe4893c0262ea97557e, type: 2}
+  _volume: 0.6

@@ -1,9 +1,12 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class ComboSystem : MonoBehaviour, IComboTimerModifierTarget
 {
-    [SerializeField, Min(0.01f)] private float _comboDuration = 4f;
+    [FormerlySerializedAs("_comboDuration")]
+    [SerializeField, Min(0.01f)] private float _comboStepDuration = 3f;
+    [SerializeField, Min(1)] private int _maxComboMultiplier = 10;
 
     private readonly MultiplierModifierCollection _timerSpeedModifiers = new MultiplierModifierCollection();
 
@@ -18,28 +21,14 @@ public class ComboSystem : MonoBehaviour, IComboTimerModifierTarget
     private void Update()
     {
         float comboDeltaTime = Time.deltaTime * _timerSpeedModifiers.CombinedMultiplier;
-        bool stateChanged = false;
 
-        if (_currentCount > 0 &&  comboDeltaTime > 0f)
-        {
-            _remainingTime = Mathf.Max(0f, _remainingTime - comboDeltaTime);
-
-            stateChanged = true;
-
-            if (_remainingTime <= 0f)
-            {
-                _currentCount = 0;
-                _remainingTime = 0f;
-            }
-        }
-
-        if (stateChanged)
-            StateChanged?.Invoke(CreateState());
+        AdvanceTimer(comboDeltaTime);
     }
 
     private void OnValidate()
     {
-        _comboDuration = Mathf.Max(0.01f, _comboDuration);
+        _comboStepDuration = Mathf.Max(0.01f, _comboStepDuration);
+        _maxComboMultiplier = Mathf.Max(1, _maxComboMultiplier);
     }
 
     public IDisposable AddTimerSpeedMultiplier(float multiplier)
@@ -49,8 +38,8 @@ public class ComboSystem : MonoBehaviour, IComboTimerModifierTarget
 
     public int RegisterMatch()
     {
-        _currentCount++;
-        _remainingTime = _comboDuration;
+        _currentCount = Mathf.Min(_currentCount + 1, _maxComboMultiplier);
+        _remainingTime = _comboStepDuration;
 
         ComboState comboState = CreateState();
 
@@ -62,7 +51,27 @@ public class ComboSystem : MonoBehaviour, IComboTimerModifierTarget
 
     private ComboState CreateState()
     {
-        float normalizedTime = _currentCount > 0 ? Mathf.Clamp01(_remainingTime / _comboDuration) : 0f;
+        float normalizedTime = _currentCount > 0 ? Mathf.Clamp01(_remainingTime / _comboStepDuration) : 0f;
         return new ComboState(_currentCount, _remainingTime, normalizedTime);
+    }
+
+    private void AdvanceTimer(float elapsedTime)
+    {
+        if (_currentCount <= 0 || elapsedTime <= 0f)
+            return;
+
+        _remainingTime -= elapsedTime;
+
+        while (_currentCount > 0 && _remainingTime <= 0f)
+        {
+            _currentCount--;
+
+            if (_currentCount > 0)
+                _remainingTime += _comboStepDuration;
+            else
+                _remainingTime = 0f;
+        }
+
+        StateChanged?.Invoke(CreateState());
     }
 }

@@ -1,7 +1,9 @@
 using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
+using YG;
 
 public class AudioSettingsPanel : MonoBehaviour
 {
@@ -10,7 +12,10 @@ public class AudioSettingsPanel : MonoBehaviour
     private const float FractionToPercentMultiplier = 100f;
     private const string PercentTextTemplate = "{0}%";
 
-    [SerializeField] private string _mutedValueText = "ÂÛÊË";
+    [FormerlySerializedAs("_mutedValueText")]
+    [SerializeField] private string _russianMutedValueText = "Ð’Ð«ÐšÐ›";
+    [SerializeField] private string _englishMutedValueText = "OFF";
+    [SerializeField] private string _turkishMutedValueText = "KAPALI";
 
     [SerializeField] private AudioSettingsService _audioSettings;
     [SerializeField] private Button _soundMuteButton;
@@ -40,6 +45,7 @@ public class AudioSettingsPanel : MonoBehaviour
         _musicSlider.onValueChanged.AddListener(ChangeMusicVolume);
 
         _audioSettings.SettingsChanged += Refresh;
+        YG2.onSwitchLang += HandleLanguageChanged;
 
         Refresh();
     }
@@ -53,6 +59,7 @@ public class AudioSettingsPanel : MonoBehaviour
         _musicSlider.onValueChanged.RemoveListener(ChangeMusicVolume);
 
         _audioSettings.SettingsChanged -= Refresh;
+        YG2.onSwitchLang -= HandleLanguageChanged;
     }
 
     private void ToggleSoundMute()
@@ -73,6 +80,11 @@ public class AudioSettingsPanel : MonoBehaviour
     private void ChangeMusicVolume(float volume)
     {
         _audioSettings.SetMusicVolume(volume);
+    }
+
+    private void HandleLanguageChanged(string language)
+    {
+        Refresh();
     }
 
     private void Refresh()
@@ -98,13 +110,28 @@ public class AudioSettingsPanel : MonoBehaviour
     {
         if (muted)
         {
-            target.SetText(_mutedValueText);
+            target.SetText(GetMutedValueText());
             return;
         }
 
         int percent = Mathf.RoundToInt(normalizedVolume * FractionToPercentMultiplier);
 
         target.SetText(PercentTextTemplate, percent);
+    }
+
+    private string GetMutedValueText()
+    {
+        switch (YG2.lang)
+        {
+            case EnableLanguages.RussianLanguageCode:
+                return _russianMutedValueText;
+
+            case EnableLanguages.TurkishLanguageCode:
+                return _turkishMutedValueText;
+
+            default:
+                return _englishMutedValueText;
+        }
     }
 
     private static void SetIconAlpha(Image icon, bool muted)

@@ -21,7 +21,7 @@ public abstract class BonusEffect : MonoBehaviour, IBonusEffect
             throw new InvalidOperationException(nameof(_definition));
 
         if (IsActive)
-            throw new InvalidOperationException($"Бонус {_definition.Id} уже активен.");
+            throw new InvalidOperationException($"Р‘РѕРЅСѓСЃ {_definition.Id} СѓР¶Рµ Р°РєС‚РёРІРµРЅ.");
 
         IsActive = true;
         ActivateEffect();

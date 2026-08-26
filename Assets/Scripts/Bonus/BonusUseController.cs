@@ -85,7 +85,7 @@ public class BonusUseController : MonoBehaviour, IBonusUseService, IBonusRuntime
             throw new ArgumentNullException(nameof(definition));
 
         if (!_runtimes.TryGetValue(definition, out BonusRuntime runtime))
-            throw new InvalidOperationException($"Бонус {definition.Id} не существует");
+            throw new InvalidOperationException($"Р‘РѕРЅСѓСЃ {definition.Id} РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚");
 
         return runtime.CreateState();
     }
@@ -101,7 +101,7 @@ public class BonusUseController : MonoBehaviour, IBonusUseService, IBonusRuntime
                 throw new InvalidOperationException(nameof(effect.Definition));
 
             if (_runtimes.ContainsKey(effect.Definition))
-                throw new InvalidOperationException($"Бонус {effect.Definition.Id} уже существует");
+                throw new InvalidOperationException($"Р‘РѕРЅСѓСЃ {effect.Definition.Id} СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚");
 
             BonusRuntime runtime = new BonusRuntime(effect);
             _runtimes.Add(effect.Definition, runtime);
@@ -115,7 +115,7 @@ public class BonusUseController : MonoBehaviour, IBonusUseService, IBonusRuntime
             throw new ArgumentNullException(nameof(effect));
 
         if (!_runtimes.TryGetValue(effect.Definition, out BonusRuntime runtime))
-            throw new InvalidOperationException($"Бонус {effect.Definition.Id} не существует");
+            throw new InvalidOperationException($"Р‘РѕРЅСѓСЃ {effect.Definition.Id} РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚");
 
         runtime.CompleteActivation();
         RuntimeStateChanged?.Invoke(runtime.CreateState());

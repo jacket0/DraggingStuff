@@ -1,3 +1,4 @@
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,14 +18,23 @@ public class BonusButtonView : MonoBehaviour
     [SerializeField] private Image _cooldownFill;
     [SerializeField] private TMP_Text _cooldownText;
     [SerializeField] private GameObject _unavailableShade;
+    [SerializeField, Min(0.01f)] private float _rejectedFeedbackDuration = 0.2f;
+    [SerializeField, Min(0.01f)] private float _rejectedFeedbackStrength = 0.08f;
 
     private bool _isInitialized;
     private int _currentAmount;
     private BonusRuntimeState _runtimeState;
+    private Tween _rejectedFeedbackTween;
+    private Vector3 _initialScale;
 
     private IBonusUseService UseService => _useController;
     private IBonusRuntimeStateSource RuntimeStateSource => _useController;
     private IBonusInventory Inventory => _inventoryService;
+
+    private void Awake()
+    {
+        _initialScale = transform.localScale;
+    }
 
     private void OnEnable()
     {
@@ -38,6 +48,10 @@ public class BonusButtonView : MonoBehaviour
 
     private void OnDisable()
     {
+        _rejectedFeedbackTween?.Kill();
+        _rejectedFeedbackTween = null;
+        transform.localScale = _initialScale;
+
         _button.onClick.RemoveListener(HandleUseButtonClicked);
         Inventory.AmountChanged -= HandleAmountChanged;
         RuntimeStateSource.RuntimeStateChanged -= HandleRuntimeStateChanged;
@@ -62,7 +76,10 @@ public class BonusButtonView : MonoBehaviour
         BonusUseResult useResult = UseService.TryUse(_definition);
 
         if (useResult != BonusUseResult.Applied)
+        {
+            PlayRejectedFeedback();
             Refresh();
+        }
     }
 
     private void HandleAmountChanged(BonusDefinition definition, int amount)
@@ -104,5 +121,17 @@ public class BonusButtonView : MonoBehaviour
             _cooldownText.SetText("{0}", Mathf.CeilToInt(_runtimeState.RemainingCooldown));
         else
             _cooldownText.SetText(string.Empty);
+    }
+
+    private void PlayRejectedFeedback()
+    {
+        _rejectedFeedbackTween?.Kill();
+        transform.localScale = _initialScale;
+        _rejectedFeedbackTween = transform.DOPunchScale(Vector3.one * _rejectedFeedbackStrength, _rejectedFeedbackDuration, 5, 0.5f)
+            .OnComplete(() =>
+            {
+                transform.localScale = _initialScale;
+                _rejectedFeedbackTween = null;
+            });
     }
 }
