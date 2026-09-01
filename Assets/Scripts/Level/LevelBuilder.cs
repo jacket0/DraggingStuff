@@ -31,20 +31,22 @@ public class LevelBuilder : MonoBehaviour
 
     private void ValidateShelf(Shelf shelf, ShelfDefinition definition, int shelfIndex)
     {
+        shelf.ValidateLayers();
+
         if (shelf.Layers.Count != definition.Layers.Count)
             throw new InvalidOperationException($"Полка {shelfIndex}: в сцене {shelf.Layers.Count} слоёв, в конфиге {definition.Layers.Count}.");
 
         for (int layerIndex = 0; layerIndex < shelf.Layers.Count; layerIndex++)
-            ValidateLayer(shelf.Layers[layerIndex], definition.Layers[layerIndex], shelfIndex, layerIndex);
+            ValidateLayer(shelf, shelf.Layers[layerIndex], definition.Layers[layerIndex], shelfIndex, layerIndex);
     }
 
-    private void ValidateLayer(ShelfLayer layer, ShelfLayerDefinition definition, int shelfIndex, int layerIndex)
+    private void ValidateLayer(Shelf shelf, ShelfLayer layer, ShelfLayerDefinition definition, int shelfIndex, int layerIndex)
     {
         if (layer.Slots.Count != definition.ItemPrefabs.Count)
             throw new InvalidOperationException($"Полка {shelfIndex}, слой {layerIndex}: в сцене {layer.Slots.Count} слотов, в конфиге {definition.ItemPrefabs.Count}.");
 
-        if (layer.Slots.Count != ShelfLayer.SlotCount)
-            throw new InvalidOperationException($"Полка {shelfIndex}, слой {layerIndex}: требуется {ShelfLayer.SlotCount} слота, найдено {layer.Slots.Count}.");
+        if (layer.Slots.Count != shelf.Capacity)
+            throw new InvalidOperationException($"Полка {shelfIndex}, слой {layerIndex}: требуется {shelf.Capacity} слотов, найдено {layer.Slots.Count}.");
 
         for (int slotIndex = 0; slotIndex < layer.Slots.Count; slotIndex++)
             ValidateSlot(layer.Slots[slotIndex], shelfIndex, layerIndex, slotIndex);

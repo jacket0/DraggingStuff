@@ -6,9 +6,10 @@ using YG.Utils.LB;
 
 public class LeaderboardScoreSynchronizer : MonoBehaviour
 {
-    [SerializeField] private TotalScoreService _totalScore;
+    [SerializeField] private LeaderboardScoreSource _scoreSource;
     [SerializeField] private LeaderboardYG _leaderboard;
     [SerializeField, Min(1f)] private float _refreshDelay = 1.1f;
+
 
     private Coroutine _refreshCoroutine;
     private int? _submittedScore;
@@ -17,6 +18,7 @@ public class LeaderboardScoreSynchronizer : MonoBehaviour
     {
         YG2.onGetSDKData += HandleSdkDataReceived;
         YG2.onGetLeaderboard += HandleLeaderboardReceived;
+        _scoreSource.ValueChanged += RequestLeaderboard;
 
         if (YG2.isSDKEnabled)
             RequestLeaderboard();
@@ -26,6 +28,7 @@ public class LeaderboardScoreSynchronizer : MonoBehaviour
     {
         YG2.onGetSDKData -= HandleSdkDataReceived;
         YG2.onGetLeaderboard -= HandleLeaderboardReceived;
+        _scoreSource.ValueChanged -= RequestLeaderboard;
 
         if (_refreshCoroutine != null)
             StopCoroutine(_refreshCoroutine);
@@ -71,16 +74,16 @@ public class LeaderboardScoreSynchronizer : MonoBehaviour
 
     private bool TryGetPlatformScore(out int score)
     {
-        long totalBestScore = _totalScore.Value;
+        long scoreValue = _scoreSource.Value;
 
-        if (totalBestScore < 0 || totalBestScore > int.MaxValue)
+        if (scoreValue < 0 || scoreValue > int.MaxValue)
         {
-            Debug.LogError($"Leaderboard score is outside Int32 range: {totalBestScore}");
+            Debug.LogError($"Leaderboard score is outside Int32 range: {scoreValue}");
             score = 0;
             return false;
         }
 
-        score = (int)totalBestScore;
+        score = (int)scoreValue;
         return score > 0;
     }
 

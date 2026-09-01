@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class MatchRewardController : MonoBehaviour
 {
-    [SerializeField] private LevelSession _levelSession;
+    [SerializeField] private GameSession _levelSession;
     [SerializeField] private ScoreSystem _scoreSystem;
     [SerializeField] private ComboSystem _comboSystem;
 

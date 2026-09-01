@@ -18,7 +18,8 @@ public class ScoreSystem : MonoBehaviour
         if (comboMultiplier < 1)
             throw new ArgumentOutOfRangeException(nameof(comboMultiplier));
 
-        long earnedScore = (long)_baseMatchScore * comboMultiplier;
+        int matchSizeMultiplier = match.Items.Count - 2;
+        long earnedScore = (long)_baseMatchScore * matchSizeMultiplier * comboMultiplier;
 
         CurrentScore += earnedScore;
 

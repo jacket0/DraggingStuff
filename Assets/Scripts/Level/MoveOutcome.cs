@@ -3,30 +3,27 @@ using System.Collections.Generic;
 
 public readonly struct MoveOutcome
 {
-    private readonly IReadOnlyList<Shelf> _shelvesToAdvance;
+    private readonly IReadOnlyList<Shelf> _emptiedShelves;
 
     public bool IsSuccessful { get; }
     public MatchResolution Match { get; }
     public bool HasMatch => Match != null;
-    public bool IsLevelCompleted { get; }
-    public IReadOnlyList<Shelf> ShelvesToAdvance => _shelvesToAdvance ?? Array.Empty<Shelf>();
-    public bool HasLayerTransition => ShelvesToAdvance.Count > 0;
+    public IReadOnlyList<Shelf> EmptiedShelves => _emptiedShelves ?? Array.Empty<Shelf>();
 
-    private MoveOutcome(bool isSuccessful, MatchResolution match, bool isLevelCompleted, IReadOnlyList<Shelf> shelvesToAdvance)
+    private MoveOutcome(bool isSuccessful, MatchResolution match, IReadOnlyList<Shelf> emptiedShelves)
     {
         IsSuccessful = isSuccessful;
         Match = match;
-        IsLevelCompleted = isLevelCompleted;
-        _shelvesToAdvance = shelvesToAdvance;
+        _emptiedShelves = emptiedShelves;
     }
 
     public static MoveOutcome Rejected()
     {
-        return new MoveOutcome(false, null, false, Array.Empty<Shelf>());
+        return new MoveOutcome(false, null, Array.Empty<Shelf>());
     }
 
-    public static MoveOutcome Successful(MatchResolution match, bool isLevelCompleted, IReadOnlyList<Shelf> shelvesToAdvance)
+    public static MoveOutcome Successful(MatchResolution match, IReadOnlyList<Shelf> emptiedShelves)
     {
-        return new MoveOutcome(true, match, isLevelCompleted, shelvesToAdvance);
+        return new MoveOutcome(true, match, emptiedShelves);
     }
 }

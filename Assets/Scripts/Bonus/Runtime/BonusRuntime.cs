@@ -3,17 +3,21 @@ using UnityEngine;
 
 public class BonusRuntime
 {
+    private readonly bool _ignoreLevelUseLimit;
+
     public IBonusEffect Effect { get; }
     public BonusRuntimePhase Phase { get; private set; }
     public int CurrentLevelUses { get; private set; }
     public float RemainingCooldown { get; private set; }
 
     public BonusDefinition Definition => Effect.Definition;
-    private bool HasReachedLevelUseLimit => Definition.HasLevelUseLimit && CurrentLevelUses >= Definition.MaxLevelUses;
+    private bool HasLevelUseLimit => Definition.HasLevelUseLimit && !_ignoreLevelUseLimit;
+    private bool HasReachedLevelUseLimit => HasLevelUseLimit && CurrentLevelUses >= Definition.MaxLevelUses;
 
-    public BonusRuntime(IBonusEffect effect)
+    public BonusRuntime(IBonusEffect effect, bool ignoreLevelUseLimit)
     {
         Effect = effect ?? throw new ArgumentNullException(nameof(effect));
+        _ignoreLevelUseLimit = ignoreLevelUseLimit;
 
         if (effect.Definition == null)
             throw new InvalidOperationException(nameof(effect.Definition));
@@ -80,6 +84,6 @@ public class BonusRuntime
         if (Phase == BonusRuntimePhase.Recharging && Definition.CooldownDuration > 0f)
             cooldownRemainingRatio = Mathf.Clamp01(RemainingCooldown / Definition.CooldownDuration);
 
-        return new BonusRuntimeState(Definition, Phase, CurrentLevelUses, Definition.HasLevelUseLimit, Definition.MaxLevelUses, RemainingCooldown, cooldownRemainingRatio);
+        return new BonusRuntimeState(Definition, Phase, CurrentLevelUses, HasLevelUseLimit, Definition.MaxLevelUses, RemainingCooldown, cooldownRemainingRatio);
     }
 }

@@ -2,13 +2,11 @@ using System;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-public class ComboSystem : MonoBehaviour, IComboTimerModifierTarget
+public class ComboSystem : TimerSpeedModifierTarget
 {
     [FormerlySerializedAs("_comboDuration")]
     [SerializeField, Min(0.01f)] private float _comboStepDuration = 3f;
     [SerializeField, Min(1)] private int _maxComboMultiplier = 10;
-
-    private readonly MultiplierModifierCollection _timerSpeedModifiers = new MultiplierModifierCollection();
 
     private int _currentCount;
     private float _remainingTime;
@@ -20,7 +18,7 @@ public class ComboSystem : MonoBehaviour, IComboTimerModifierTarget
 
     private void Update()
     {
-        float comboDeltaTime = Time.deltaTime * _timerSpeedModifiers.CombinedMultiplier;
+        float comboDeltaTime = Time.deltaTime * TimerSpeedMultiplier;
 
         AdvanceTimer(comboDeltaTime);
     }
@@ -29,11 +27,6 @@ public class ComboSystem : MonoBehaviour, IComboTimerModifierTarget
     {
         _comboStepDuration = Mathf.Max(0.01f, _comboStepDuration);
         _maxComboMultiplier = Mathf.Max(1, _maxComboMultiplier);
-    }
-
-    public IDisposable AddTimerSpeedMultiplier(float multiplier)
-    {
-        return _timerSpeedModifiers.AddMultiplier(multiplier);
     }
 
     public int RegisterMatch()

@@ -4,9 +4,10 @@ using UnityEngine;
 
 public class BonusUseController : MonoBehaviour, IBonusUseService, IBonusRuntimeStateSource
 {
-    [SerializeField] private LevelSession _session;
+    [SerializeField] private GameSession _session;
     [SerializeField] private BonusInventoryService _inventory;
     [SerializeField] private List<BonusEffect> _effects = new List<BonusEffect>();
+    [SerializeField] private bool _ignoreLevelUseLimit;
 
     private readonly Dictionary<BonusDefinition, BonusRuntime> _runtimes = new Dictionary<BonusDefinition, BonusRuntime>();
 
@@ -14,11 +15,13 @@ public class BonusUseController : MonoBehaviour, IBonusUseService, IBonusRuntime
 
     private void Awake()
     {
-        RegisterEffects();
+        EnsureInitialized();
     }
 
     private void Update()
     {
+        EnsureInitialized();
+
         if (!_session.IsPlaying)
             return;
 
@@ -44,6 +47,8 @@ public class BonusUseController : MonoBehaviour, IBonusUseService, IBonusRuntime
     {
         if (definition == null)
             throw new ArgumentNullException(nameof(definition));
+
+        EnsureInitialized();
 
         if (!_session.CanInteract)
             return BonusUseResult.LevelUnavailable;
@@ -84,6 +89,8 @@ public class BonusUseController : MonoBehaviour, IBonusUseService, IBonusRuntime
         if (definition == null)
             throw new ArgumentNullException(nameof(definition));
 
+        EnsureInitialized();
+
         if (!_runtimes.TryGetValue(definition, out BonusRuntime runtime))
             throw new InvalidOperationException($"Бонус {definition.Id} не существует");
 
@@ -103,16 +110,26 @@ public class BonusUseController : MonoBehaviour, IBonusUseService, IBonusRuntime
             if (_runtimes.ContainsKey(effect.Definition))
                 throw new InvalidOperationException($"Бонус {effect.Definition.Id} уже существует");
 
-            BonusRuntime runtime = new BonusRuntime(effect);
+            BonusRuntime runtime = new BonusRuntime(effect, _ignoreLevelUseLimit);
             _runtimes.Add(effect.Definition, runtime);
             effect.Completed += HandleEffectCompleted;
         }
+    }
+
+    private void EnsureInitialized()
+    {
+        if (_runtimes.Count > 0)
+            return;
+
+        RegisterEffects();
     }
 
     private void HandleEffectCompleted(IBonusEffect effect)
     {
         if (effect == null)
             throw new ArgumentNullException(nameof(effect));
+
+        EnsureInitialized();
 
         if (!_runtimes.TryGetValue(effect.Definition, out BonusRuntime runtime))
             throw new InvalidOperationException($"Бонус {effect.Definition.Id} не существует");

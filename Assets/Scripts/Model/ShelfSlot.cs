@@ -8,6 +8,7 @@ public class ShelfSlot : MonoBehaviour
 
     public ShelfItem Item => _shelfItem;
     public bool IsEmpty => _shelfItem == null;
+    public bool HasItemAnchor => _itemAnchor != null;
 
 
     public ShelfItem TakeItem()

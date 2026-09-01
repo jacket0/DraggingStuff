@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
 
@@ -21,8 +22,23 @@ public sealed class HintPresenter : MonoBehaviour, IHintPresenter
     private Vector3 _originalLocalPosition;
     private Quaternion _originalLocalRotation;
     private Vector3 _originalLocalScale;
+    private readonly List<ParticleSystem> _matchingHighlightPool = new List<ParticleSystem>();
 
     public bool IsPlaying => _presentationSequence != null;
+
+    private void Awake()
+    {
+        foreach (ParticleSystem matchingHighlight in _matchingHighlights)
+        {
+            if (matchingHighlight == null || _matchingHighlightPool.Contains(matchingHighlight))
+                throw new InvalidOperationException(nameof(_matchingHighlights));
+
+            _matchingHighlightPool.Add(matchingHighlight);
+        }
+
+        if (_matchingHighlightPool.Count == 0)
+            throw new InvalidOperationException(nameof(_matchingHighlights));
+    }
 
     private void OnDisable()
     {
@@ -46,8 +62,7 @@ public sealed class HintPresenter : MonoBehaviour, IHintPresenter
         if (!suggestion.TargetSlot.IsEmpty)
             throw new InvalidOperationException("Целевой слот подсказки уже занят.");
 
-        if (suggestion.TargetMatchingItems.Count > _matchingHighlights.Length)
-            throw new InvalidOperationException("Недостаточно систем подсветки совпадающих предметов.");
+        EnsureMatchingHighlightCapacity(suggestion.TargetMatchingItems.Count);
 
         StopParticleSystems();
 
@@ -63,7 +78,7 @@ public sealed class HintPresenter : MonoBehaviour, IHintPresenter
         PlayAtPosition(_sourceHighlight, sourcePosition);
 
         for (int index = 0; index < suggestion.TargetMatchingItems.Count; index++)
-            PlayAtPosition(_matchingHighlights[index], suggestion.TargetMatchingItems[index].transform.position);
+            PlayAtPosition(_matchingHighlightPool[index], suggestion.TargetMatchingItems[index].transform.position);
 
         PlayAtPosition(_targetHighlight, targetPosition);
 
@@ -98,7 +113,7 @@ public sealed class HintPresenter : MonoBehaviour, IHintPresenter
         float duration = Mathf.Max(_sourceHighlight.main.duration, _targetHighlight.main.duration);
         duration = Mathf.Max(duration, _movementParticles.main.duration);
 
-        foreach (ParticleSystem matchingHighlight in _matchingHighlights)
+        foreach (ParticleSystem matchingHighlight in _matchingHighlightPool)
             duration = Mathf.Max(duration, matchingHighlight.main.duration);
 
         float remainingDuration = Mathf.Max(MinimumPresentationDuration, duration) - _itemMoveDuration;
@@ -138,7 +153,19 @@ public sealed class HintPresenter : MonoBehaviour, IHintPresenter
         _targetHighlight.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
         _movementParticles.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
 
-        foreach (ParticleSystem matchingHighlight in _matchingHighlights)
+        foreach (ParticleSystem matchingHighlight in _matchingHighlightPool)
             matchingHighlight.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+    }
+
+    private void EnsureMatchingHighlightCapacity(int count)
+    {
+        ParticleSystem template = _matchingHighlightPool[0];
+
+        while (_matchingHighlightPool.Count < count)
+        {
+            ParticleSystem matchingHighlight = Instantiate(template, template.transform.parent);
+            matchingHighlight.name = $"MatchingHighlight{_matchingHighlightPool.Count + 1}";
+            _matchingHighlightPool.Add(matchingHighlight);
+        }
     }
 }

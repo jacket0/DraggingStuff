@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class ShelfItemDragController : MonoBehaviour
 {
-    [SerializeField] private LevelSession _levelSession;
+    [SerializeField] private GameSession _levelSession;
     [SerializeField] private ShelfItemDragMover _dragMover;
     [SerializeField] private ShelfSlotRaycaster _slotRaycaster;
 

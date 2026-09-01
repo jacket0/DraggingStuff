@@ -3,9 +3,10 @@ using UnityEngine;
 
 public sealed class MoveSuggestionProvider : MonoBehaviour, IMoveSuggestionProvider
 {
-    private const int MatchPriority = 3;
-    private const int PairPriority = 2;
-    private const int RegularMovePriority = 1;
+    private const int MatchPriority = 4;
+    private const int GroupPriority = 3;
+    private const int LayerReleasePriority = 2;
+    private const int PreparatoryMovePriority = 1;
 
     [SerializeField] private ShelfBoard _shelfBoard;
 
@@ -13,6 +14,7 @@ public sealed class MoveSuggestionProvider : MonoBehaviour, IMoveSuggestionProvi
     {
         suggestion = null;
         int bestPriority = 0;
+        int bestGroupSize = 0;
         bool bestMoveBreaksPair = true;
 
         foreach (Shelf sourceShelf in _shelfBoard.Shelves)
@@ -38,13 +40,19 @@ public sealed class MoveSuggestionProvider : MonoBehaviour, IMoveSuggestionProvi
                             continue;
 
                         List<ShelfItem> targetMatchingItems = GetTargetMatchingItems(targetShelf.ActiveLayer, sourceSlot.Item.Type);
-                        int priority = GetSuggestionPriority(targetMatchingItems.Count);
+                        bool createsMatch = CreatesMatch(targetShelf.ActiveLayer, sourceSlot.Item.Type);
+                        int priority = GetSuggestionPriority(
+                            createsMatch,
+                            targetMatchingItems.Count,
+                            WouldReleaseLayer(sourceShelf.ActiveLayer, sourceShelf.HasNextLayer));
+                        int groupSize = createsMatch ? targetShelf.Capacity : targetMatchingItems.Count + 1;
 
-                        if (!IsBetterSuggestion(priority, sourceMoveBreaksPair, bestPriority, bestMoveBreaksPair))
+                        if (!IsBetterSuggestion(priority, groupSize, sourceMoveBreaksPair, bestPriority, bestGroupSize, bestMoveBreaksPair))
                             continue;
 
                         suggestion = new MoveSuggestion(sourceSlot, targetSlot, targetMatchingItems);
                         bestPriority = priority;
+                        bestGroupSize = groupSize;
                         bestMoveBreaksPair = sourceMoveBreaksPair;
                     }
                 }
@@ -56,7 +64,7 @@ public sealed class MoveSuggestionProvider : MonoBehaviour, IMoveSuggestionProvi
 
     private static List<ShelfItem> GetTargetMatchingItems(ShelfLayer targetLayer, ItemType sourceItemType)
     {
-        List<ShelfItem> matchingItems = new List<ShelfItem>(ShelfLayer.SlotCount - 1);
+        List<ShelfItem> matchingItems = new List<ShelfItem>(targetLayer.Capacity - 1);
 
         foreach (ShelfSlot targetSlot in targetLayer.Slots)
         {
@@ -81,21 +89,71 @@ public sealed class MoveSuggestionProvider : MonoBehaviour, IMoveSuggestionProvi
         return false;
     }
 
-    private static int GetSuggestionPriority(int targetMatchingItemCount)
+    private static bool CreatesMatch(ShelfLayer targetLayer, ItemType sourceItemType)
     {
-        if (targetMatchingItemCount == ShelfLayer.SlotCount - 1)
-            return MatchPriority;
+        if (targetLayer.Capacity < Shelf.MinimumMatchCapacity)
+            return false;
 
-        if (targetMatchingItemCount == 1)
-            return PairPriority;
+        int emptySlotCount = 0;
 
-        return RegularMovePriority;
+        foreach (ShelfSlot slot in targetLayer.Slots)
+        {
+            if (slot.IsEmpty)
+            {
+                emptySlotCount++;
+                continue;
+            }
+
+            if (slot.Item.Type != sourceItemType)
+                return false;
+        }
+
+        return emptySlotCount == 1;
     }
 
-    private static bool IsBetterSuggestion(int candidatePriority, bool candidateBreaksPair, int bestPriority, bool bestMoveBreaksPair)
+    private static bool WouldReleaseLayer(ShelfLayer sourceLayer, bool hasNextLayer)
+    {
+        if (!hasNextLayer)
+            return false;
+
+        int itemCount = 0;
+
+        foreach (ShelfSlot slot in sourceLayer.Slots)
+        {
+            if (!slot.IsEmpty)
+                itemCount++;
+        }
+
+        return itemCount == 1;
+    }
+
+    private static int GetSuggestionPriority(bool createsMatch, int targetMatchingItemCount, bool releasesLayer)
+    {
+        if (createsMatch)
+            return MatchPriority;
+
+        if (targetMatchingItemCount > 0)
+            return GroupPriority;
+
+        if (releasesLayer)
+            return LayerReleasePriority;
+
+        return PreparatoryMovePriority;
+    }
+
+    private static bool IsBetterSuggestion(
+        int candidatePriority,
+        int candidateGroupSize,
+        bool candidateBreaksPair,
+        int bestPriority,
+        int bestGroupSize,
+        bool bestMoveBreaksPair)
     {
         if (candidatePriority != bestPriority)
             return candidatePriority > bestPriority;
+
+        if (candidateGroupSize != bestGroupSize)
+            return candidateGroupSize > bestGroupSize;
 
         return bestMoveBreaksPair && !candidateBreaksPair;
     }
