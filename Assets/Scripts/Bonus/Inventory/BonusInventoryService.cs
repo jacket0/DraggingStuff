@@ -8,6 +8,7 @@ public class BonusInventoryService : MonoBehaviour, IBonusInventory
     [SerializeField] private BonusInventoryStorageAsset _storageAsset;
 
     private readonly Dictionary<BonusDefinition, int> _amounts = new Dictionary<BonusDefinition, int>();
+    private bool _isReloading;
 
     public event Action<BonusDefinition, int> AmountChanged;
 
@@ -15,16 +16,25 @@ public class BonusInventoryService : MonoBehaviour, IBonusInventory
 
     private void Awake()
     {
-        if (_catalog == null)
-            throw new InvalidOperationException(nameof(_catalog));
+        EnsureLoaded();
+    }
 
-        LoadAmounts();
+    private void OnEnable()
+    {
+        GameProgressRepository.ProgressChanged += ReloadAmounts;
+    }
+
+    private void OnDisable()
+    {
+        GameProgressRepository.ProgressChanged -= ReloadAmounts;
     }
 
     public int GetAmount(BonusDefinition definition)
     {
         if (definition == null)
             throw new ArgumentNullException(nameof(definition));
+
+        EnsureLoaded();
 
         if (!_amounts.TryGetValue(definition, out int amount))
             throw new InvalidOperationException(nameof(amount));
@@ -109,6 +119,20 @@ public class BonusInventoryService : MonoBehaviour, IBonusInventory
             SaveAmounts();
     }
 
+    private void EnsureLoaded()
+    {
+        if (_amounts.Count > 0)
+            return;
+
+        if (_catalog == null)
+            throw new InvalidOperationException(nameof(_catalog));
+
+        if (InventoryStorage == null)
+            throw new InvalidOperationException(nameof(InventoryStorage));
+
+        LoadAmounts();
+    }
+
     private void SaveAmounts()
     {
         BonusInventoryData data = new BonusInventoryData();
@@ -123,5 +147,31 @@ public class BonusInventoryService : MonoBehaviour, IBonusInventory
         }
     
         InventoryStorage.Save(data);
+    }
+
+    private void ReloadAmounts()
+    {
+        if (_isReloading)
+            return;
+
+        _isReloading = true;
+        try
+        {
+            Dictionary<BonusDefinition, int> previousAmounts = new Dictionary<BonusDefinition, int>(_amounts);
+            LoadAmounts();
+
+            foreach (BonusDefinition definition in _catalog.Definitions)
+            {
+                int previousAmount = previousAmounts.TryGetValue(definition, out int amount) ? amount : -1;
+                int currentAmount = _amounts[definition];
+
+                if (previousAmount != currentAmount)
+                    AmountChanged?.Invoke(definition, currentAmount);
+            }
+        }
+        finally
+        {
+            _isReloading = false;
+        }
     }
 }

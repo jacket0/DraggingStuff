@@ -13,8 +13,12 @@ public class LevelUiController : MonoBehaviour
     [SerializeField] private LevelSession _levelSession;
     [SerializeField] private ScoreSystem _scoreSystem;
     [SerializeField] private YandexGameReviewService _gameReviewService;
+    [SerializeField] private YandexInterstitialAdService _interstitialAdService;
+
+    private bool _isMenuTransitionPending;
 
     private IGameReviewService GameReviewService => _gameReviewService;
+    private IInterstitialAdService InterstitialAdService => _interstitialAdService;
 
     private void Start()
     {
@@ -49,19 +53,19 @@ public class LevelUiController : MonoBehaviour
 
     private void HandlePauseRequested()
     {
-        if (_levelSession.TryPauseLevel())
+        if (_levelSession.TryPause())
             _pauseWindowView.Show();
     }
 
     private void HandleResumeRequested()
     {
-        _levelSession.ResumeLevel();
+        _levelSession.Resume();
         _pauseWindowView.Hide();
     }
 
     private void HandleRestartRequested()
     {
-        _levelSession.RestartLevel();
+        _levelSession.Restart();
     }
 
     private void HandleLevelCompleted()
@@ -77,7 +81,16 @@ public class LevelUiController : MonoBehaviour
 
     private void HandleMenuRequest()
     {
-        Time.timeScale = 1;
+        if (_isMenuTransitionPending)
+            return;
+
+        _isMenuTransitionPending = true;
+        InterstitialAdService.Show(OpenMainMenu);
+    }
+
+    private static void OpenMainMenu()
+    {
+        Time.timeScale = 1f;
         SceneManager.LoadScene(MainMenuSceneName);
     }
 

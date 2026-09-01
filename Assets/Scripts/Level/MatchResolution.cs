@@ -14,11 +14,16 @@ public class MatchResolution
 
         List<ShelfItem> itemList = new List<ShelfItem>(items);
 
-        if (itemList.Count != ShelfLayer.SlotCount)
+        if (itemList.Count < Shelf.MinimumMatchCapacity || itemList.Count > Shelf.MaximumCapacity)
             throw new ArgumentException(nameof(items));
 
         if (itemList.Exists(item => item == null))
             throw new ArgumentException(nameof(itemList));
+
+        ItemType itemType = itemList[0].Type;
+
+        if (itemList.Exists(item => item.Type != itemType))
+            throw new ArgumentException(nameof(items));
 
         _items = itemList.AsReadOnly();
     }

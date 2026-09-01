@@ -32,15 +32,14 @@ public class MoveResolutionPlayer : MonoBehaviour
             return;
         }
 
-        ShelfItem centerItem = match.Items[ShelfLayer.SlotCount / 2];
-        Vector3 mergePosition = centerItem.transform.position;
-        Vector3 effectPosition = GetEffectPosition(centerItem);
+        Vector3 mergePosition = GetMergePosition(match);
+        Vector3 effectPosition = GetEffectPosition(match, mergePosition);
 
         Sequence resolutionSequence = DOTween.Sequence();
 
-        foreach (var item in match.Items)
+        foreach (ShelfItem item in match.Items)
         {
-            Sequence sequence = CreateItemAnimation(item, centerItem, mergePosition);
+            Sequence sequence = CreateItemAnimation(item, mergePosition);
             resolutionSequence.Insert(0f, sequence);
         }
 
@@ -57,7 +56,7 @@ public class MoveResolutionPlayer : MonoBehaviour
         resolutionSequence.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
     }
 
-    private Sequence CreateItemAnimation(ShelfItem item, ShelfItem centerItem, Vector3 mergePosition)
+    private Sequence CreateItemAnimation(ShelfItem item, Vector3 mergePosition)
     {
         Transform itemTransform = item.transform;
         itemTransform.SetParent(_resolutionRoot, true);
@@ -68,18 +67,43 @@ public class MoveResolutionPlayer : MonoBehaviour
         itemSequence.Append(itemTransform.DOScale(initialScale * _preparatoryScaleCoef, _preparatoryDuration).SetEase(_preparatoryEase));
         itemSequence.Append(itemTransform.DOScale(initialScale * _mergedScale, _mergeDuration).SetEase(_mergeEase));
 
-        if (item != centerItem)
-            itemSequence.Join(itemTransform.DOMove(mergePosition, _mergeDuration).SetEase(_mergeEase));
+        itemSequence.Join(itemTransform.DOMove(mergePosition, _mergeDuration).SetEase(_mergeEase));
 
         itemSequence.Append(itemTransform.DOScale(initialScale * _impactScale, _impactDuration).SetEase(_impactEase));
         return itemSequence;
     }
 
-    private Vector3 GetEffectPosition(ShelfItem item)
+    private static Vector3 GetMergePosition(MatchResolution match)
     {
-        Renderer renderer = item.GetComponentInChildren<Renderer>();
+        Vector3 position = Vector3.zero;
 
-        Vector3 center = renderer != null ? renderer.bounds.center : item.transform.position;
+        foreach (ShelfItem item in match.Items)
+            position += item.transform.position;
+
+        return position / match.Items.Count;
+    }
+
+    private Vector3 GetEffectPosition(MatchResolution match, Vector3 mergePosition)
+    {
+        Vector3 center = Vector3.zero;
+        int rendererCount = 0;
+
+        foreach (ShelfItem item in match.Items)
+        {
+            Renderer renderer = item.GetComponentInChildren<Renderer>();
+
+            if (renderer == null)
+                continue;
+
+            center += renderer.bounds.center;
+            rendererCount++;
+        }
+
+        if (rendererCount > 0)
+            center /= rendererCount;
+        else
+            center = mergePosition;
+
         return center - _camera.transform.forward * _cameraOffset;
     }
 

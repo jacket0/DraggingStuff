@@ -7,13 +7,18 @@ public class ShelfLayerStackView : MonoBehaviour
 {
     [SerializeField, Min(0.1f)] private float _moveDuration = 0.3f;
     [SerializeField] private Ease _moveEase = Ease.OutCubic;
+    [SerializeField] private bool _useConfiguredPositions;
+    [SerializeField] private Vector3 _configuredActiveLocalPosition;
+    [SerializeField] private Vector3 _configuredPreviewLocalPosition;
 
-    private IReadOnlyList<ShelfLayer> _layers;
-    private Vector3[] _initialLocalPositions;
-    private ShelfLayerView[] _layerViews;
+    private readonly Dictionary<ShelfLayer, ShelfLayerView> _layerViews = new Dictionary<ShelfLayer, ShelfLayerView>();
+
+    private Vector3 _activeLocalPosition;
+    private Vector3 _previewLocalPosition;
+    private bool _isInitialized;
     private Sequence _activeTransition;
 
-    public void Initialize(IReadOnlyList<ShelfLayer> layers, int activeLayerIndex)
+    public void Initialize(IReadOnlyList<ShelfLayer> layers)
     {
         if (layers == null)
             throw new ArgumentNullException(nameof(layers));
@@ -21,52 +26,100 @@ public class ShelfLayerStackView : MonoBehaviour
         if (layers.Count == 0)
             throw new InvalidOperationException();
 
-        _layers = layers;
-        _initialLocalPositions = new Vector3[layers.Count];
+        _activeLocalPosition = _useConfiguredPositions
+            ? _configuredActiveLocalPosition
+            : layers[0].transform.localPosition;
 
-        for (int i = 0; i < layers.Count; i++)
-        {
-            ShelfLayer layer = layers[i];
+        _previewLocalPosition = _useConfiguredPositions
+            ? _configuredPreviewLocalPosition
+            : layers.Count > 1
+                ? layers[1].transform.localPosition
+                : _activeLocalPosition;
 
-            if (layer is null)
-                throw new InvalidOperationException(nameof(layer));
+        _layerViews.Clear();
 
-            _initialLocalPositions[i] = layer.transform.localPosition;
-            layer.gameObject.SetActive(i == activeLayerIndex);
-        }
+        foreach (ShelfLayer layer in layers)
+            RegisterLayer(layer);
 
-        _layerViews = new ShelfLayerView[layers.Count];
-
-        for (int i = 0; i < layers.Count; i++)
-        {
-            ShelfLayerView layerView = _layers[i].GetComponent<ShelfLayerView>();
-
-            if (layerView == null)
-                throw new InvalidOperationException(nameof(layerView));
-
-            _layerViews[i] = layerView;
-            layerView.Initialize();
-        }
-
-        ApplyLayerStates(activeLayerIndex);
+        _isInitialized = true;
+        Refresh(layers);
     }
 
-    public void Advance(int activeLayerIndex, Action completed)
+    public void RegisterLayer(ShelfLayer layer)
     {
-        _activeTransition?.Complete();
+        if (layer == null)
+            throw new ArgumentNullException(nameof(layer));
 
-        ApplyLayerStates(activeLayerIndex);
+        if (_layerViews.ContainsKey(layer))
+            throw new InvalidOperationException(nameof(layer));
+
+        ShelfLayerView layerView = layer.GetComponent<ShelfLayerView>();
+
+        if (layerView == null)
+            throw new InvalidOperationException(nameof(layerView));
+
+        layerView.Initialize();
+        _layerViews.Add(layer, layerView);
+
+        if (_isInitialized)
+            layerView.Hide();
+    }
+
+    public void UnregisterLayer(ShelfLayer layer)
+    {
+        if (layer == null)
+            throw new ArgumentNullException(nameof(layer));
+
+        _layerViews.Remove(layer);
+    }
+
+    public void Refresh(IReadOnlyList<ShelfLayer> layers)
+    {
+        if (layers == null)
+            throw new ArgumentNullException(nameof(layers));
+
+        for (int index = 0; index < layers.Count; index++)
+        {
+            ShelfLayer layer = layers[index];
+
+            if (!_layerViews.TryGetValue(layer, out ShelfLayerView layerView))
+                throw new InvalidOperationException(nameof(layer));
+
+            if (index == 0)
+            {
+                layer.transform.localPosition = _activeLocalPosition;
+                layerView.ShowActive();
+            }
+            else if (index == 1)
+            {
+                layer.transform.localPosition = _previewLocalPosition;
+                layerView.ShowPreview();
+            }
+            else
+            {
+                layerView.Hide();
+            }
+        }
+    }
+
+    public void Advance(IReadOnlyList<ShelfLayer> layers, Action completed)
+    {
+        if (layers == null)
+            throw new ArgumentNullException(nameof(layers));
+
+        if (layers.Count < 2)
+            throw new InvalidOperationException();
+
+        _activeTransition?.Kill(true);
+
+        ShelfLayer activeLayer = layers[0];
+        ShelfLayer nextLayer = layers[1];
+
+        HideLayer(activeLayer);
+        _layerViews[nextLayer].ShowActive();
 
         Sequence transition = DOTween.Sequence();
-
-        for (int i = activeLayerIndex; i < _layers.Count; i++)
-        {
-            int positionIndex = i - activeLayerIndex;
-
-            transition.Join(_layers[i].transform.DOLocalMove(_initialLocalPositions[positionIndex], _moveDuration).SetEase(_moveEase));
-        }
-
-        _activeTransition = transition;
+        transition.Append(nextLayer.transform.DOLocalMove(_activeLocalPosition, _moveDuration).SetEase(_moveEase));
 
         transition.OnComplete(() =>
         {
@@ -76,35 +129,18 @@ public class ShelfLayerStackView : MonoBehaviour
             completed?.Invoke();
         });
 
+        _activeTransition = transition;
         transition.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
     }
 
-    public void HideLayer(int index)
+    public void HideLayer(ShelfLayer layer)
     {
-        if (index < 0 || index >= _layerViews.Length)
-            throw new ArgumentOutOfRangeException(nameof(index));
+        if (layer == null)
+            throw new ArgumentNullException(nameof(layer));
 
-        _layerViews[index].Hide();
-    }
+        if (!_layerViews.TryGetValue(layer, out ShelfLayerView layerView))
+            throw new InvalidOperationException(nameof(layer));
 
-
-    private void ApplyLayerStates(int activeLayerIndex)
-    {
-        for (int i = 0; i < _layerViews.Length; i++)
-        {
-            if (activeLayerIndex == i)
-            {
-                _layerViews[i].ShowActive();
-                continue;
-            }
-
-            if (activeLayerIndex + 1 == i)
-            {
-                _layerViews[i].ShowPreview();
-                continue;
-            }
-
-            _layerViews[i].Hide();
-        }
+        layerView.Hide();
     }
 }

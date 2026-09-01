@@ -17,9 +17,7 @@ public class ShelfLayerView : MonoBehaviour
         _originalMaterials = new Material[_renderers.Length][];
 
         for (int i = 0; i < _originalMaterials.Length; i++)
-        {
             _originalMaterials[i] = _renderers[i].sharedMaterials;
-        }
     }
 
     public void ShowActive()
@@ -38,6 +36,15 @@ public class ShelfLayerView : MonoBehaviour
 
     public void Hide()
     {
+        gameObject.SetActive(false);
+    }
+
+    public void ResetForPool()
+    {
+        if (_renderers != null)
+            RestoreMaterials();
+
+        SetInteractionEnabled(true);
         gameObject.SetActive(false);
     }
 
