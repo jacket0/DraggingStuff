@@ -19,6 +19,122 @@ MonoBehaviour:
     uniqueID: 000
     playerPhoto: demo image
     payingStatus: 0
+  AutoTranslateLangs:
+    domainAutoLocalization: com
+    languages:
+      ru: 1
+      en: 1
+      tr: 1
+      az: 0
+      be: 0
+      he: 0
+      hy: 0
+      ka: 0
+      et: 0
+      fr: 0
+      kk: 0
+      ky: 0
+      lt: 0
+      lv: 0
+      ro: 0
+      tg: 0
+      tk: 0
+      uk: 0
+      uz: 0
+      es: 0
+      pt: 0
+      ar: 0
+      id: 0
+      ja: 0
+      it: 0
+      de: 0
+      hi: 0
+    fonts:
+      defaultFont: []
+      ru: []
+      en: []
+      tr: []
+      az: []
+      be: []
+      he: []
+      hy: []
+      ka: []
+      et: []
+      fr: []
+      kk: []
+      ky: []
+      lt: []
+      lv: []
+      ro: []
+      tg: []
+      tk: []
+      uk: []
+      uz: []
+      es: []
+      pt: []
+      ar: []
+      id: []
+      ja: []
+      it: []
+      de: []
+      hi: []
+    fontsTMP:
+      defaultFont: []
+      ru: []
+      en: []
+      tr: []
+      az: []
+      be: []
+      he: []
+      hy: []
+      ka: []
+      et: []
+      fr: []
+      kk: []
+      ky: []
+      lt: []
+      lv: []
+      ro: []
+      tg: []
+      tk: []
+      uk: []
+      uz: []
+      es: []
+      pt: []
+      ar: []
+      id: []
+      ja: []
+      it: []
+      de: []
+      hi: []
+    fontsSizeCorrect:
+      ru: 
+      en: 
+      tr: 
+      az: 
+      be: 
+      he: 
+      hy: 
+      ka: 
+      et: 
+      fr: 
+      kk: 
+      ky: 
+      lt: 
+      lv: 
+      ro: 
+      tg: 
+      tk: 
+      uk: 
+      uz: 
+      es: 
+      pt: 
+      ar: 
+      id: 
+      ja: 
+      it: 
+      de: 
+      hi: 
   InterstitialAdv:
     showFirstAdv: 0
     interAdvInterval: 60
@@ -29,7 +145,7 @@ MonoBehaviour:
     enable: 1
     saveScoreAnonymousPlayers: 1
     listLBSim:
-    - technoName: TotalScore
+    - technoName: TotalScoreV2
       entries: '1. Max: 10
 
         2. Masha: 15
@@ -254,7 +370,7 @@ MonoBehaviour:
     loadSceneIfSDKLate: 0
     loadSceneIndex: 0
     initDelaySimulation: 0
-    buildNumber: 6
+    buildNumber: 7
   Simulation:
     device: 0
     language: ru
@@ -292,7 +408,7 @@ MonoBehaviour:
       color1: {r: 1, g: 0.831, b: 0.149, a: 1}
       color2: {r: 0.36, g: 0.09, b: 1, a: 1}
     pixelRatioEnable: 1
-    pixelRatioValue: 1
+    pixelRatioValue: 1.5
     developerBuild: 0
   platformInfo:
     ownHost: 0

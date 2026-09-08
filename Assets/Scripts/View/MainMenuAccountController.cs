@@ -2,7 +2,7 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using YG;
+using YG.LanguageLegacy;
 
 public sealed class MainMenuAccountController : MonoBehaviour
 {
@@ -14,6 +14,15 @@ public sealed class MainMenuAccountController : MonoBehaviour
     [SerializeField] private Button _authorizeButton;
     [SerializeField] private TMP_Text _authorizeButtonText;
     [SerializeField] private Button _closeButton;
+    [SerializeField] private LanguageYG _signInLocalization;
+    [SerializeField] private LanguageYG _anonymousNameLocalization;
+    [SerializeField] private LanguageYG _guestTitleLocalization;
+    [SerializeField] private LanguageYG _anonymousTitleLocalization;
+    [SerializeField] private LanguageYG _accountTitleLocalization;
+    [SerializeField] private LanguageYG _guestMessageLocalization;
+    [SerializeField] private LanguageYG _anonymousMessageLocalization;
+    [SerializeField] private LanguageYG _accountMessageLocalization;
+    [SerializeField] private LanguageYG _authorizeButtonLocalization;
 
     private readonly YandexPlayerAccountService _accountService = new YandexPlayerAccountService();
 
@@ -29,7 +38,6 @@ public sealed class MainMenuAccountController : MonoBehaviour
         _authorizeButton.onClick.AddListener(RequestAuthorization);
         _closeButton.onClick.AddListener(CloseDialog);
         _accountService.StateChanged += Refresh;
-        YG2.onSwitchLang += ApplyLanguage;
         _accountService.Enable();
         Refresh();
     }
@@ -40,7 +48,6 @@ public sealed class MainMenuAccountController : MonoBehaviour
         _authorizeButton.onClick.RemoveListener(RequestAuthorization);
         _closeButton.onClick.RemoveListener(CloseDialog);
         _accountService.StateChanged -= Refresh;
-        YG2.onSwitchLang -= ApplyLanguage;
         _accountService.Disable();
     }
 
@@ -64,107 +71,75 @@ public sealed class MainMenuAccountController : MonoBehaviour
     private void Refresh()
     {
         PlayerAccountState state = _accountService.State;
-        string language = YG2.lang;
+        RefreshAccountButton(state);
+        RefreshDialog(state);
 
-        _accountButtonText.text = state == PlayerAccountState.AuthorizedNamed
-            ? _accountService.PlayerName
-            : GetAccountName(state, language);
-
-        _dialogTitleText.text = GetDialogTitle(state, language);
-        _dialogMessageText.text = GetDialogMessage(state, language);
         bool authorizationAvailable = state == PlayerAccountState.Guest;
         _authorizeButton.gameObject.SetActive(authorizationAvailable);
-        _authorizeButtonText.text = GetSignInText(language);
+        _authorizeButtonLocalization.enabled = authorizationAvailable;
+
+        if (authorizationAvailable && _authorizeButtonLocalization.gameObject.activeInHierarchy)
+            _authorizeButtonLocalization.SwitchLanguage();
     }
 
-    private void ApplyLanguage(string language)
+    private void RefreshAccountButton(PlayerAccountState state)
     {
-        Refresh();
+        bool showsPlayerName = state == PlayerAccountState.AuthorizedNamed;
+        _signInLocalization.enabled = state == PlayerAccountState.Guest;
+        _anonymousNameLocalization.enabled = state == PlayerAccountState.AuthorizedAnonymous;
+
+        if (showsPlayerName)
+        {
+            _accountButtonText.text = _accountService.PlayerName;
+            return;
+        }
+
+        LanguageYG selectedLocalization = state == PlayerAccountState.Guest
+            ? _signInLocalization
+            : _anonymousNameLocalization;
+
+        if (selectedLocalization.gameObject.activeInHierarchy)
+            selectedLocalization.SwitchLanguage();
     }
 
-    private static string GetAccountName(PlayerAccountState state, string language)
+    private void RefreshDialog(PlayerAccountState state)
     {
-        if (state == PlayerAccountState.AuthorizedAnonymous)
+        LanguageYG titleLocalization = state switch
         {
-            return language switch
-            {
-                EnableLanguages.RussianLanguageCode => "Аноним",
-                EnableLanguages.TurkishLanguageCode => "Anonim",
-                _ => "Anonymous"
-            };
-        }
-
-        return GetSignInText(language);
-    }
-
-    private static string GetDialogTitle(PlayerAccountState state, string language)
-    {
-        if (state == PlayerAccountState.Guest)
-        {
-            return language switch
-            {
-                EnableLanguages.RussianLanguageCode => "СОХРАНИТЬ ПРОГРЕСС",
-                EnableLanguages.TurkishLanguageCode => "İLERLEMEYİ KAYDET",
-                _ => "SAVE PROGRESS"
-            };
-        }
-
-        if (state == PlayerAccountState.AuthorizedAnonymous)
-        {
-            return language switch
-            {
-                EnableLanguages.RussianLanguageCode => "АНОНИМНЫЙ АККАУНТ",
-                EnableLanguages.TurkishLanguageCode => "ANONİM HESAP",
-                _ => "ANONYMOUS ACCOUNT"
-            };
-        }
-
-        return language switch
-        {
-            EnableLanguages.RussianLanguageCode => "АККАУНТ",
-            EnableLanguages.TurkishLanguageCode => "HESAP",
-            _ => "ACCOUNT"
+            PlayerAccountState.Guest => _guestTitleLocalization,
+            PlayerAccountState.AuthorizedAnonymous => _anonymousTitleLocalization,
+            _ => _accountTitleLocalization
         };
+
+        LanguageYG messageLocalization = state switch
+        {
+            PlayerAccountState.Guest => _guestMessageLocalization,
+            PlayerAccountState.AuthorizedAnonymous => _anonymousMessageLocalization,
+            _ => _accountMessageLocalization
+        };
+
+        SelectLocalization(titleLocalization,
+            _guestTitleLocalization,
+            _anonymousTitleLocalization,
+            _accountTitleLocalization);
+
+        SelectLocalization(messageLocalization,
+            _guestMessageLocalization,
+            _anonymousMessageLocalization,
+            _accountMessageLocalization);
     }
 
-    private static string GetDialogMessage(PlayerAccountState state, string language)
+    private static void SelectLocalization(
+        LanguageYG selected,
+        LanguageYG first,
+        LanguageYG second,
+        LanguageYG third)
     {
-        if (state == PlayerAccountState.Guest)
-        {
-            return language switch
-            {
-                EnableLanguages.RussianLanguageCode => "Войдите в аккаунт Яндекса, чтобы сохранять прогресс в облаке и продолжать игру на других устройствах.",
-                EnableLanguages.TurkishLanguageCode => "İlerlemenizi buluta kaydetmek ve diğer cihazlarda devam etmek için Yandex hesabınıza giriş yapın.",
-                _ => "Sign in to your Yandex account to save progress in the cloud and continue on other devices."
-            };
-        }
-
-        if (state == PlayerAccountState.AuthorizedAnonymous)
-        {
-            return language switch
-            {
-                EnableLanguages.RussianLanguageCode => "Вы вошли анонимно. Прогресс синхронизируется с вашим аккаунтом Яндекса.",
-                EnableLanguages.TurkishLanguageCode => "Anonim olarak giriş yaptınız. İlerlemeniz Yandex hesabınızla eşitleniyor.",
-                _ => "You are signed in anonymously. Progress is synchronized with your Yandex account."
-            };
-        }
-
-        return language switch
-        {
-            EnableLanguages.RussianLanguageCode => "Прогресс синхронизируется с вашим аккаунтом Яндекса.",
-            EnableLanguages.TurkishLanguageCode => "İlerlemeniz Yandex hesabınızla eşitleniyor.",
-            _ => "Progress is synchronized with your Yandex account."
-        };
-    }
-
-    private static string GetSignInText(string language)
-    {
-        return language switch
-        {
-            EnableLanguages.RussianLanguageCode => "ВОЙТИ",
-            EnableLanguages.TurkishLanguageCode => "GİRİŞ YAP",
-            _ => "SIGN IN"
-        };
+        first.enabled = first == selected;
+        second.enabled = second == selected;
+        third.enabled = third == selected;
+        if (selected.gameObject.activeInHierarchy)
+            selected.SwitchLanguage();
     }
 
     private void ValidateDependencies()
@@ -174,6 +149,15 @@ public sealed class MainMenuAccountController : MonoBehaviour
             _authorizeButtonText == null || _closeButton == null)
         {
             throw new InvalidOperationException(nameof(MainMenuAccountController));
+        }
+
+        if (_signInLocalization == null || _anonymousNameLocalization == null ||
+            _guestTitleLocalization == null || _anonymousTitleLocalization == null ||
+            _accountTitleLocalization == null || _guestMessageLocalization == null ||
+            _anonymousMessageLocalization == null || _accountMessageLocalization == null ||
+            _authorizeButtonLocalization == null)
+        {
+            throw new InvalidOperationException(nameof(LanguageYG));
         }
     }
 }

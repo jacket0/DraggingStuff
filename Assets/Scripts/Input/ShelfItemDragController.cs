@@ -11,6 +11,14 @@ public class ShelfItemDragController : MonoBehaviour
     private bool _isDragging;
 
     public event Action<ShelfItem> DragStarting;
+    public event Action InteractionOccurred;
+
+    public bool IsDragging => _isDragging;
+
+    private void OnDisable()
+    {
+        CancelDrag();
+    }
 
     public bool TryBeginDrag(ShelfItem item, Vector2 pressScreenPosition)
     {
@@ -31,6 +39,7 @@ public class ShelfItemDragController : MonoBehaviour
 
         _sourceSlot = sourceSlot;
         _isDragging = true;
+        InteractionOccurred?.Invoke();
 
         return true;
     }
@@ -40,19 +49,21 @@ public class ShelfItemDragController : MonoBehaviour
         if (!_isDragging) return;
 
         _dragMover.Move(pointerPosition);
+        InteractionOccurred?.Invoke();
     }
 
     public void EndDrag(Vector2 pointerPosition)
     {
         if (!_isDragging) return;
 
-        if (!_slotRaycaster.TryGetSlot(pointerPosition, out ShelfSlot targetSlot))
+        if (!_slotRaycaster.TryGetSlot(_sourceSlot, pointerPosition, out ShelfSlot targetSlot))
         {
             CancelDrag();
             return;
         }
 
-        MoveOutcome outcome = _levelSession.TryMove(_sourceSlot, targetSlot);
+        _dragMover.PreparePlacement();
+        MoveOutcome outcome = _levelSession.TryStartMove(_sourceSlot, targetSlot);
 
         if (!outcome.IsSuccessful)
         {
@@ -60,13 +71,17 @@ public class ShelfItemDragController : MonoBehaviour
             return;
         }
 
-        _dragMover.Complete();
+        _dragMover.Place(_levelSession.CompleteMovePlacement);
         ClearDragState();
     }
 
-    private void CancelDrag()
+    public void CancelDrag()
     {
+        if (!_isDragging)
+            return;
+
         _dragMover.Cancel();
+        InteractionOccurred?.Invoke();
         ClearDragState();
     }
 

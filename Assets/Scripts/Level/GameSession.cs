@@ -10,6 +10,8 @@ public abstract class GameSession : MonoBehaviour
     [SerializeField] private MoveResolutionPlayer _moveResolutionPlayer;
 
     private bool _isResolvingMove;
+    private bool _hasPendingMove;
+    private MoveOutcome _pendingMoveOutcome;
 
     public LevelState State { get; private set; }
     public bool IsPlaying => State == LevelState.Playing;
@@ -25,10 +27,12 @@ public abstract class GameSession : MonoBehaviour
     {
         Time.timeScale = 1;
         _isResolvingMove = false;
+        _hasPendingMove = false;
+        _pendingMoveOutcome = default;
         SetState(LevelState.Playing);
     }
 
-    public MoveOutcome TryMove(ShelfSlot source, ShelfSlot target)
+    public MoveOutcome TryStartMove(ShelfSlot source, ShelfSlot target)
     {
         if (!CanInteract)
             return MoveOutcome.Rejected();
@@ -39,13 +43,25 @@ public abstract class GameSession : MonoBehaviour
             return moveOutcome;
 
         _isResolvingMove = true;
+        _hasPendingMove = true;
+        _pendingMoveOutcome = moveOutcome;
+
+        return moveOutcome;
+    }
+
+    public void CompleteMovePlacement()
+    {
+        if (!_isResolvingMove || !_hasPendingMove)
+            throw new InvalidOperationException(nameof(_pendingMoveOutcome));
+
+        MoveOutcome moveOutcome = _pendingMoveOutcome;
+        _hasPendingMove = false;
+        _pendingMoveOutcome = default;
 
         if (moveOutcome.HasMatch)
             RegisterMatch(moveOutcome.Match);
 
         PlayMoveResolution(moveOutcome);
-
-        return moveOutcome;
     }
 
     public void Restart()

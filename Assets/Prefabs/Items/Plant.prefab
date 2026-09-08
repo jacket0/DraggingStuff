@@ -27,8 +27,8 @@ Transform:
   m_GameObject: {fileID: 2785980629905679748}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.05, z: 0}
-  m_LocalScale: {x: 0.45000002, y: 0.45000002, z: 0.45000002}
+  m_LocalPosition: {x: 0, y: -0.075, z: 0}
+  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 7348835975180354909}
@@ -95,6 +95,8 @@ GameObject:
   - component: {fileID: 8278389911820959414}
   - component: {fileID: 1243895387681738075}
   - component: {fileID: 2846255378075750968}
+  - component: {fileID: 9000000000000000005}
+  - component: {fileID: 9000000000000000006}
   m_Layer: 0
   m_Name: Plant
   m_TagString: Untagged
@@ -131,6 +133,30 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _type: 2
+--- !u!114 &9000000000000000005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5274213366516155059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 056ba278883a18d4880d5cc00945453f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &9000000000000000006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5274213366516155059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0538340d57d9d6c468f5ec5533968c73, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &1243895387681738075
 MonoBehaviour:
   m_ObjectHideFlags: 0

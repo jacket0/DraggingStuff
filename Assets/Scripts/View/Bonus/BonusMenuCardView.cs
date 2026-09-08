@@ -9,15 +9,25 @@ public sealed class BonusMenuCardView : MonoBehaviour
     [SerializeField] private BonusRewardedAdService _rewardedAdService;
     [SerializeField] private Image _icon;
     [SerializeField] private TMP_Text _amountText;
-    [SerializeField] private Button _rewardedButton;
+    [SerializeField] private Button _cardButton;
 
     private bool _isInitialized;
 
     private IBonusInventory Inventory => _inventoryService;
 
+    private void Awake()
+    {
+        ValidateDependencies();
+        _cardButton.onClick.AddListener(HandleClicked);
+    }
+
+    private void OnDestroy()
+    {
+        _cardButton?.onClick.RemoveListener(HandleClicked);
+    }
+
     private void OnEnable()
     {
-        _rewardedButton.onClick.AddListener(HandleRewardedButtonClicked);
         Inventory.AmountChanged += HandleAmountChanged;
         _rewardedAdService.AvailabilityChanged += Refresh;
 
@@ -27,7 +37,6 @@ public sealed class BonusMenuCardView : MonoBehaviour
 
     private void OnDisable()
     {
-        _rewardedButton.onClick.RemoveListener(HandleRewardedButtonClicked);
         Inventory.AmountChanged -= HandleAmountChanged;
         _rewardedAdService.AvailabilityChanged -= Refresh;
     }
@@ -44,8 +53,11 @@ public sealed class BonusMenuCardView : MonoBehaviour
         ApplyIcon();
     }
 
-    private void HandleRewardedButtonClicked()
+    private void HandleClicked()
     {
+        if (!_cardButton.interactable)
+            return;
+
         if (!_rewardedAdService.TryShow(_definition))
             Refresh();
     }
@@ -69,7 +81,7 @@ public sealed class BonusMenuCardView : MonoBehaviour
     private void Render(int amount)
     {
         _amountText.SetText("x{0}", amount);
-        _rewardedButton.interactable = _rewardedAdService.CanShow(_definition);
+        _cardButton.interactable = _rewardedAdService.CanShow(_definition);
     }
 
     private void ApplyIcon()
@@ -79,5 +91,26 @@ public sealed class BonusMenuCardView : MonoBehaviour
 
         _icon.sprite = _definition == null ? null : _definition.Icon;
         _icon.enabled = _icon.sprite != null;
+    }
+
+    private void ValidateDependencies()
+    {
+        if (_definition == null)
+            throw new MissingReferenceException(nameof(_definition));
+
+        if (_inventoryService == null)
+            throw new MissingReferenceException(nameof(_inventoryService));
+
+        if (_rewardedAdService == null)
+            throw new MissingReferenceException(nameof(_rewardedAdService));
+
+        if (_icon == null)
+            throw new MissingReferenceException(nameof(_icon));
+
+        if (_amountText == null)
+            throw new MissingReferenceException(nameof(_amountText));
+
+        if (_cardButton == null)
+            throw new MissingReferenceException(nameof(_cardButton));
     }
 }

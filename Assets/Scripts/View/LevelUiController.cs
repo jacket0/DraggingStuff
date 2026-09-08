@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 public class LevelUiController : MonoBehaviour
 {
     private const string MainMenuSceneName = "MainMenu";
+    private const string EndlessLevelSceneName = "EndlessLevel";
     private const int ReviewLevelNumber = 3;
 
     [SerializeField] private PauseWindowView _pauseWindowView;
@@ -14,8 +15,10 @@ public class LevelUiController : MonoBehaviour
     [SerializeField] private ScoreSystem _scoreSystem;
     [SerializeField] private YandexGameReviewService _gameReviewService;
     [SerializeField] private YandexInterstitialAdService _interstitialAdService;
+    [SerializeField] private LevelCatalog _levelCatalog;
+    [SerializeField] private LevelSelectionState _levelSelectionState;
 
-    private bool _isMenuTransitionPending;
+    private bool _isTransitionPending;
 
     private IGameReviewService GameReviewService => _gameReviewService;
     private IInterstitialAdService InterstitialAdService => _interstitialAdService;
@@ -35,6 +38,7 @@ public class LevelUiController : MonoBehaviour
         _levelCompletionView.RestartRequested += HandleRestartRequested;
         _levelSession.LevelCompleted += HandleLevelCompleted;
         _levelCompletionView.MenuRequested += HandleMenuRequest;
+        _levelCompletionView.NextRequested += HandleNextLevelRequest;
         _pauseWindowView.MenuRequested += HandleMenuRequest;
         _levelCompletionView.ReviewRequested += HandleReviewRequested;
     }
@@ -47,6 +51,7 @@ public class LevelUiController : MonoBehaviour
         _levelCompletionView.RestartRequested -= HandleRestartRequested;
         _levelSession.LevelCompleted -= HandleLevelCompleted;
         _levelCompletionView.MenuRequested -= HandleMenuRequest;
+        _levelCompletionView.NextRequested -= HandleNextLevelRequest;
         _pauseWindowView.MenuRequested -= HandleMenuRequest;
         _levelCompletionView.ReviewRequested -= HandleReviewRequested;
     }
@@ -65,6 +70,10 @@ public class LevelUiController : MonoBehaviour
 
     private void HandleRestartRequested()
     {
+        if (_isTransitionPending)
+            return;
+
+        _isTransitionPending = true;
         _levelSession.Restart();
     }
 
@@ -73,18 +82,20 @@ public class LevelUiController : MonoBehaviour
         bool isReviewAvailable =
             _levelSession.CurrentLevel.Number == ReviewLevelNumber &&
             GameReviewService.CanRequest;
+        bool opensEndlessMode = !_levelCatalog.TryGetNext(_levelSession.CurrentLevel, out _);
 
         _levelHudView.Hide();
         _pauseWindowView.Hide();
-        _levelCompletionView.Show(_scoreSystem.CurrentScore, isReviewAvailable);
+        _levelCompletionView.Show(_scoreSystem.CurrentScore, isReviewAvailable, opensEndlessMode);
     }
 
     private void HandleMenuRequest()
     {
-        if (_isMenuTransitionPending)
+        if (_isTransitionPending)
             return;
 
-        _isMenuTransitionPending = true;
+        _isTransitionPending = true;
+        _levelCompletionView.SetInteractable(false);
         InterstitialAdService.Show(OpenMainMenu);
     }
 
@@ -96,7 +107,34 @@ public class LevelUiController : MonoBehaviour
 
     private void HandleReviewRequested()
     {
+        if (_isTransitionPending)
+            return;
+
         if (GameReviewService.TryRequest())
             _levelCompletionView.HideReviewButton();
+    }
+
+    private void HandleNextLevelRequest()
+    {
+        if (_isTransitionPending || _levelSession.State != LevelState.Won)
+            return;
+
+        _isTransitionPending = true;
+        _levelCompletionView.SetInteractable(false);
+        InterstitialAdService.Show(OpenNextLevel);
+    }
+
+    private void OpenNextLevel()
+    {
+        Time.timeScale = 1f;
+
+        if (_levelCatalog.TryGetNext(_levelSession.CurrentLevel, out LevelEntry nextLevel))
+        {
+            _levelSelectionState.Select(nextLevel);
+            SceneManager.LoadScene(nextLevel.SceneName);
+            return;
+        }
+
+        SceneManager.LoadScene(EndlessLevelSceneName);
     }
 }

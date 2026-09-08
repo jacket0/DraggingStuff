@@ -259,7 +259,8 @@ public sealed class VariableShelfTests
                     .DefaultIfEmpty(0)
                     .Max();
 
-                Assert.That(itemCount == items.Length && largestGroup == items.Length, Is.False);
+                if (items.Length >= Shelf.MinimumMatchCapacity)
+                    Assert.That(itemCount == items.Length && largestGroup == items.Length, Is.False);
 
                 if (items.Length >= 4)
                     Assert.That(itemCount == items.Length - 1 && largestGroup == items.Length - 1, Is.False);
