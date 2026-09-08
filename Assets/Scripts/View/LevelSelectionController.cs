@@ -7,20 +7,23 @@ public class LevelSelectionController : MonoBehaviour
 {
     [SerializeField] private LevelCatalog _catalog;
     [SerializeField] private LevelSelectionState _selectionState;
-    [SerializeField] private LevelCardView _cardView;
-    [SerializeField] private Transform _cardsRoot;
     [SerializeField] private LevelProgressService _progress;
-    [SerializeField] private EndlessModeCardView _endlessCardView;
     [SerializeField] private EndlessProgressService _endlessProgress;
     [SerializeField] private string _endlessSceneName = "EndlessLevel";
-
-    private readonly List<LevelCardView> _cards = new List<LevelCardView>();
-
-    private EndlessModeCardView _createdEndlessCard;
+    [SerializeField] private List<LevelCardView> _cards = new List<LevelCardView>();
+    [SerializeField] private EndlessModeCardView _endlessCard;
 
     private void Start()
     {
-        CreateCards();
+        ValidateDependencies();
+
+        foreach (LevelCardView card in _cards)
+        {
+            card.Clicked += OpenLevel;
+        }
+
+        _endlessCard.Clicked += OpenEndlessLevel;
+        RefreshCards();
     }
 
     private void OnEnable()
@@ -43,11 +46,14 @@ public class LevelSelectionController : MonoBehaviour
 
     private void OnDestroy()
     {
-        foreach (var card in _cards)
-            card.Clicked -= OpenLevel;
+        foreach (LevelCardView card in _cards)
+        {
+            if (card != null)
+                card.Clicked -= OpenLevel;
+        }
 
-        if (_createdEndlessCard != null)
-            _createdEndlessCard.Clicked -= OpenEndlessLevel;
+        if (_endlessCard != null)
+            _endlessCard.Clicked -= OpenEndlessLevel;
     }
 
     private void OpenLevel(LevelEntry level)
@@ -60,42 +66,6 @@ public class LevelSelectionController : MonoBehaviour
 
         _selectionState.Select(level);
         SceneManager.LoadScene(level.SceneName);
-    }
-
-    private void CreateCards()
-    {
-        ValidateDependencies();
-
-        foreach (var level in _catalog.Levels)
-        {
-            if (level == null)
-                throw new NullReferenceException(nameof(level));
-
-            LevelCardView card = Instantiate(_cardView, _cardsRoot);
-
-            bool unlocked = _progress.IsUnlocked(level);
-            long bestScore = _progress.GetBestScore(level);
-
-            card.Bind(level, unlocked, bestScore);
-            card.Clicked += OpenLevel;
-
-            _cards.Add(card);
-        }
-
-        CreateEndlessCard();
-    }
-
-    private void CreateEndlessCard()
-    {
-        if (_endlessCardView == null && _endlessProgress == null)
-            return;
-
-        if (_endlessCardView == null || _endlessProgress == null || string.IsNullOrWhiteSpace(_endlessSceneName))
-            throw new InvalidOperationException(nameof(_endlessCardView));
-
-        _createdEndlessCard = Instantiate(_endlessCardView, _cardsRoot);
-        _createdEndlessCard.Bind(_progress.AreAllLevelsCompleted(), _endlessProgress.BestScore);
-        _createdEndlessCard.Clicked += OpenEndlessLevel;
     }
 
     private void RefreshCards()
@@ -116,10 +86,7 @@ public class LevelSelectionController : MonoBehaviour
 
     private void RefreshEndlessCard()
     {
-        if (_createdEndlessCard == null)
-            return;
-
-        _createdEndlessCard.Bind(_progress.AreAllLevelsCompleted(), _endlessProgress.BestScore);
+        _endlessCard.Bind(_progress.AreAllLevelsCompleted(), _endlessProgress.BestScore);
     }
 
     private void OpenEndlessLevel()
@@ -138,13 +105,16 @@ public class LevelSelectionController : MonoBehaviour
         if (_selectionState == null)
             throw new InvalidOperationException(nameof(_selectionState));
 
-        if (_cardView == null)
-            throw new InvalidOperationException(nameof(_cardView));
-
-        if (_cardsRoot == null)
-            throw new InvalidOperationException(nameof(_cardsRoot));
-
         if (_progress == null)
             throw new InvalidOperationException(nameof(_progress));
+
+        if (_endlessProgress == null)
+            throw new InvalidOperationException(nameof(_endlessProgress));
+
+        if (_cards == null || _cards.Count != _catalog.Levels.Count || _cards.Exists(card => card == null))
+            throw new InvalidOperationException(nameof(_cards));
+
+        if (_endlessCard == null)
+            throw new InvalidOperationException(nameof(_endlessCard));
     }
 }

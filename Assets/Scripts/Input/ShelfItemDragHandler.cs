@@ -26,6 +26,11 @@ public class ShelfItemDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandl
         if (dragController == null)
             return;
 
+        ShelfPointerInput pointerInput = dragController.GetComponent<ShelfPointerInput>();
+
+        if (pointerInput != null && pointerInput.isActiveAndEnabled)
+            return;
+
         if (!dragController.TryBeginDrag(_item, eventData.pressPosition))
             return;
 

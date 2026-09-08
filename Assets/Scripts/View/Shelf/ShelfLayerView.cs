@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public class ShelfLayerView : MonoBehaviour
 {
@@ -7,6 +8,8 @@ public class ShelfLayerView : MonoBehaviour
 
     private Renderer[] _renderers;
     private Material[][] _originalMaterials;
+    private ShadowCastingMode[] _originalShadowCastingModes;
+    private bool[] _originalReceiveShadows;
 
     public void Initialize()
     {
@@ -14,23 +17,38 @@ public class ShelfLayerView : MonoBehaviour
             throw new InvalidOperationException(nameof(_previewMaterial));
 
         _renderers = GetComponentsInChildren<Renderer>(true);
-        _originalMaterials = new Material[_renderers.Length][];
 
-        for (int i = 0; i < _originalMaterials.Length; i++)
-            _originalMaterials[i] = _renderers[i].sharedMaterials;
+        _originalMaterials = new Material[_renderers.Length][];
+        _originalShadowCastingModes = new ShadowCastingMode[_renderers.Length];
+        _originalReceiveShadows = new bool[_renderers.Length];
+
+        for (int i = 0; i < _renderers.Length; i++)
+        {
+            Renderer renderer = _renderers[i];
+
+            _originalMaterials[i] = renderer.sharedMaterials;
+            _originalShadowCastingModes[i] = renderer.shadowCastingMode;
+            _originalReceiveShadows[i] = renderer.receiveShadows;
+        }
     }
 
     public void ShowActive()
     {
         gameObject.SetActive(true);
+
         RestoreMaterials();
+        RestoreShadows();
+
         SetInteractionEnabled(true);
     }
 
     public void ShowPreview()
     {
         gameObject.SetActive(true);
+
         ApplyPreviewMaterials();
+        DisableShadows();
+
         SetInteractionEnabled(false);
     }
 
@@ -42,7 +60,10 @@ public class ShelfLayerView : MonoBehaviour
     public void ResetForPool()
     {
         if (_renderers != null)
+        {
             RestoreMaterials();
+            RestoreShadows();
+        }
 
         SetInteractionEnabled(true);
         gameObject.SetActive(false);
@@ -50,7 +71,7 @@ public class ShelfLayerView : MonoBehaviour
 
     private void SetInteractionEnabled(bool isEnabled)
     {
-        Collider[] colliders = gameObject.GetComponentsInChildren<Collider>(true);
+        Collider[] colliders = GetComponentsInChildren<Collider>(true);
 
         foreach (Collider collider in colliders)
         {
@@ -79,6 +100,24 @@ public class ShelfLayerView : MonoBehaviour
             }
 
             _renderers[r].sharedMaterials = previewMaterials;
+        }
+    }
+
+    private void DisableShadows()
+    {
+        foreach (Renderer renderer in _renderers)
+        {
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+        }
+    }
+
+    private void RestoreShadows()
+    {
+        for (int i = 0; i < _renderers.Length; i++)
+        {
+            _renderers[i].shadowCastingMode = _originalShadowCastingModes[i];
+            _renderers[i].receiveShadows = _originalReceiveShadows[i];
         }
     }
 }

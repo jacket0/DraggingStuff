@@ -1,9 +1,8 @@
 using System;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
-using YG;
+using YG.LanguageLegacy;
 
 public class AudioSettingsPanel : MonoBehaviour
 {
@@ -11,11 +10,6 @@ public class AudioSettingsPanel : MonoBehaviour
     private const float ActiveIconAlpha = 1f;
     private const float FractionToPercentMultiplier = 100f;
     private const string PercentTextTemplate = "{0}%";
-
-    [FormerlySerializedAs("_mutedValueText")]
-    [SerializeField] private string _russianMutedValueText = "ВЫКЛ";
-    [SerializeField] private string _englishMutedValueText = "OFF";
-    [SerializeField] private string _turkishMutedValueText = "KAPALI";
 
     [SerializeField] private AudioSettingsService _audioSettings;
     [SerializeField] private Button _soundMuteButton;
@@ -29,11 +23,19 @@ public class AudioSettingsPanel : MonoBehaviour
 
     [SerializeField] private TMP_Text _soundValueText;
     [SerializeField] private TMP_Text _musicValueText;
+    [SerializeField] private LanguageYG _soundMutedLocalization;
+    [SerializeField] private LanguageYG _musicMutedLocalization;
 
     private void Awake()
     {
         if (_audioSettings == null)
             throw new InvalidOperationException(nameof(_audioSettings));
+
+        if (_soundMutedLocalization == null)
+            throw new InvalidOperationException(nameof(_soundMutedLocalization));
+
+        if (_musicMutedLocalization == null)
+            throw new InvalidOperationException(nameof(_musicMutedLocalization));
     }
 
     private void OnEnable()
@@ -45,7 +47,6 @@ public class AudioSettingsPanel : MonoBehaviour
         _musicSlider.onValueChanged.AddListener(ChangeMusicVolume);
 
         _audioSettings.SettingsChanged += Refresh;
-        YG2.onSwitchLang += HandleLanguageChanged;
 
         Refresh();
     }
@@ -59,7 +60,6 @@ public class AudioSettingsPanel : MonoBehaviour
         _musicSlider.onValueChanged.RemoveListener(ChangeMusicVolume);
 
         _audioSettings.SettingsChanged -= Refresh;
-        YG2.onSwitchLang -= HandleLanguageChanged;
     }
 
     private void ToggleSoundMute()
@@ -82,11 +82,6 @@ public class AudioSettingsPanel : MonoBehaviour
         _audioSettings.SetMusicVolume(volume);
     }
 
-    private void HandleLanguageChanged(string language)
-    {
-        Refresh();
-    }
-
     private void Refresh()
     {
         _soundSlider.SetValueWithoutNotify(_audioSettings.SfxVolume);
@@ -94,11 +89,13 @@ public class AudioSettingsPanel : MonoBehaviour
 
         SetVolumeText(
             _soundValueText,
+            _soundMutedLocalization,
             _audioSettings.SfxVolume,
             _audioSettings.IsSfxMuted);
 
         SetVolumeText(
             _musicValueText,
+            _musicMutedLocalization,
             _audioSettings.MusicVolume,
             _audioSettings.IsMusicMuted);
 
@@ -106,32 +103,23 @@ public class AudioSettingsPanel : MonoBehaviour
         SetIconAlpha(_musicIcon, _audioSettings.IsMusicMuted);
     }
 
-    private void SetVolumeText(TMP_Text target, float normalizedVolume, bool muted)
+    private static void SetVolumeText(
+        TMP_Text target,
+        LanguageYG mutedLocalization,
+        float normalizedVolume,
+        bool muted)
     {
         if (muted)
         {
-            target.SetText(GetMutedValueText());
+            mutedLocalization.enabled = true;
+            mutedLocalization.SwitchLanguage();
             return;
         }
 
+        mutedLocalization.enabled = false;
         int percent = Mathf.RoundToInt(normalizedVolume * FractionToPercentMultiplier);
 
         target.SetText(PercentTextTemplate, percent);
-    }
-
-    private string GetMutedValueText()
-    {
-        switch (YG2.lang)
-        {
-            case EnableLanguages.RussianLanguageCode:
-                return _russianMutedValueText;
-
-            case EnableLanguages.TurkishLanguageCode:
-                return _turkishMutedValueText;
-
-            default:
-                return _englishMutedValueText;
-        }
     }
 
     private static void SetIconAlpha(Image icon, bool muted)

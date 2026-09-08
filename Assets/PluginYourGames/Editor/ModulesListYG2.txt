@@ -1,4 +1,5 @@
 Authorization v1.023
+AutoTranslateLangs v1.003
 InterstitialAdv v1.02
 Leaderboards v1.01
 Localization v1.02

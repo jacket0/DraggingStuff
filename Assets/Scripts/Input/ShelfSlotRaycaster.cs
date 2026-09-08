@@ -4,20 +4,22 @@ public class ShelfSlotRaycaster : MonoBehaviour
 {
     [SerializeField] private Camera _camera;
     [SerializeField] private LayerMask _slotLayerMask;
+    [SerializeField, Min(0f)] private float _shelfPaddingPixels = 64f;
 
-    public bool TryGetSlot(Vector2 pointerPosition, out ShelfSlot slot)
+    private ShelfDropTargetResolver _targetResolver;
+
+    private void OnEnable()
     {
-        Ray ray = _camera.ScreenPointToRay(pointerPosition);
+        ShelfBoard shelfBoard = GetComponent<ShelfBoard>();
 
-        bool hasHit = Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, _slotLayerMask, QueryTriggerInteraction.Collide);
+        if (shelfBoard == null)
+            throw new MissingComponentException(nameof(ShelfBoard));
 
-        if (!hasHit)
-        {
-            slot = null;
-            return false;
-        }
+        _targetResolver = new ShelfDropTargetResolver(_camera, shelfBoard, _slotLayerMask, _shelfPaddingPixels);
+    }
 
-        slot = hit.collider.GetComponentInParent<ShelfSlot>();
-        return slot != null;
+    public bool TryGetSlot(ShelfSlot sourceSlot, Vector2 pointerPosition, out ShelfSlot targetSlot)
+    {
+        return _targetResolver.TryResolve(sourceSlot, pointerPosition, out targetSlot);
     }
 }

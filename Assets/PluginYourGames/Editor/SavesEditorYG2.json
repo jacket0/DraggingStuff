@@ -1,5 +1,5 @@
 {
-    "idSave": 12,
+    "idSave": 91,
     "GameProgress": {
         "Version": 1,
         "LegacyDataImported": true,
@@ -21,7 +21,7 @@
             },
             {
                 "LevelNumber": 4,
-                "BestScore": 12100,
+                "BestScore": 14300,
                 "IsCompleted": true
             },
             {
@@ -39,7 +39,7 @@
         "Bonuses": [
             {
                 "Id": "combo_freeze",
-                "Amount": 3
+                "Amount": 2
             },
             {
                 "Id": "hint",
