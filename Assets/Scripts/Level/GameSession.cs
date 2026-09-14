@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using YG;
@@ -9,71 +10,173 @@ public abstract class GameSession : MonoBehaviour
     [SerializeField] private ShelfBoard _shelfBoard;
     [SerializeField] private MoveResolutionPlayer _moveResolutionPlayer;
 
-    private bool _isResolvingMove;
-    private bool _hasPendingMove;
-    private MoveOutcome _pendingMoveOutcome;
+    private readonly Dictionary<Shelf, ShelfOperation> _operations = new Dictionary<Shelf, ShelfOperation>();
+    private readonly List<ResolutionWave> _waves = new List<ResolutionWave>();
+    private ShelfColumn _dragSource;
+    private bool _needsSettlement;
+    private bool _needsPreparation;
+    private bool _isPreparing;
+    private int _generation;
 
     public LevelState State { get; private set; }
     public bool IsPlaying => State == LevelState.Playing;
-    public bool CanInteract => IsPlaying && !_isResolvingMove;
-    protected bool IsResolvingMove => _isResolvingMove;
+    public bool CanInteract => IsPlaying && !_isPreparing;
+    public bool IsBoardSettled => !_needsSettlement && !_isPreparing && _operations.Count == 0 && _dragSource == null && !ItemAnimations.HasAnimations;
+    public ShelfItemPlacementAnimator ItemAnimations => _shelfBoard.ItemAnimations;
+    protected bool IsResolvingMove => !IsBoardSettled;
+    protected ShelfBoard ShelfBoard => _shelfBoard;
 
     public event Action<MatchResolution> MatchSucceeded;
     public event Action<LevelState> StateChanged;
 
-    protected ShelfBoard ShelfBoard => _shelfBoard;
-
     protected void StartSession()
     {
         Time.timeScale = 1;
-        _isResolvingMove = false;
-        _hasPendingMove = false;
-        _pendingMoveOutcome = default;
+        _generation++;
+        _dragSource = null;
+        _needsSettlement = false;
+        _needsPreparation = false;
+        _isPreparing = false;
         SetState(LevelState.Playing);
     }
 
-    public MoveOutcome TryStartMove(ShelfSlot source, ShelfSlot target)
+    public bool CanPickUp(ShelfColumnView view) => CanInteract && view != null && _shelfBoard.CanPickUp(view.Column);
+
+    public bool TryBeginDrag(ShelfColumnView source)
     {
-        if (!CanInteract)
-            return MoveOutcome.Rejected();
+        if (_dragSource != null || !CanPickUp(source))
+            return false;
 
-        MoveOutcome moveOutcome = _shelfBoard.TryMove(source, target);
-
-        if (!moveOutcome.IsSuccessful)
-            return moveOutcome;
-
-        _isResolvingMove = true;
-        _hasPendingMove = true;
-        _pendingMoveOutcome = moveOutcome;
-
-        return moveOutcome;
+        _dragSource = source.Column;
+        return true;
     }
 
-    public void CompleteMovePlacement()
+    public void EndDrag() => _dragSource = null;
+
+    public MoveOutcome TryStartMove(ShelfColumnView source, ShelfColumnView target, out Action completePlacement)
     {
-        if (!_isResolvingMove || !_hasPendingMove)
-            throw new InvalidOperationException(nameof(_pendingMoveOutcome));
+        completePlacement = null;
 
-        MoveOutcome moveOutcome = _pendingMoveOutcome;
-        _hasPendingMove = false;
-        _pendingMoveOutcome = default;
+        if (!CanInteract || source == null || target == null || _dragSource != null && _dragSource != source.Column)
+            return MoveOutcome.Rejected();
 
-        if (moveOutcome.HasMatch)
-            RegisterMatch(moveOutcome.Match);
+        MoveOutcome outcome = _shelfBoard.TryMove(source.Column, target.Column);
 
-        PlayMoveResolution(moveOutcome);
+        if (!outcome.IsSuccessful)
+            return outcome;
+
+        ResolutionWave wave = CreateWave(outcome.AffectedShelves);
+        wave.PendingInitialAnimations = 2;
+        target.AttachFront(outcome.Item);
+        _needsSettlement = true;
+        _needsPreparation = true;
+        int generation = _generation;
+        bool placementCompleted = false;
+
+        void CompleteInitialAnimation()
+        {
+            if (this == null || generation != _generation || !_waves.Contains(wave))
+                return;
+
+            wave.PendingInitialAnimations--;
+
+            if (wave.PendingInitialAnimations == 0)
+            {
+                foreach (ShelfOperation operation in wave.Operations)
+                    operation.IsReady = true;
+            }
+        }
+
+        source.Shelf.View.Advance(CompleteInitialAnimation, outcome.Item);
+        completePlacement = () =>
+        {
+            if (placementCompleted || this == null || generation != _generation || outcome.Item == null || outcome.Item.Column != target.Column)
+                return;
+
+            placementCompleted = true;
+            CompleteInitialAnimation();
+        };
+
+        return outcome;
+    }
+
+    private void Update()
+    {
+        if (!_needsSettlement || _isPreparing || State == LevelState.Paused)
+            return;
+
+        foreach (ResolutionWave wave in _waves.ToArray())
+        {
+            if (wave.PendingInitialAnimations > 0 || wave.Operations.Any(operation => !operation.IsReady))
+                continue;
+
+            foreach (ShelfOperation operation in wave.Operations.ToArray())
+            {
+                Shelf shelf = operation.Shelf;
+
+                if (shelf.TryResolveMatch(out MatchResolution match))
+                {
+                    PlayMatch(operation, match);
+                }
+                else
+                {
+                    _operations.Remove(shelf);
+                    _shelfBoard.UnlockShelf(shelf);
+                    wave.Operations.Remove(operation);
+                }
+            }
+
+            if (wave.Operations.Count == 0)
+                _waves.Remove(wave);
+        }
+
+        if (_operations.Count > 0 || _dragSource != null || ItemAnimations.HasAnimations)
+            return;
+
+        _isPreparing = true;
+        int generation = _generation;
+
+        if (_needsPreparation)
+        {
+            _needsPreparation = false;
+            PrepareBoardAfterMove(() =>
+            {
+                if (this == null || generation != _generation)
+                    return;
+
+                _isPreparing = false;
+                Shelf[] matchedShelves = _shelfBoard.Shelves.Where(shelf => shelf.HasMatch()).ToArray();
+
+                if (matchedShelves.Length > 0)
+                {
+                    foreach (ShelfOperation operation in CreateWave(matchedShelves).Operations)
+                        operation.IsReady = true;
+                }
+            });
+            return;
+        }
+
+        SettleBoard(() =>
+        {
+            if (this == null || generation != _generation)
+                return;
+
+            _isPreparing = false;
+            _needsSettlement = false;
+            HandleBoardSettled(_shelfBoard.IsCleared);
+        });
     }
 
     public void Restart()
     {
+        CancelOperations();
         Time.timeScale = 1;
-        Scene currentScene = SceneManager.GetActiveScene();
-        SceneManager.LoadScene(currentScene.buildIndex);
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     public bool TryPause()
     {
-        if (State != LevelState.Playing)
+        if (!IsPlaying)
             return false;
 
         SetState(LevelState.Paused);
@@ -90,75 +193,80 @@ public abstract class GameSession : MonoBehaviour
         SetState(LevelState.Playing);
     }
 
-    private void OnDestroy()
-    {
-        if (YG2.isGameplaying)
-            YG2.GameplayStop();
-    }
-
     protected abstract void HandleBoardSettled(bool isBoardCleared);
     protected virtual void PrepareBoardAfterMove(Action completed) => completed?.Invoke();
     protected virtual void SettleBoard(Action completed) => completed?.Invoke();
     protected virtual void HandleMatchRegistered(MatchResolution match) { }
-
     protected void CompleteAsWon() => SetState(LevelState.Won);
-    protected void BeginEnding() => SetState(LevelState.Ending);
+    protected void BeginEnding()
+    {
+        _needsSettlement = true;
+        SetState(LevelState.Ending);
+    }
     protected void CompleteAsLost() => SetState(LevelState.Lost);
 
-    private void PlayMoveResolution(MoveOutcome moveOutcome)
+    private ResolutionWave CreateWave(IReadOnlyList<Shelf> shelves)
     {
-        if (!moveOutcome.HasMatch)
+        ResolutionWave wave = new ResolutionWave();
+
+        foreach (Shelf shelf in shelves)
         {
-            PrepareAndAdvanceLayers();
-            return;
+            ShelfOperation operation = new ShelfOperation(shelf);
+            _shelfBoard.LockShelf(shelf);
+            _operations.Add(shelf, operation);
+            wave.Operations.Add(operation);
         }
 
-        _moveResolutionPlayer.Play(moveOutcome.Match, PrepareAndAdvanceLayers);
-        _shelfBoard.HideActiveLayers(moveOutcome.EmptiedShelves);
+        _waves.Add(wave);
+        return wave;
     }
 
-    private void PrepareAndAdvanceLayers()
+    private bool IsCurrent(ShelfOperation operation)
     {
-        PrepareBoardAfterMove(() =>
+        return this != null && _operations.TryGetValue(operation.Shelf, out ShelfOperation current) && current == operation;
+    }
+
+    private void PlayMatch(ShelfOperation operation, MatchResolution match)
+    {
+        operation.IsReady = false;
+        _needsPreparation = true;
+        MatchSucceeded?.Invoke(match);
+        HandleMatchRegistered(match);
+        _moveResolutionPlayer.Play(match, () =>
         {
-            IReadOnlyList<Shelf> shelves = _shelfBoard.GetShelvesReadyToAdvance();
-            _shelfBoard.AdvanceLayers(shelves, ResolveRevealedMatches);
+            if (!IsCurrent(operation))
+                return;
+
+            operation.Shelf.View.Advance(() =>
+            {
+                if (IsCurrent(operation))
+                    operation.IsReady = true;
+            });
         });
     }
 
-    private void ResolveRevealedMatches()
+    private void CancelOperations()
     {
-        if (State == LevelState.Ending)
+        _generation++;
+        _waves.Clear();
+
+        foreach (Shelf shelf in _operations.Keys)
         {
-            CompleteResolution();
-            return;
+            shelf.View.Cancel();
+            _shelfBoard.UnlockShelf(shelf);
         }
 
-        if (_shelfBoard.TryResolveActiveMatch(out Shelf matchedShelf, out MatchResolution match))
-        {
-            RegisterMatch(match);
-
-            _moveResolutionPlayer.Play(match, PrepareAndAdvanceLayers);
-
-            if (matchedShelf.CanRevealNextLayer)
-                matchedShelf.HideActiveLayer();
-
-            return;
-        }
-
-        SettleBoard(CompleteResolution);
+        _operations.Clear();
+        _moveResolutionPlayer.CancelAll();
+        ItemAnimations.Dispose();
     }
 
-    private void RegisterMatch(MatchResolution match)
+    private void OnDestroy()
     {
-        MatchSucceeded?.Invoke(match);
-        HandleMatchRegistered(match);
-    }
+        CancelOperations();
 
-    private void CompleteResolution()
-    {
-        _isResolvingMove = false;
-        HandleBoardSettled(_shelfBoard.IsCleared);
+        if (YG2.isGameplaying)
+            YG2.GameplayStop();
     }
 
     private void SetState(LevelState state)
@@ -168,11 +276,24 @@ public abstract class GameSession : MonoBehaviour
 
         State = state;
 
-        if (State == LevelState.Playing)
+        if (state == LevelState.Playing)
             YG2.GameplayStart();
         else
             YG2.GameplayStop();
 
-        StateChanged?.Invoke(State);
+        StateChanged?.Invoke(state);
+    }
+
+    private sealed class ShelfOperation
+    {
+        public Shelf Shelf { get; }
+        public bool IsReady { get; set; }
+        public ShelfOperation(Shelf shelf) => Shelf = shelf;
+    }
+
+    private sealed class ResolutionWave
+    {
+        public List<ShelfOperation> Operations { get; } = new List<ShelfOperation>();
+        public int PendingInitialAnimations { get; set; }
     }
 }

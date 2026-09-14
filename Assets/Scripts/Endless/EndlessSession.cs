@@ -44,14 +44,13 @@ public sealed class EndlessSession : GameSession
             return;
 
         MatchCount++;
-        _timer.RegisterMatch(MatchCount);
-        _boardRefiller.PrepareRefill(MatchCount);
+        _timer.RegisterMatch(MatchCount, match.Items.Count);
     }
 
     protected override void PrepareBoardAfterMove(Action completed)
     {
         if (State == LevelState.Playing)
-            _boardRefiller.ApplyPreparedRefill(MatchCount);
+            _boardRefiller.RefillIfNeeded(MatchCount);
 
         completed?.Invoke();
     }

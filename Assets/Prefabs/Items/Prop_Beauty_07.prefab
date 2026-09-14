@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 236516120612161615}
   - component: {fileID: 9000000000000000009}
   - component: {fileID: 9000000000000000010}
+  - component: {fileID: 7951623178298473497}
   m_Layer: 6
   m_Name: Prop_Beauty_07
   m_TagString: Untagged
@@ -156,5 +157,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0538340d57d9d6c468f5ec5533968c73, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &7951623178298473497
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6737359750028854706}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e110af07044f6e3458b12a9c7245c028, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 

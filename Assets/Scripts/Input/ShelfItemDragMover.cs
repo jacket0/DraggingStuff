@@ -24,6 +24,12 @@ public class ShelfItemDragMover : MonoBehaviour
     private Quaternion _placementWorldRotation;
     private Vector3 _placementLocalScale;
     private Tween _movementTween;
+    private ShelfItemPlacementAnimator _placementAnimator;
+
+    public void Initialize(ShelfItemPlacementAnimator placementAnimator)
+    {
+        _placementAnimator = placementAnimator ?? throw new ArgumentNullException(nameof(placementAnimator));
+    }
 
     private void OnDestroy()
     {
@@ -32,7 +38,7 @@ public class ShelfItemDragMover : MonoBehaviour
 
     public bool TryBeginMove(ShelfItem item, Vector2 pointerPosition, bool snapToPointer = false)
     {
-        if (item == null || _draggedItem != null)
+        if (item == null || _draggedItem != null || _placementAnimator.IsAnimating(item))
             return false;
 
         Vector3 liftedItemPosition = CalculateLiftedItemPosition(item.transform.position);
@@ -86,22 +92,8 @@ public class ShelfItemDragMover : MonoBehaviour
         ShelfItem returningItem = _draggedItem;
         returningItem.transform.SetParent(_originalParent, true);
 
-        Sequence returnSequence = DOTween.Sequence();
-
-        returnSequence.Join(returningItem.transform.DOLocalMove(_originalLocalPosition, _returnDuration).SetEase(_moveEase));
-        returnSequence.Join(returningItem.transform.DOLocalRotateQuaternion(_originalLocalRotation, _returnDuration).SetEase(_moveEase));
-        returnSequence.Join(returningItem.transform.DOScale(_originalLocalScale, _returnDuration).SetEase(_moveEase));
-
-        returnSequence.OnComplete(() =>
-        {
-            returningItem.transform.localPosition = _originalLocalPosition;
-            returningItem.transform.localRotation = _originalLocalRotation;
-            returningItem.transform.localScale = _originalLocalScale;
-
-            ClearState();
-        });
-
-        _movementTween = returnSequence;
+        _placementAnimator.Return(returningItem, _originalLocalPosition, _originalLocalRotation, _originalLocalScale, _returnDuration, _moveEase);
+        ClearState();
     }
 
     public void PreparePlacement()
@@ -124,20 +116,8 @@ public class ShelfItemDragMover : MonoBehaviour
         placedItem.transform.SetPositionAndRotation(_placementWorldPosition, _placementWorldRotation);
         placedItem.transform.localScale = _placementLocalScale;
 
-        Sequence placementSequence = DOTween.Sequence();
-        placementSequence.Join(placedItem.transform.DOLocalMove(Vector3.zero, _placementDuration).SetEase(Ease.OutBack, 1.25f));
-        placementSequence.Join(placedItem.transform.DOLocalRotateQuaternion(Quaternion.identity, _placementDuration).SetEase(Ease.OutCubic));
-        placementSequence.Join(placedItem.transform.DOScale(Vector3.one, _placementDuration).SetEase(Ease.OutCubic));
-        placementSequence.OnComplete(() =>
-        {
-            placedItem.transform.localPosition = Vector3.zero;
-            placedItem.transform.localRotation = Quaternion.identity;
-            placedItem.transform.localScale = Vector3.one;
-            ClearState();
-            completed?.Invoke();
-        });
-
-        _movementTween = placementSequence;
+        ClearState();
+        _placementAnimator.Place(placedItem, _placementDuration, completed);
     }
 
     private void ClearState()

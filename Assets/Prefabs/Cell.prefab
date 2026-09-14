@@ -42,11 +42,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 7786416583050388594}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bde7fe36df092ac4f8c157fe07da8f04, type: 3}
+  m_Script: {fileID: 11500000, guid: c2d780693ed719d44ab3dd07d0dcbc7b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _shelfItem: {fileID: 0}
   _itemAnchor: {fileID: 1302365361847199425}
+  _dropCollider: {fileID: 4679314731838025669}
 --- !u!65 &4679314731838025669
 BoxCollider:
   m_ObjectHideFlags: 0

@@ -1,62 +1,27 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 public sealed class GenerationBatch
 {
-    private readonly List<BoardLayerSnapshot>[] _layersByShelf;
-    private readonly List<int> _groupSizes = new List<int>();
+    private readonly List<ItemType>[][] _items;
+    public int ShelfCount => _items.Length;
 
-    public int ShelfCount => _layersByShelf.Length;
-    public int ItemCount => _layersByShelf.Sum(layers => layers.Sum(CountItems));
-    public int GroupCount => _groupSizes.Count;
-    public IReadOnlyList<int> GroupSizes => _groupSizes;
-
-    public GenerationBatch(int shelfCount)
+    public GenerationBatch(BoardSnapshot snapshot)
     {
-        if (shelfCount <= 0)
-            throw new ArgumentOutOfRangeException(nameof(shelfCount));
+        if (snapshot == null)
+            throw new ArgumentNullException(nameof(snapshot));
 
-        _layersByShelf = new List<BoardLayerSnapshot>[shelfCount];
+        _items = new List<ItemType>[snapshot.Shelves.Count][];
 
-        for (int shelfIndex = 0; shelfIndex < shelfCount; shelfIndex++)
-            _layersByShelf[shelfIndex] = new List<BoardLayerSnapshot>();
-    }
-
-    public IReadOnlyList<BoardLayerSnapshot> GetLayers(int shelfIndex)
-    {
-        if (shelfIndex < 0 || shelfIndex >= ShelfCount)
-            throw new ArgumentOutOfRangeException(nameof(shelfIndex));
-
-        return _layersByShelf[shelfIndex];
-    }
-
-    public void AddLayer(int shelfIndex, BoardLayerSnapshot layer)
-    {
-        if (shelfIndex < 0 || shelfIndex >= ShelfCount)
-            throw new ArgumentOutOfRangeException(nameof(shelfIndex));
-
-        _layersByShelf[shelfIndex].Add(layer ?? throw new ArgumentNullException(nameof(layer)));
-    }
-
-    public void RegisterGroup(int size)
-    {
-        if (size < Shelf.MinimumMatchCapacity || size > Shelf.MaximumCapacity)
-            throw new ArgumentOutOfRangeException(nameof(size));
-
-        _groupSizes.Add(size);
-    }
-
-    private static int CountItems(BoardLayerSnapshot layer)
-    {
-        int count = 0;
-
-        foreach (ItemType? item in layer.Items)
+        for (int shelfIndex = 0; shelfIndex < _items.Length; shelfIndex++)
         {
-            if (item.HasValue)
-                count++;
-        }
+            _items[shelfIndex] = new List<ItemType>[snapshot.Shelves[shelfIndex].Capacity];
 
-        return count;
+            for (int columnIndex = 0; columnIndex < _items[shelfIndex].Length; columnIndex++)
+                _items[shelfIndex][columnIndex] = new List<ItemType>();
+        }
     }
+
+    public IReadOnlyList<ItemType> GetItems(int shelfIndex, int columnIndex) => _items[shelfIndex][columnIndex].AsReadOnly();
+    public void Append(int shelfIndex, int columnIndex, ItemType type) => _items[shelfIndex][columnIndex].Add(type);
 }

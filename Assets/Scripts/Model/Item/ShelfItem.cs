@@ -8,6 +8,7 @@ public class ShelfItem : MonoBehaviour
     private Action<ShelfItem> _releaseAction;
 
     public ItemType Type => _type;
+    public ShelfColumn Column { get; internal set; }
 
     public void Delete()
     {

@@ -1,5 +1,5 @@
 {
-    "idSave": 91,
+    "idSave": 160,
     "GameProgress": {
         "Version": 1,
         "LegacyDataImported": true,
@@ -33,17 +33,47 @@
                 "LevelNumber": 6,
                 "BestScore": 17900,
                 "IsCompleted": true
+            },
+            {
+                "LevelNumber": 7,
+                "BestScore": 8400,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 8,
+                "BestScore": 18800,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 9,
+                "BestScore": 17100,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 10,
+                "BestScore": 20000,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 11,
+                "BestScore": 21900,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 12,
+                "BestScore": 22700,
+                "IsCompleted": true
             }
         ],
         "EndlessBestScore": 80500,
         "Bonuses": [
             {
                 "Id": "combo_freeze",
-                "Amount": 2
+                "Amount": 0
             },
             {
                 "Id": "hint",
-                "Amount": 2
+                "Amount": 0
             }
         ]
     }

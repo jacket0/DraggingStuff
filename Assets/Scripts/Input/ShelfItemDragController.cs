@@ -5,9 +5,9 @@ public class ShelfItemDragController : MonoBehaviour
 {
     [SerializeField] private GameSession _levelSession;
     [SerializeField] private ShelfItemDragMover _dragMover;
-    [SerializeField] private ShelfSlotRaycaster _slotRaycaster;
+    [SerializeField] private ShelfColumnRaycaster _columnRaycaster;
 
-    private ShelfSlot _sourceSlot;
+    private ShelfColumnView _sourceColumn;
     private bool _isDragging;
 
     public event Action<ShelfItem> DragStarting;
@@ -15,8 +15,20 @@ public class ShelfItemDragController : MonoBehaviour
 
     public bool IsDragging => _isDragging;
 
+    private void Awake()
+    {
+        _dragMover.Initialize(_levelSession.ItemAnimations);
+    }
+
+    private void OnEnable()
+    {
+        _levelSession.StateChanged += HandleStateChanged;
+    }
+
     private void OnDisable()
     {
+        if (_levelSession != null)
+            _levelSession.StateChanged -= HandleStateChanged;
         CancelDrag();
     }
 
@@ -25,9 +37,9 @@ public class ShelfItemDragController : MonoBehaviour
         if (!_levelSession.CanInteract || item == null || _isDragging)
             return false;
 
-        ShelfSlot sourceSlot = item.GetComponentInParent<ShelfSlot>();
+        ShelfColumnView sourceColumn = item.GetComponentInParent<ShelfColumnView>();
 
-        if (sourceSlot == null || sourceSlot.Item != item)
+        if (sourceColumn == null || sourceColumn.FrontItem != item || !_levelSession.TryBeginDrag(sourceColumn))
             return false;
 
         Vector3 positionBeforeDragStarting = item.transform.position;
@@ -35,9 +47,12 @@ public class ShelfItemDragController : MonoBehaviour
         bool snapToPointer = (item.transform.position - positionBeforeDragStarting).sqrMagnitude > Mathf.Epsilon;
 
         if (!_dragMover.TryBeginMove(item, pressScreenPosition, snapToPointer))
+        {
+            _levelSession.EndDrag();
             return false;
+        }
 
-        _sourceSlot = sourceSlot;
+        _sourceColumn = sourceColumn;
         _isDragging = true;
         InteractionOccurred?.Invoke();
 
@@ -56,14 +71,14 @@ public class ShelfItemDragController : MonoBehaviour
     {
         if (!_isDragging) return;
 
-        if (!_slotRaycaster.TryGetSlot(_sourceSlot, pointerPosition, out ShelfSlot targetSlot))
+        if (!_columnRaycaster.TryGetColumn(_sourceColumn, pointerPosition, out ShelfColumnView targetColumn))
         {
             CancelDrag();
             return;
         }
 
         _dragMover.PreparePlacement();
-        MoveOutcome outcome = _levelSession.TryStartMove(_sourceSlot, targetSlot);
+        MoveOutcome outcome = _levelSession.TryStartMove(_sourceColumn, targetColumn, out Action completePlacement);
 
         if (!outcome.IsSuccessful)
         {
@@ -71,7 +86,7 @@ public class ShelfItemDragController : MonoBehaviour
             return;
         }
 
-        _dragMover.Place(_levelSession.CompleteMovePlacement);
+        _dragMover.Place(completePlacement);
         ClearDragState();
     }
 
@@ -87,7 +102,16 @@ public class ShelfItemDragController : MonoBehaviour
 
     private void ClearDragState()
     {
-        _sourceSlot = null;
+        if (_levelSession != null)
+            _levelSession.EndDrag();
+
+        _sourceColumn = null;
         _isDragging = false;
+    }
+
+    private void HandleStateChanged(LevelState state)
+    {
+        if (state != LevelState.Playing)
+            CancelDrag();
     }
 }

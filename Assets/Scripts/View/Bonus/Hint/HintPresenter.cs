@@ -56,24 +56,24 @@ public sealed class HintPresenter : MonoBehaviour, IHintPresenter
         if (IsPlaying)
             throw new InvalidOperationException("Отображение подсказки уже запущено.");
 
-        if (suggestion.SourceSlot.IsEmpty)
+        if (suggestion.SourceColumn.IsEmpty)
             throw new InvalidOperationException("Исходный слот подсказки больше не содержит предмет.");
 
-        if (!suggestion.TargetSlot.IsEmpty)
+        if (!suggestion.TargetColumn.IsEmpty)
             throw new InvalidOperationException("Целевой слот подсказки уже занят.");
 
         EnsureMatchingHighlightCapacity(suggestion.TargetMatchingItems.Count);
 
         StopParticleSystems();
 
-        _animatedItem = suggestion.SourceSlot.Item;
+        _animatedItem = suggestion.SourceColumn.FrontItem;
         _originalParent = _animatedItem.transform.parent;
         _originalLocalPosition = _animatedItem.transform.localPosition;
         _originalLocalRotation = _animatedItem.transform.localRotation;
         _originalLocalScale = _animatedItem.transform.localScale;
 
         Vector3 sourcePosition = _animatedItem.transform.position;
-        Vector3 targetPosition = suggestion.TargetSlot.transform.TransformPoint(_originalLocalPosition);
+        Vector3 targetPosition = suggestion.TargetColumn.ItemAnchor.TransformPoint(_originalLocalPosition);
 
         PlayAtPosition(_sourceHighlight, sourcePosition);
 

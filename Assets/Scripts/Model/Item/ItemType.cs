@@ -3,5 +3,9 @@ public enum ItemType
     Ball,
     Bear,
     Plant,
-    Lamp
+    Lamp,
+    MapBall,
+    Beauty,
+    Toy,
+    TrainToy
 }

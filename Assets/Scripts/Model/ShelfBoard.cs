@@ -3,256 +3,119 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public class ShelfBoard : MonoBehaviour
+public sealed class ShelfBoard : MonoBehaviour
 {
     [SerializeField] private List<Shelf> _shelves;
 
+    private readonly HashSet<Shelf> _lockedShelves = new HashSet<Shelf>();
+    private readonly Dictionary<ShelfColumn, ColumnPosition> _positions = new Dictionary<ShelfColumn, ColumnPosition>();
+    private readonly BoardMoveSimulator _simulator = new BoardMoveSimulator();
+    private bool _initialized;
+
     public IReadOnlyList<Shelf> Shelves => _shelves;
     public bool IsCleared => _shelves.All(shelf => shelf.IsCleared);
+    public bool HasLockedShelves => _lockedShelves.Count > 0;
+    public ShelfItemPlacementAnimator ItemAnimations { get; } = new ShelfItemPlacementAnimator();
+
+    public void Initialize()
+    {
+        if (_initialized)
+            return;
+
+        if (_shelves == null || _shelves.Count == 0 || _shelves.Any(shelf => shelf == null) || _shelves.Distinct().Count() != _shelves.Count)
+            throw new InvalidOperationException("The board requires unique shelves.");
+
+        for (int shelfIndex = 0; shelfIndex < _shelves.Count; shelfIndex++)
+        {
+            Shelf shelf = _shelves[shelfIndex];
+            shelf.Initialize();
+
+            for (int columnIndex = 0; columnIndex < shelf.Capacity; columnIndex++)
+                _positions.Add(shelf.Columns[columnIndex], new ColumnPosition(shelfIndex, columnIndex));
+        }
+
+        _initialized = true;
+    }
 
     public void InitializeViews()
     {
+        Initialize();
+
         foreach (Shelf shelf in _shelves)
-            shelf.InitializeView();
+            shelf.View.Refresh();
     }
 
-    public bool CanMove(ShelfSlot source, ShelfSlot target)
+    public bool IsShelfLocked(Shelf shelf) => _lockedShelves.Contains(shelf);
+
+    public void LockShelf(Shelf shelf)
     {
-        return TryGetValidMoveShelves(source, target, out Shelf sourceShelf, out Shelf targetShelf)
-            && IsMoveSafe(source, target, sourceShelf, targetShelf);
+        if (shelf == null || !_shelves.Contains(shelf) || !_lockedShelves.Add(shelf))
+            throw new InvalidOperationException("The shelf cannot be locked twice.");
     }
 
-    public MoveOutcome TryMove(ShelfSlot source, ShelfSlot target)
+    public void UnlockShelf(Shelf shelf) => _lockedShelves.Remove(shelf);
+
+    public bool CanPickUp(ShelfColumn column)
     {
-        if (!TryGetValidMoveShelves(source, target, out Shelf sourceShelf, out Shelf targetShelf))
+        Initialize();
+        return column != null && !column.IsEmpty && _positions.TryGetValue(column, out ColumnPosition position)
+            && _shelves[position.ShelfIndex].isActiveAndEnabled && !IsShelfLocked(_shelves[position.ShelfIndex])
+            && !ItemAnimations.IsAnimating(column.FrontItem);
+    }
+
+    public ShelfColumnView GetView(ShelfColumn column)
+    {
+        Initialize();
+
+        if (column == null || !_positions.TryGetValue(column, out ColumnPosition position))
+            throw new ArgumentException("The column does not belong to this board.", nameof(column));
+
+        return _shelves[position.ShelfIndex].ColumnViews[position.ColumnIndex];
+    }
+
+    public BoardStateSnapshot CreateSnapshot()
+    {
+        Initialize();
+        return new BoardStateSnapshot(_shelves.Select(shelf => shelf.CreateSnapshot()).ToArray());
+    }
+
+    public bool CanMove(ShelfColumn source, ShelfColumn target) => TrySimulateMove(source, target, out _);
+
+    public bool TrySimulateMove(ShelfColumn source, ShelfColumn target, out BoardMoveSimulation simulation)
+    {
+        simulation = null;
+
+        if (!CanPickUp(source) || target == null || !target.IsEmpty || !_positions.TryGetValue(target, out ColumnPosition targetPosition))
+            return false;
+
+        Shelf targetShelf = _shelves[targetPosition.ShelfIndex];
+
+        if (!targetShelf.isActiveAndEnabled || IsShelfLocked(targetShelf))
+            return false;
+
+        ShelfStateSnapshot[] shelves = _shelves.Select(shelf => shelf.CreateSnapshot()).ToArray();
+
+        for (int index = 0; index < shelves.Length; index++)
+        {
+            if (IsShelfLocked(_shelves[index]))
+                shelves[index] = _simulator.ResolveMatches(new BoardStateSnapshot(new[] { shelves[index] })).State.Shelves[0];
+        }
+
+        return _simulator.TrySimulate(new BoardStateSnapshot(shelves), _positions[source], targetPosition, out simulation) && simulation.IsAllowed;
+    }
+
+    public MoveOutcome TryMove(ShelfColumn source, ShelfColumn target)
+    {
+        if (!TrySimulateMove(source, target, out _))
             return MoveOutcome.Rejected();
 
-        if (!IsMoveSafe(source, target, sourceShelf, targetShelf))
-            return MoveOutcome.Rejected();
-
-        ShelfItem item = source.TakeItem();
-        target.PlaceItem(item);
-
-        targetShelf.TryResolveMatch(out MatchResolution match);
-
-        List<Shelf> advancingShelves = new List<Shelf>(2);
-
-        if (sourceShelf.CanRevealNextLayer)
-            advancingShelves.Add(sourceShelf);
-
-        if (targetShelf != sourceShelf && targetShelf.CanRevealNextLayer)
-            advancingShelves.Add(targetShelf);
-
-        return MoveOutcome.Successful(match, advancingShelves);
+        ShelfItem item = source.TakeFront();
+        target.PlaceFront(item);
+        Shelf sourceShelf = GetView(source).Shelf;
+        Shelf targetShelf = GetView(target).Shelf;
+        Shelf[] affected = _shelves.Where(shelf => shelf == sourceShelf || shelf == targetShelf).ToArray();
+        return MoveOutcome.Successful(item, source, target, affected);
     }
 
-    public bool TryResolveActiveMatch(out Shelf matchedShelf, out MatchResolution match)
-    {
-        foreach (Shelf shelf in _shelves)
-        {
-            if (!shelf.TryResolveMatch(out match))
-                continue;
-
-            matchedShelf = shelf;
-            return true;
-        }
-
-        matchedShelf = null;
-        match = null;
-        return false;
-    }
-
-    public void AdvanceLayers(IReadOnlyList<Shelf> shelves, Action completed)
-    {
-        if (shelves == null)
-            throw new ArgumentNullException(nameof(shelves));
-
-        if (shelves.Count == 0)
-        {
-            completed?.Invoke();
-            return;
-        }
-
-        int remainingTransitions = shelves.Count;
-
-        void HandleTransitionCompleted()
-        {
-            remainingTransitions--;
-
-            if (remainingTransitions == 0)
-                completed?.Invoke();
-        }
-
-        foreach (Shelf shelf in shelves)
-            shelf.RevealNextLayer(HandleTransitionCompleted);
-    }
-
-    public IReadOnlyList<Shelf> GetShelvesReadyToAdvance()
-    {
-        return _shelves.Where(shelf => shelf.CanRevealNextLayer).ToArray();
-    }
-
-    public void HideActiveLayers(IReadOnlyList<Shelf> shelves)
-    {
-        if (shelves == null)
-            throw new ArgumentNullException(nameof(shelves));
-
-        foreach (Shelf shelf in shelves)
-        {
-            if (shelf == null)
-                throw new InvalidOperationException(nameof(shelf));
-
-            shelf.HideActiveLayer();
-        }
-    }
-
-    private bool TryGetValidMoveShelves(ShelfSlot source, ShelfSlot target, out Shelf sourceShelf, out Shelf targetShelf)
-    {
-        sourceShelf = null;
-        targetShelf = null;
-
-        if (source == null || target == null || source == target)
-            return false;
-
-        if (source.IsEmpty || !target.IsEmpty)
-            return false;
-
-        if (!TryGetOwningShelf(source, out sourceShelf))
-            return false;
-
-        if (!TryGetOwningShelf(target, out targetShelf))
-            return false;
-
-        if (!sourceShelf.IsContainsActiveSlot(source))
-            return false;
-
-        if (!targetShelf.IsContainsActiveSlot(target))
-            return false;
-
-        return true;
-    }
-
-    private bool TryGetOwningShelf(ShelfSlot slot, out Shelf shelf)
-    {
-        shelf = slot != null ? slot.GetComponentInParent<Shelf>() : null;
-        return shelf != null && _shelves.Contains(shelf);
-    }
-
-    private bool IsMoveSafe(ShelfSlot source, ShelfSlot target, Shelf sourceShelf, Shelf targetShelf)
-    {
-        List<List<ItemType?[]>> projectedShelves = CreateProjection();
-        int sourceShelfIndex = _shelves.IndexOf(sourceShelf);
-        int targetShelfIndex = _shelves.IndexOf(targetShelf);
-        int sourceSlotIndex = GetSlotIndex(sourceShelf.ActiveLayer, source);
-        int targetSlotIndex = GetSlotIndex(targetShelf.ActiveLayer, target);
-        ItemType?[] sourceLayer = projectedShelves[sourceShelfIndex][0];
-        ItemType?[] targetLayer = projectedShelves[targetShelfIndex][0];
-
-        targetLayer[targetSlotIndex] = sourceLayer[sourceSlotIndex];
-        sourceLayer[sourceSlotIndex] = null;
-
-        bool createdMatch = ResolveProjection(projectedShelves);
-
-        if (createdMatch)
-            return true;
-
-        return CountActiveEmptySlots(projectedShelves) > 0;
-    }
-
-    private List<List<ItemType?[]>> CreateProjection()
-    {
-        List<List<ItemType?[]>> projectedShelves = new List<List<ItemType?[]>>(_shelves.Count);
-
-        foreach (Shelf shelf in _shelves)
-        {
-            List<ItemType?[]> layers = new List<ItemType?[]>(shelf.Layers.Count);
-
-            foreach (ShelfLayer layer in shelf.Layers)
-            {
-                ItemType?[] items = new ItemType?[layer.Capacity];
-
-                for (int slotIndex = 0; slotIndex < layer.Slots.Count; slotIndex++)
-                {
-                    ShelfSlot slot = layer.Slots[slotIndex];
-                    items[slotIndex] = slot.IsEmpty ? null : slot.Item.Type;
-                }
-
-                layers.Add(items);
-            }
-
-            projectedShelves.Add(layers);
-        }
-
-        return projectedShelves;
-    }
-
-    private static bool ResolveProjection(List<List<ItemType?[]>> shelves)
-    {
-        bool createdMatch = false;
-        bool changed;
-
-        do
-        {
-            changed = false;
-
-            foreach (List<ItemType?[]> shelf in shelves)
-            {
-                while (shelf.Count > 1 && IsEmpty(shelf[0]))
-                {
-                    shelf.RemoveAt(0);
-                    changed = true;
-                }
-
-                if (shelf.Count == 0 || !HasMatch(shelf[0]))
-                    continue;
-
-                Array.Clear(shelf[0], 0, shelf[0].Length);
-                createdMatch = true;
-                changed = true;
-            }
-        }
-        while (changed);
-
-        return createdMatch;
-    }
-
-    private static int CountActiveEmptySlots(IEnumerable<List<ItemType?[]>> shelves)
-    {
-        int emptySlotCount = 0;
-
-        foreach (List<ItemType?[]> shelf in shelves)
-        {
-            if (shelf.Count == 0)
-                continue;
-
-            emptySlotCount += shelf[0].Count(item => !item.HasValue);
-        }
-
-        return emptySlotCount;
-    }
-
-    private static bool HasMatch(ItemType?[] layer)
-    {
-        if (layer.Length < Shelf.MinimumMatchCapacity || !layer[0].HasValue)
-            return false;
-
-        ItemType itemType = layer[0].Value;
-        return layer.All(item => item.HasValue && item.Value == itemType);
-    }
-
-    private static bool IsEmpty(ItemType?[] layer)
-    {
-        return layer.All(item => !item.HasValue);
-    }
-
-    private static int GetSlotIndex(ShelfLayer layer, ShelfSlot slot)
-    {
-        for (int index = 0; index < layer.Slots.Count; index++)
-        {
-            if (layer.Slots[index] == slot)
-                return index;
-        }
-
-        throw new InvalidOperationException(nameof(slot));
-    }
+    private void OnDestroy() => ItemAnimations.Dispose();
 }

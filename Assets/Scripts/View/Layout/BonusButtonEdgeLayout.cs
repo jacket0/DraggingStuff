@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,35 +11,40 @@ public sealed class BonusButtonEdgeLayout : MonoBehaviour
     [SerializeField, Min(0f)] private float _edgeInset = 32f;
     [SerializeField, Min(0f)] private float _bottomInset = 32f;
     [SerializeField, Min(0f)] private float _boardGap = 24f;
+    [SerializeField, Min(0.1f)] private float _preferredScale = 1.1f;
 
     private RectTransform _rectTransform;
     private HorizontalLayoutGroup _layoutGroup;
     private Rect _appliedSafeArea;
     private Vector2Int _appliedScreenSize;
+    private readonly List<Rect> _slotBounds = new List<Rect>();
+    private Matrix4x4 _appliedCameraMatrix;
+    private bool _layoutPending = true;
 
     private void Awake()
     {
         _rectTransform = GetComponent<RectTransform>();
         _layoutGroup = GetComponent<HorizontalLayoutGroup>();
         ValidateDependencies();
-        ApplyLayout();
     }
 
     private void OnEnable()
     {
-        ApplyLayout();
-    }
-
-    private void Start()
-    {
-        Canvas.ForceUpdateCanvases();
-        ApplyLayout();
+        _layoutPending = true;
     }
 
     private void LateUpdate()
     {
-        if (_appliedSafeArea != Screen.safeArea || _appliedScreenSize.x != Screen.width || _appliedScreenSize.y != Screen.height)
+        Matrix4x4 cameraMatrix = _worldCamera.projectionMatrix * _worldCamera.worldToCameraMatrix;
+
+        if (_layoutPending || _appliedSafeArea != Screen.safeArea || _appliedScreenSize.x != Screen.width ||
+            _appliedScreenSize.y != Screen.height || _appliedCameraMatrix != cameraMatrix)
+        {
+            Canvas.ForceUpdateCanvases();
             ApplyLayout();
+            _appliedCameraMatrix = cameraMatrix;
+            _layoutPending = false;
+        }
     }
 
     private void ApplyLayout()
@@ -59,10 +65,8 @@ public sealed class BonusButtonEdgeLayout : MonoBehaviour
         RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPosition, canvasCamera, out Vector2 localPosition);
 
         Vector2 preferredSize = CalculatePreferredSize();
-        float availableWidth = CalculateAvailableWidth(screenPosition.x, canvasScaleFactor);
-        float panelScale = preferredSize.x > 0f
-            ? Mathf.Clamp01(availableWidth / (preferredSize.x * canvasScaleFactor))
-            : 1f;
+        CollectSlotBounds(_boardGap * canvasScaleFactor);
+        float panelScale = CalculatePanelScale(screenPosition, preferredSize * canvasScaleFactor);
 
         _rectTransform.anchorMin = Vector2.zero;
         _rectTransform.anchorMax = Vector2.zero;
@@ -97,42 +101,79 @@ public sealed class BonusButtonEdgeLayout : MonoBehaviour
         return new Vector2(width, height);
     }
 
-    private float CalculateAvailableWidth(float panelLeft, float canvasScaleFactor)
+    private float CalculatePanelScale(Vector2 position, Vector2 size)
     {
-        float boardLeft = CalculateBoardLeft();
-        float panelRightLimit = Mathf.Min(Screen.safeArea.xMax, boardLeft - _boardGap * canvasScaleFactor);
-        return Mathf.Max(0f, panelRightLimit - panelLeft);
+        float minimumScale = 0f;
+        float maximumScale = _preferredScale;
+
+        if (Fits(new Rect(position, size * maximumScale)))
+            return maximumScale;
+
+        for (int iteration = 0; iteration < 12; iteration++)
+        {
+            float scale = (minimumScale + maximumScale) * 0.5f;
+
+            if (Fits(new Rect(position, size * scale)))
+                minimumScale = scale;
+            else
+                maximumScale = scale;
+        }
+
+        return minimumScale;
     }
 
-    private float CalculateBoardLeft()
+    private bool Fits(Rect panel)
     {
-        float boardLeft = Screen.safeArea.xMax;
+        if (panel.xMax > Screen.safeArea.xMax || panel.yMax > Screen.safeArea.yMax)
+            return false;
+
+        foreach (Rect columnView in _slotBounds)
+        {
+            if (panel.Overlaps(columnView))
+                return false;
+        }
+
+        return true;
+    }
+
+    private void CollectSlotBounds(float padding)
+    {
+        _slotBounds.Clear();
 
         foreach (Shelf shelf in _shelfBoard.Shelves)
         {
             if (shelf == null || !shelf.gameObject.activeInHierarchy)
                 continue;
 
-            Renderer[] renderers = shelf.GetComponentsInChildren<Renderer>(false);
+            if (shelf.Capacity == 0)
+                continue;
 
-            foreach (Renderer renderer in renderers)
+            foreach (ShelfColumnView columnView in shelf.ColumnViews)
             {
-                if (!renderer.enabled)
+                if (columnView == null || !columnView.gameObject.activeInHierarchy)
                     continue;
 
-                boardLeft = Mathf.Min(boardLeft, CalculateRendererLeft(renderer));
+                BoxCollider slotCollider = columnView.GetComponent<BoxCollider>();
+
+                if (slotCollider == null || !slotCollider.enabled)
+                    continue;
+
+                if (!TryProjectBounds(slotCollider, out Rect bounds))
+                    continue;
+
+                bounds.min -= Vector2.one * padding;
+                bounds.max += Vector2.one * padding;
+                _slotBounds.Add(bounds);
             }
         }
-
-        return boardLeft;
     }
 
-    private float CalculateRendererLeft(Renderer renderer)
+    private bool TryProjectBounds(BoxCollider slotCollider, out Rect rectangle)
     {
-        Bounds bounds = renderer.bounds;
-        Vector3 center = bounds.center;
-        Vector3 extents = bounds.extents;
-        float left = Screen.safeArea.xMax;
+        Vector3 center = slotCollider.center;
+        Vector3 extents = slotCollider.size * 0.5f;
+        Vector2 minimum = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+        Vector2 maximum = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
 
         for (int x = -1; x <= 1; x += 2)
         {
@@ -141,15 +182,19 @@ public sealed class BonusButtonEdgeLayout : MonoBehaviour
                 for (int z = -1; z <= 1; z += 2)
                 {
                     Vector3 corner = center + Vector3.Scale(extents, new Vector3(x, y, z));
-                    Vector3 screenPoint = _worldCamera.WorldToScreenPoint(corner);
+                    Vector3 screenPoint = _worldCamera.WorldToScreenPoint(slotCollider.transform.TransformPoint(corner));
 
                     if (screenPoint.z > 0f)
-                        left = Mathf.Min(left, screenPoint.x);
+                    {
+                        minimum = Vector2.Min(minimum, screenPoint);
+                        maximum = Vector2.Max(maximum, screenPoint);
+                    }
                 }
             }
         }
 
-        return left;
+        rectangle = Rect.MinMaxRect(minimum.x, minimum.y, maximum.x, maximum.y);
+        return minimum.x <= maximum.x && minimum.y <= maximum.y;
     }
 
     private void ValidateDependencies()

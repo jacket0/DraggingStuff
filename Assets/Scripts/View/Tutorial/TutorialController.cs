@@ -1,64 +1,37 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public sealed class TutorialController : MonoBehaviour
 {
-    private const string TutorialVersionKey = "tutorial.seen.version";
-    private const int TutorialVersion = 1;
+    private const string TutorialSceneName = "TutorialLevel";
 
-    [SerializeField] private TutorialView _tutorialView;
     [SerializeField] private Button _openButton;
-    [SerializeField] private List<TutorialPage> _pages = new List<TutorialPage>();
 
-    private bool _isInitialized;
+    private bool _isOpening;
 
     private void Awake()
     {
-        ValidateDependencies();
-        _tutorialView.Initialize();
-        _tutorialView.Hide();
-        _openButton.onClick.AddListener(Open);
-        _tutorialView.Closed += HandleTutorialClosed;
-        _isInitialized = true;
-    }
+        if (_openButton == null)
+            throw new InvalidOperationException(nameof(_openButton));
 
-    private void Start()
-    {
-        if (PlayerPrefs.GetInt(TutorialVersionKey, 0) < TutorialVersion)
-            Open();
+        _openButton.onClick.AddListener(Open);
     }
 
     private void OnDestroy()
     {
-        if (!_isInitialized)
-            return;
-
-        _openButton.onClick.RemoveListener(Open);
-        _tutorialView.Closed -= HandleTutorialClosed;
+        if (_openButton != null)
+            _openButton.onClick.RemoveListener(Open);
     }
 
     private void Open()
     {
-        _tutorialView.Show(_pages);
-    }
+        if (_isOpening)
+            return;
 
-    private void HandleTutorialClosed()
-    {
-        PlayerPrefs.SetInt(TutorialVersionKey, TutorialVersion);
-        PlayerPrefs.Save();
-    }
-
-    private void ValidateDependencies()
-    {
-        if (_tutorialView == null)
-            throw new InvalidOperationException(nameof(_tutorialView));
-
-        if (_openButton == null)
-            throw new InvalidOperationException(nameof(_openButton));
-
-        if (_pages == null || _pages.Count != 3 || _pages.Exists(page => page == null))
-            throw new InvalidOperationException(nameof(_pages));
+        _isOpening = true;
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(TutorialSceneName);
     }
 }

@@ -50,7 +50,7 @@ public class BonusUseController : MonoBehaviour, IBonusUseService, IBonusRuntime
 
         EnsureInitialized();
 
-        if (!_session.CanInteract)
+        if (!_session.CanInteract || !_session.IsBoardSettled)
             return BonusUseResult.LevelUnavailable;
 
         if (!_runtimes.TryGetValue(definition, out var runtime))

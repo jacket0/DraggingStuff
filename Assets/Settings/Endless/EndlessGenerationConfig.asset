@@ -12,25 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 30d04dbb7ad2e9543b766b0b919751a7, type: 3}
   m_Name: EndlessGenerationConfig
   m_EditorClassIdentifier: 
-  _minimumInitialEmptySlots: 6
-  _initialEmptySlotRatio: 0.15
-  _minimumBatchGroupCount: 10
-  _maximumBatchGroupCount: 14
+  _minimumEmptyColumns: 6
+  _emptyColumnRatio: 0.15
   _refillThresholdItemCount: 24
-  _threeItemGroupWeight: 0.6
-  _fourItemGroupWeight: 0.3
-  _fiveItemGroupWeight: 0.1
-  _fullTwoSlotLayerChance: 0.7
-  _candidateCount: 10
-  _solverCandidateCount: 3
-  _solverMatchGoal: 3
-  _solverMaximumMoveCount: 7
-  _solverNodeLimit: 400
-  _solverMaximumMovesPerState: 32
-  _solverTimeLimitMilliseconds: 8
-  _generationTimeLimitMilliseconds: 30
-  _earlyThreeShelfChance: 0.7
-  _lateThreeShelfChance: 0.9
-  _earlySameLayerPairChance: 0.2
-  _lateSameLayerPairChance: 0.1
+  _repeatedTypeWeight: 0.35
+  _earlySlotFillChance: 0.65
+  _lateSlotFillChance: 0.8
   _fullDifficultyMatchCount: 100

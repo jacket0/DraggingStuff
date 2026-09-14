@@ -46,7 +46,7 @@ public sealed class IdleMovePrompt : MonoBehaviour
 
     private void Update()
     {
-        bool canInteract = _levelSession.CanInteract && Time.timeScale > 0f;
+        bool canInteract = _levelSession.CanInteract && _levelSession.IsBoardSettled && Time.timeScale > 0f;
         bool hasInput = Input.anyKey || Input.touchCount > 0 || Input.mousePosition != _lastPointerPosition;
         _lastPointerPosition = Input.mousePosition;
 
@@ -66,13 +66,13 @@ public sealed class IdleMovePrompt : MonoBehaviour
 
     private void ShowPrompt()
     {
-        if (!_suggestionProvider.TryGetSuggestion(out MoveSuggestion suggestion) || suggestion.SourceSlot.IsEmpty)
+        if (!_suggestionProvider.TryGetSuggestion(out MoveSuggestion suggestion) || suggestion.SourceColumn.IsEmpty)
         {
             ResetTimer();
             return;
         }
 
-        _promptedItem = suggestion.SourceSlot.Item;
+        _promptedItem = suggestion.SourceColumn.FrontItem;
         _outlineView = ShelfItemOutlineView.GetRequired(_promptedItem);
         _initialRotation = _promptedItem.transform.localRotation;
         _outlineView.Show();
