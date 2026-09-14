@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-public class LevelBuilder : MonoBehaviour
+public sealed class LevelBuilder : MonoBehaviour
 {
     [SerializeField] private ShelfBoard _shelfBoard;
 
@@ -10,87 +10,45 @@ public class LevelBuilder : MonoBehaviour
         if (levelDefinition == null)
             throw new ArgumentNullException(nameof(levelDefinition));
 
-        ValidateConfig(levelDefinition);
-        FillBoard(levelDefinition);
-    }
-
-    private void ValidateConfig(LevelDefinition levelDefinition)
-    {
-        if (_shelfBoard == null)
-            throw new InvalidOperationException();
-
-        if (levelDefinition == null)
-            throw new InvalidOperationException();
+        _shelfBoard.Initialize();
 
         if (_shelfBoard.Shelves.Count != levelDefinition.Shelves.Count)
-            throw new InvalidOperationException($"Количество полок не совпадает. В сцене: {_shelfBoard.Shelves.Count}, в конфиге: {levelDefinition.Shelves.Count}.");
+            throw new InvalidOperationException("Scene and level shelf counts do not match.");
 
-        for (int i = 0; i < _shelfBoard.Shelves.Count; i++)
-            ValidateShelf(_shelfBoard.Shelves[i], levelDefinition.Shelves[i], i);
-    }
-
-    private void ValidateShelf(Shelf shelf, ShelfDefinition definition, int shelfIndex)
-    {
-        shelf.ValidateLayers();
-
-        if (shelf.Layers.Count != definition.Layers.Count)
-            throw new InvalidOperationException($"Полка {shelfIndex}: в сцене {shelf.Layers.Count} слоёв, в конфиге {definition.Layers.Count}.");
-
-        for (int layerIndex = 0; layerIndex < shelf.Layers.Count; layerIndex++)
-            ValidateLayer(shelf, shelf.Layers[layerIndex], definition.Layers[layerIndex], shelfIndex, layerIndex);
-    }
-
-    private void ValidateLayer(Shelf shelf, ShelfLayer layer, ShelfLayerDefinition definition, int shelfIndex, int layerIndex)
-    {
-        if (layer.Slots.Count != definition.ItemPrefabs.Count)
-            throw new InvalidOperationException($"Полка {shelfIndex}, слой {layerIndex}: в сцене {layer.Slots.Count} слотов, в конфиге {definition.ItemPrefabs.Count}.");
-
-        if (layer.Slots.Count != shelf.Capacity)
-            throw new InvalidOperationException($"Полка {shelfIndex}, слой {layerIndex}: требуется {shelf.Capacity} слотов, найдено {layer.Slots.Count}.");
-
-        for (int slotIndex = 0; slotIndex < layer.Slots.Count; slotIndex++)
-            ValidateSlot(layer.Slots[slotIndex], shelfIndex, layerIndex, slotIndex);
-    }
-
-    private void ValidateSlot(ShelfSlot slot, int shelfIndex, int layerIndex, int slotIndex)
-    {
-        if (slot == null)
-            throw new InvalidOperationException($"В шкафу {shelfIndex}, в слое {layerIndex}, слот {slotIndex} пуст.");
-
-        if (!slot.IsEmpty)
-            throw new InvalidOperationException($"В шкафу {shelfIndex}, в слое {layerIndex}, слот {slotIndex} уже содержит предмет.");
-    }
-
-    private void FillBoard(LevelDefinition levelDefinition)
-    {
-        for (int i = 0; i < _shelfBoard.Shelves.Count; i++)
+        for (int shelfIndex = 0; shelfIndex < _shelfBoard.Shelves.Count; shelfIndex++)
         {
-            FillShelf(_shelfBoard.Shelves[i], levelDefinition.Shelves[i]);
-        }
-    }
+            Shelf shelf = _shelfBoard.Shelves[shelfIndex];
+            ShelfDefinition definition = levelDefinition.Shelves[shelfIndex];
 
-    private void FillShelf(Shelf shelf, ShelfDefinition definition)
-    {
-        for (int i = 0; i < shelf.Layers.Count; i++)
+            if (definition == null || definition.Columns.Count != shelf.Capacity)
+                throw new InvalidOperationException($"Shelf {shelfIndex}: scene and level column counts do not match.");
+
+            for (int columnIndex = 0; columnIndex < shelf.Capacity; columnIndex++)
+            {
+                ShelfColumnDefinition column = definition.Columns[columnIndex];
+
+                if (column == null || !shelf.Columns[columnIndex].IsEmpty)
+                    throw new InvalidOperationException($"Shelf {shelfIndex}, column {columnIndex}: invalid or occupied column.");
+
+                foreach (ShelfItem prefab in column.ItemPrefabs)
+                {
+                    if (prefab == null || prefab.GetComponent<ShelfItemPresentation>() == null)
+                        throw new InvalidOperationException($"Shelf {shelfIndex}, column {columnIndex}: missing item prefab or presentation.");
+                }
+            }
+        }
+
+        for (int shelfIndex = 0; shelfIndex < _shelfBoard.Shelves.Count; shelfIndex++)
         {
-            FillLayer(shelf.Layers[i], definition.Layers[i]);
+            Shelf shelf = _shelfBoard.Shelves[shelfIndex];
+
+            for (int columnIndex = 0; columnIndex < shelf.Capacity; columnIndex++)
+            {
+                foreach (ShelfItem prefab in levelDefinition.Shelves[shelfIndex].Columns[columnIndex].ItemPrefabs)
+                    shelf.Columns[columnIndex].Append(Instantiate(prefab));
+            }
         }
-    }
 
-    private void FillLayer(ShelfLayer layer, ShelfLayerDefinition definition)
-    {
-        for (int i = 0; i < layer.Slots.Count; i++)
-        {
-            FillSlot(layer.Slots[i], definition.ItemPrefabs[i]);
-        }
-    }
-
-    private void FillSlot(ShelfSlot slot, ShelfItem itemPrefab)
-    {
-        if (itemPrefab == null)
-            return;
-
-        ShelfItem item = Instantiate(itemPrefab);
-        slot.PlaceItem(item);
+        _shelfBoard.InitializeViews();
     }
 }

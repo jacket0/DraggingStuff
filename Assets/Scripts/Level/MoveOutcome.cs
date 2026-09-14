@@ -3,27 +3,21 @@ using System.Collections.Generic;
 
 public readonly struct MoveOutcome
 {
-    private readonly IReadOnlyList<Shelf> _emptiedShelves;
+    public bool IsSuccessful => Item != null;
+    public ShelfItem Item { get; }
+    public ShelfColumn Source { get; }
+    public ShelfColumn Target { get; }
+    public IReadOnlyList<Shelf> AffectedShelves { get; }
 
-    public bool IsSuccessful { get; }
-    public MatchResolution Match { get; }
-    public bool HasMatch => Match != null;
-    public IReadOnlyList<Shelf> EmptiedShelves => _emptiedShelves ?? Array.Empty<Shelf>();
-
-    private MoveOutcome(bool isSuccessful, MatchResolution match, IReadOnlyList<Shelf> emptiedShelves)
+    private MoveOutcome(ShelfItem item, ShelfColumn source, ShelfColumn target, Shelf[] affectedShelves)
     {
-        IsSuccessful = isSuccessful;
-        Match = match;
-        _emptiedShelves = emptiedShelves;
+        Item = item;
+        Source = source;
+        Target = target;
+        AffectedShelves = Array.AsReadOnly(affectedShelves);
     }
 
-    public static MoveOutcome Rejected()
-    {
-        return new MoveOutcome(false, null, Array.Empty<Shelf>());
-    }
-
-    public static MoveOutcome Successful(MatchResolution match, IReadOnlyList<Shelf> emptiedShelves)
-    {
-        return new MoveOutcome(true, match, emptiedShelves);
-    }
+    public static MoveOutcome Rejected() => default;
+    public static MoveOutcome Successful(ShelfItem item, ShelfColumn source, ShelfColumn target, Shelf[] affectedShelves)
+        => new MoveOutcome(item, source, target, affectedShelves);
 }

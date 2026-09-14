@@ -16,7 +16,6 @@ public class LevelSession : GameSession
         CurrentLevel = ResolveCurrentLevel();
 
         _levelBuilder.Build(CurrentLevel.Definition);
-        ShelfBoard.InitializeViews();
         StartSession();
     }
 
@@ -34,18 +33,22 @@ public class LevelSession : GameSession
 
     private LevelEntry ResolveCurrentLevel()
     {
-        LevelEntry currentLevel;
+        string sceneName = gameObject.scene.name;
+        LevelEntry currentLevel = _fallbackLevel;
 
-        if (_levelSelection != null && _levelSelection.TryGetSelected(out LevelEntry selectionEntry))
+        if (_levelSelection != null
+            && _levelSelection.TryGetSelected(out LevelEntry selectionEntry)
+            && selectionEntry.SceneName == sceneName)
             currentLevel = selectionEntry;
-        else
-            currentLevel = _fallbackLevel;
 
         if (currentLevel == null)
-            throw new InvalidOperationException(nameof(currentLevel));
+            throw new InvalidOperationException($"Для сцены {sceneName} не задан запасной уровень.");
+
+        if (currentLevel.SceneName != sceneName)
+            throw new InvalidOperationException($"Уровень {currentLevel.Number} настроен для сцены {currentLevel.SceneName}, а загружена {sceneName}.");
 
         if (currentLevel.Definition == null)
-            throw new InvalidCastException(nameof(currentLevel.Definition));
+            throw new InvalidOperationException($"Для уровня {currentLevel.Number} не задана расстановка предметов.");
 
         return currentLevel;
     }

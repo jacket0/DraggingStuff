@@ -1,160 +1,58 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public sealed class MoveSuggestionProvider : MonoBehaviour, IMoveSuggestionProvider
 {
-    private const int MatchPriority = 4;
-    private const int GroupPriority = 3;
-    private const int LayerReleasePriority = 2;
-    private const int PreparatoryMovePriority = 1;
-
     [SerializeField] private ShelfBoard _shelfBoard;
 
     public bool TryGetSuggestion(out MoveSuggestion suggestion)
     {
         suggestion = null;
-        int bestPriority = 0;
-        int bestGroupSize = 0;
-        bool bestMoveBreaksPair = true;
+
+        if (_shelfBoard.HasLockedShelves || _shelfBoard.ItemAnimations.HasAnimations)
+            return false;
+
+        int bestMatches = -1;
+        int bestGroupGain = -1;
+        bool bestBreaksPair = true;
 
         foreach (Shelf sourceShelf in _shelfBoard.Shelves)
         {
-            if (!sourceShelf.HasActiveLayer)
-                continue;
-
-            foreach (ShelfSlot sourceSlot in sourceShelf.ActiveLayer.Slots)
+            foreach (ShelfColumnView source in sourceShelf.ColumnViews)
             {
-                if (sourceSlot.IsEmpty)
+                if (!_shelfBoard.CanPickUp(source.Column))
                     continue;
 
-                bool sourceMoveBreaksPair = WouldBreakSourcePair(sourceSlot, sourceShelf.ActiveLayer);
+                ItemType type = source.FrontItem.Type;
+                bool breaksPair = sourceShelf.Columns.Count(column => column.FrontItem != null && column.FrontItem.Type == type) > 1;
 
                 foreach (Shelf targetShelf in _shelfBoard.Shelves)
                 {
-                    if (!targetShelf.HasActiveLayer || targetShelf == sourceShelf)
-                        continue;
-
-                    foreach (ShelfSlot targetSlot in targetShelf.ActiveLayer.Slots)
+                    foreach (ShelfColumnView target in targetShelf.ColumnViews)
                     {
-                        if (!_shelfBoard.CanMove(sourceSlot, targetSlot))
+                        if (!_shelfBoard.TrySimulateMove(source.Column, target.Column, out BoardMoveSimulation simulation))
                             continue;
 
-                        List<ShelfItem> targetMatchingItems = GetTargetMatchingItems(targetShelf.ActiveLayer, sourceSlot.Item.Type);
-                        bool createsMatch = CreatesMatch(targetShelf.ActiveLayer, sourceSlot.Item.Type);
-                        int priority = GetSuggestionPriority(
-                            createsMatch,
-                            targetMatchingItems.Count,
-                            WouldReleaseLayer(sourceShelf.ActiveLayer, sourceShelf.HasNextLayer));
-                        int groupSize = createsMatch ? targetShelf.Capacity : targetMatchingItems.Count + 1;
+                        List<ShelfItem> matchingItems = targetShelf.Columns
+                            .Where(column => column != source.Column && column.FrontItem != null && column.FrontItem.Type == type)
+                            .Select(column => column.FrontItem).ToList();
+                        int groupGain = sourceShelf == targetShelf ? 0 : matchingItems.Count;
 
-                        if (!IsBetterSuggestion(priority, groupSize, sourceMoveBreaksPair, bestPriority, bestGroupSize, bestMoveBreaksPair))
+                        if (simulation.MatchCount < bestMatches
+                            || simulation.MatchCount == bestMatches && groupGain < bestGroupGain
+                            || simulation.MatchCount == bestMatches && groupGain == bestGroupGain && (!bestBreaksPair || breaksPair))
                             continue;
 
-                        suggestion = new MoveSuggestion(sourceSlot, targetSlot, targetMatchingItems);
-                        bestPriority = priority;
-                        bestGroupSize = groupSize;
-                        bestMoveBreaksPair = sourceMoveBreaksPair;
+                        bestMatches = simulation.MatchCount;
+                        bestGroupGain = groupGain;
+                        bestBreaksPair = breaksPair;
+                        suggestion = new MoveSuggestion(source, target, matchingItems);
                     }
                 }
             }
         }
 
         return suggestion != null;
-    }
-
-    private static List<ShelfItem> GetTargetMatchingItems(ShelfLayer targetLayer, ItemType sourceItemType)
-    {
-        List<ShelfItem> matchingItems = new List<ShelfItem>(targetLayer.Capacity - 1);
-
-        foreach (ShelfSlot targetSlot in targetLayer.Slots)
-        {
-            if (!targetSlot.IsEmpty && targetSlot.Item.Type == sourceItemType)
-                matchingItems.Add(targetSlot.Item);
-        }
-
-        return matchingItems;
-    }
-
-    private static bool WouldBreakSourcePair(ShelfSlot sourceSlot, ShelfLayer sourceLayer)
-    {
-        foreach (ShelfSlot otherSlot in sourceLayer.Slots)
-        {
-            if (otherSlot == sourceSlot || otherSlot.IsEmpty)
-                continue;
-
-            if (otherSlot.Item.Type == sourceSlot.Item.Type)
-                return true;
-        }
-
-        return false;
-    }
-
-    private static bool CreatesMatch(ShelfLayer targetLayer, ItemType sourceItemType)
-    {
-        if (targetLayer.Capacity < Shelf.MinimumMatchCapacity)
-            return false;
-
-        int emptySlotCount = 0;
-
-        foreach (ShelfSlot slot in targetLayer.Slots)
-        {
-            if (slot.IsEmpty)
-            {
-                emptySlotCount++;
-                continue;
-            }
-
-            if (slot.Item.Type != sourceItemType)
-                return false;
-        }
-
-        return emptySlotCount == 1;
-    }
-
-    private static bool WouldReleaseLayer(ShelfLayer sourceLayer, bool hasNextLayer)
-    {
-        if (!hasNextLayer)
-            return false;
-
-        int itemCount = 0;
-
-        foreach (ShelfSlot slot in sourceLayer.Slots)
-        {
-            if (!slot.IsEmpty)
-                itemCount++;
-        }
-
-        return itemCount == 1;
-    }
-
-    private static int GetSuggestionPriority(bool createsMatch, int targetMatchingItemCount, bool releasesLayer)
-    {
-        if (createsMatch)
-            return MatchPriority;
-
-        if (targetMatchingItemCount > 0)
-            return GroupPriority;
-
-        if (releasesLayer)
-            return LayerReleasePriority;
-
-        return PreparatoryMovePriority;
-    }
-
-    private static bool IsBetterSuggestion(
-        int candidatePriority,
-        int candidateGroupSize,
-        bool candidateBreaksPair,
-        int bestPriority,
-        int bestGroupSize,
-        bool bestMoveBreaksPair)
-    {
-        if (candidatePriority != bestPriority)
-            return candidatePriority > bestPriority;
-
-        if (candidateGroupSize != bestGroupSize)
-            return candidateGroupSize > bestGroupSize;
-
-        return bestMoveBreaksPair && !candidateBreaksPair;
     }
 }

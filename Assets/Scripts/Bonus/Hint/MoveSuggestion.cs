@@ -5,14 +5,14 @@ public class MoveSuggestion
 {
     private readonly IReadOnlyList<ShelfItem> _targetMatchingItems;
 
-    public ShelfSlot SourceSlot { get; }
-    public ShelfSlot TargetSlot { get; }
+    public ShelfColumnView SourceColumn { get; }
+    public ShelfColumnView TargetColumn { get; }
     public IReadOnlyList<ShelfItem> TargetMatchingItems => _targetMatchingItems;
 
-    public MoveSuggestion(ShelfSlot sourceSlot, ShelfSlot targetSlot, IReadOnlyList<ShelfItem> targetMatchingItems)
+    public MoveSuggestion(ShelfColumnView sourceColumn, ShelfColumnView targetColumn, IReadOnlyList<ShelfItem> targetMatchingItems)
     {
-        SourceSlot = sourceSlot ?? throw new ArgumentNullException(nameof(sourceSlot));
-        TargetSlot = targetSlot ?? throw new ArgumentNullException(nameof(targetSlot));
+        SourceColumn = sourceColumn ?? throw new ArgumentNullException(nameof(sourceColumn));
+        TargetColumn = targetColumn ?? throw new ArgumentNullException(nameof(targetColumn));
 
         if (targetMatchingItems == null)
             throw new ArgumentNullException(nameof(targetMatchingItems));

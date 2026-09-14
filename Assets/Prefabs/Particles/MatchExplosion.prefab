@@ -287,7 +287,7 @@ ParticleSystem:
     startSize:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 0.3
+      scalar: 0.375
       minScalar: 1
       maxCurve:
         serializedVersion: 2
@@ -4880,9 +4880,9 @@ ParticleSystemRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 2
+  m_SortingLayerID: -1202139959
+  m_SortingLayer: 2
+  m_SortingOrder: 102
   m_RenderMode: 0
   m_MeshDistribution: 0
   m_SortMode: 0
@@ -9777,9 +9777,9 @@ ParticleSystemRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: -2
+  m_SortingLayerID: -1202139959
+  m_SortingLayer: 2
+  m_SortingOrder: 98
   m_RenderMode: 0
   m_MeshDistribution: 0
   m_SortMode: 0
@@ -14696,9 +14696,9 @@ ParticleSystemRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingLayerID: -1202139959
+  m_SortingLayer: 2
+  m_SortingOrder: 100
   m_RenderMode: 0
   m_MeshDistribution: 0
   m_SortMode: 0
@@ -14750,6 +14750,16 @@ MonoBehaviour:
   - {fileID: 2100000, guid: 74b531a8f9fc2c849a5c21c1cbabeb19, type: 2}
   - {fileID: 2100000, guid: 356f402df6106794f9fd9cf4ac54cb04, type: 2}
   - {fileID: 2100000, guid: 8ab279e5a1fbf7c458d4d0b16bb4bed6, type: 2}
+  _russianPraiseMaterials:
+  - {fileID: 2100000, guid: b7f5d99090d14c3187dc3f13c884a254, type: 2}
+  - {fileID: 2100000, guid: f7aeb8f00f2f4c39b61df516d8d48279, type: 2}
+  - {fileID: 2100000, guid: 70492302a3374417ad1cc0aed4421be7, type: 2}
+  - {fileID: 2100000, guid: bce8749581fe48ec93456e43a0698b1f, type: 2}
+  _turkishPraiseMaterials:
+  - {fileID: 2100000, guid: 6bfd85f44500421e86882f24534421ab, type: 2}
+  - {fileID: 2100000, guid: 13b3f9d49be74201b82cac9daa8e7444, type: 2}
+  - {fileID: 2100000, guid: fc8a853c696b4d1d9b073012bc73da8c, type: 2}
+  - {fileID: 2100000, guid: 2e40c6d66fd84500a7b89f4452ef9b35, type: 2}
 --- !u!1 &8953862055707303103
 GameObject:
   m_ObjectHideFlags: 0
@@ -19612,9 +19622,9 @@ ParticleSystemRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: -1
+  m_SortingLayerID: -1202139959
+  m_SortingLayer: 2
+  m_SortingOrder: 99
   m_RenderMode: 0
   m_MeshDistribution: 0
   m_SortMode: 0

@@ -5,7 +5,9 @@ public sealed class EndlessTimer : TimerSpeedModifierTarget
 {
     [SerializeField, Min(1f)] private float _startingTime = 35f;
     [SerializeField, Min(1f)] private float _maximumTime = 45f;
-    [SerializeField, Min(0f)] private float _matchTimeReward = 2.5f;
+    [SerializeField, Min(0f)] private float _threeItemTimeReward = 2.5f;
+    [SerializeField, Min(0f)] private float _fourItemTimeReward = 3.5f;
+    [SerializeField, Min(0f)] private float _fiveItemTimeReward = 5f;
     [SerializeField, Min(0.01f)] private float _drainSmoothingDuration = 2f;
     [SerializeField] private AnimationCurve _drainMultiplierByMatchCount;
 
@@ -61,7 +63,9 @@ public sealed class EndlessTimer : TimerSpeedModifierTarget
     {
         _maximumTime = Mathf.Max(1f, _maximumTime);
         _startingTime = Mathf.Clamp(_startingTime, 1f, _maximumTime);
-        _matchTimeReward = Mathf.Max(0f, _matchTimeReward);
+        _threeItemTimeReward = Mathf.Max(0f, _threeItemTimeReward);
+        _fourItemTimeReward = Mathf.Max(0f, _fourItemTimeReward);
+        _fiveItemTimeReward = Mathf.Max(0f, _fiveItemTimeReward);
         _drainSmoothingDuration = Mathf.Max(0.01f, _drainSmoothingDuration);
     }
 
@@ -81,13 +85,21 @@ public sealed class EndlessTimer : TimerSpeedModifierTarget
         _isRunning = false;
     }
 
-    public void RegisterMatch(int matchCount)
+    public void RegisterMatch(int matchCount, int itemCount)
     {
         if (matchCount < 0)
             throw new ArgumentOutOfRangeException(nameof(matchCount));
 
+        float timeReward = itemCount switch
+        {
+            3 => _threeItemTimeReward,
+            4 => _fourItemTimeReward,
+            5 => _fiveItemTimeReward,
+            _ => throw new ArgumentOutOfRangeException(nameof(itemCount))
+        };
+
         _targetDrainMultiplier = EvaluateDrainMultiplier(matchCount);
-        AddTime(_matchTimeReward);
+        AddTime(timeReward);
     }
 
     public void AddTime(float seconds)

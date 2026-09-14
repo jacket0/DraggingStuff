@@ -3,30 +3,22 @@ using System.Collections.Generic;
 
 public sealed class BoardShelfSnapshot
 {
-    private readonly BoardLayerSnapshot[] _layers;
+    public int Capacity => Columns.Count;
+    public IReadOnlyList<BoardColumnSnapshot> Columns { get; }
 
-    public int Capacity { get; }
-    public IReadOnlyList<BoardLayerSnapshot> Layers => _layers;
-
-    public BoardShelfSnapshot(int capacity, IReadOnlyList<BoardLayerSnapshot> layers)
+    public BoardShelfSnapshot(IReadOnlyList<BoardColumnSnapshot> columns)
     {
-        if (!Shelf.IsValidCapacity(capacity))
-            throw new ArgumentOutOfRangeException(nameof(capacity));
+        if (columns == null)
+            throw new ArgumentNullException(nameof(columns));
 
-        if (layers == null)
-            throw new ArgumentNullException(nameof(layers));
+        if (!Shelf.IsValidCapacity(columns.Count))
+            throw new ArgumentException("A shelf must contain between one and five columns.", nameof(columns));
 
-        Capacity = capacity;
-        _layers = new BoardLayerSnapshot[layers.Count];
+        BoardColumnSnapshot[] copy = new BoardColumnSnapshot[columns.Count];
 
-        for (int index = 0; index < layers.Count; index++)
-        {
-            BoardLayerSnapshot layer = layers[index] ?? throw new ArgumentException(nameof(layers));
+        for (int index = 0; index < columns.Count; index++)
+            copy[index] = columns[index] ?? throw new ArgumentException("A column is missing.", nameof(columns));
 
-            if (layer.Items.Count != Capacity)
-                throw new ArgumentException(nameof(layers));
-
-            _layers[index] = layer;
-        }
+        Columns = Array.AsReadOnly(copy);
     }
 }

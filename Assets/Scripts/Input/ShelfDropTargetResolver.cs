@@ -6,46 +6,46 @@ public sealed class ShelfDropTargetResolver
 {
     private readonly Camera _camera;
     private readonly ShelfBoard _shelfBoard;
-    private readonly LayerMask _slotLayerMask;
+    private readonly LayerMask _columnLayerMask;
     private readonly float _shelfPaddingPixels;
 
-    public ShelfDropTargetResolver(Camera camera, ShelfBoard shelfBoard, LayerMask slotLayerMask, float shelfPaddingPixels)
+    public ShelfDropTargetResolver(Camera camera, ShelfBoard shelfBoard, LayerMask columnLayerMask, float shelfPaddingPixels)
     {
         _camera = camera != null ? camera : throw new ArgumentNullException(nameof(camera));
         _shelfBoard = shelfBoard != null ? shelfBoard : throw new ArgumentNullException(nameof(shelfBoard));
-        _slotLayerMask = slotLayerMask;
+        _columnLayerMask = columnLayerMask;
         _shelfPaddingPixels = Mathf.Max(0f, shelfPaddingPixels);
     }
 
-    public bool TryResolve(ShelfSlot sourceSlot, Vector2 pointerPosition, out ShelfSlot targetSlot)
+    public bool TryResolve(ShelfColumnView sourceColumn, Vector2 pointerPosition, out ShelfColumnView targetColumn)
     {
-        if (sourceSlot == null)
-            throw new ArgumentNullException(nameof(sourceSlot));
+        if (sourceColumn == null)
+            throw new ArgumentNullException(nameof(sourceColumn));
 
         if (TryGetDirectShelf(pointerPosition, out Shelf directShelf))
-            return TryGetNearestValidSlot(sourceSlot, directShelf, pointerPosition, out targetSlot);
+            return TryGetNearestValidColumn(sourceColumn, directShelf, pointerPosition, out targetColumn);
 
         if (!TryGetNearestShelf(pointerPosition, out Shelf nearestShelf))
         {
-            targetSlot = null;
+            targetColumn = null;
             return false;
         }
 
-        return TryGetNearestValidSlot(sourceSlot, nearestShelf, pointerPosition, out targetSlot);
+        return TryGetNearestValidColumn(sourceColumn, nearestShelf, pointerPosition, out targetColumn);
     }
 
     private bool TryGetDirectShelf(Vector2 pointerPosition, out Shelf shelf)
     {
         Ray ray = _camera.ScreenPointToRay(pointerPosition);
-        RaycastHit[] hits = Physics.RaycastAll(ray, Mathf.Infinity, _slotLayerMask, QueryTriggerInteraction.Collide);
+        RaycastHit[] hits = Physics.RaycastAll(ray, Mathf.Infinity, _columnLayerMask, QueryTriggerInteraction.Collide);
         Array.Sort(hits, CompareHits);
 
         foreach (RaycastHit hit in hits)
         {
-            ShelfSlot slot = hit.collider.GetComponentInParent<ShelfSlot>();
-            Shelf candidate = slot != null ? slot.GetComponentInParent<Shelf>() : null;
+            ShelfColumnView columnView = hit.collider.GetComponentInParent<ShelfColumnView>();
+            Shelf candidate = columnView != null ? columnView.GetComponentInParent<Shelf>() : null;
 
-            if (candidate == null || !candidate.isActiveAndEnabled || !candidate.IsContainsActiveSlot(slot) || !ContainsShelf(candidate))
+            if (candidate == null || !candidate.isActiveAndEnabled || columnView.Shelf != candidate || _shelfBoard.IsShelfLocked(candidate) || !ContainsShelf(candidate))
                 continue;
 
             shelf = candidate;
@@ -64,7 +64,7 @@ public sealed class ShelfDropTargetResolver
 
         foreach (Shelf candidate in _shelfBoard.Shelves)
         {
-            if (!candidate.isActiveAndEnabled || !candidate.HasActiveLayer || !TryGetScreenRect(candidate.ActiveLayer.Slots, out Rect screenRect))
+            if (!candidate.isActiveAndEnabled || _shelfBoard.IsShelfLocked(candidate) || candidate.Capacity == 0 || !TryGetScreenRect(candidate.ColumnViews, out Rect screenRect))
                 continue;
 
             screenRect.xMin -= _shelfPaddingPixels;
@@ -89,21 +89,21 @@ public sealed class ShelfDropTargetResolver
         return shelf != null;
     }
 
-    private bool TryGetNearestValidSlot(ShelfSlot sourceSlot, Shelf shelf, Vector2 pointerPosition, out ShelfSlot targetSlot)
+    private bool TryGetNearestValidColumn(ShelfColumnView sourceColumn, Shelf shelf, Vector2 pointerPosition, out ShelfColumnView targetColumn)
     {
-        targetSlot = null;
+        targetColumn = null;
 
-        if (!shelf.HasActiveLayer)
+        if (shelf.Capacity == 0)
             return false;
 
         float bestDistance = float.PositiveInfinity;
 
-        foreach (ShelfSlot candidate in shelf.ActiveLayer.Slots)
+        foreach (ShelfColumnView candidate in shelf.ColumnViews)
         {
-            if (!_shelfBoard.CanMove(sourceSlot, candidate))
+            if (!_shelfBoard.CanMove(sourceColumn.Column, candidate.Column))
                 continue;
 
-            Vector3 screenPosition = _camera.WorldToScreenPoint(candidate.transform.position);
+            Vector3 screenPosition = _camera.WorldToScreenPoint(candidate.ItemAnchor.position);
 
             if (screenPosition.z <= 0f)
                 continue;
@@ -113,33 +113,33 @@ public sealed class ShelfDropTargetResolver
             if (distance >= bestDistance)
                 continue;
 
-            targetSlot = candidate;
+            targetColumn = candidate;
             bestDistance = distance;
         }
 
-        return targetSlot != null;
+        return targetColumn != null;
     }
 
-    private bool TryGetScreenRect(IReadOnlyList<ShelfSlot> slots, out Rect screenRect)
+    private bool TryGetScreenRect(IReadOnlyList<ShelfColumnView> columnViews, out Rect screenRect)
     {
         Vector2 minimum = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
         Vector2 maximum = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
-        bool hasVisibleSlot = false;
+        bool hasVisibleColumn = false;
 
-        foreach (ShelfSlot slot in slots)
+        foreach (ShelfColumnView columnView in columnViews)
         {
-            Vector3 screenPosition = _camera.WorldToScreenPoint(slot.transform.position);
+            Vector3 screenPosition = _camera.WorldToScreenPoint(columnView.ItemAnchor.position);
 
             if (screenPosition.z <= 0f)
                 continue;
 
             minimum = Vector2.Min(minimum, screenPosition);
             maximum = Vector2.Max(maximum, screenPosition);
-            hasVisibleSlot = true;
+            hasVisibleColumn = true;
         }
 
-        screenRect = hasVisibleSlot ? Rect.MinMaxRect(minimum.x, minimum.y, maximum.x, maximum.y) : default;
-        return hasVisibleSlot;
+        screenRect = hasVisibleColumn ? Rect.MinMaxRect(minimum.x, minimum.y, maximum.x, maximum.y) : default;
+        return hasVisibleColumn;
     }
 
     private bool ContainsShelf(Shelf shelf)

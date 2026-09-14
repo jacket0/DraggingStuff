@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [Serializable]
-public class ShelfDefinition
+public sealed class ShelfDefinition
 {
-    [SerializeField] private List<ShelfLayerDefinition> _layers;
+    [SerializeField] private List<ShelfColumnDefinition> _columns = new List<ShelfColumnDefinition>();
 
-    public IReadOnlyList<ShelfLayerDefinition> Layers => _layers;
+    public IReadOnlyList<ShelfColumnDefinition> Columns => _columns;
 }

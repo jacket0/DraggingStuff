@@ -1,9 +1,11 @@
 using DG.Tweening;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class MoveResolutionPlayer : MonoBehaviour
 {
+    private readonly HashSet<Sequence> _sequences = new HashSet<Sequence>();
     [SerializeField] private MatchEffectView _matchEffectPrefab;
     [SerializeField] private Transform _resolutionRoot;
     [SerializeField] private Camera _camera;
@@ -36,6 +38,7 @@ public class MoveResolutionPlayer : MonoBehaviour
         Vector3 effectPosition = GetEffectPosition(match, mergePosition);
 
         Sequence resolutionSequence = DOTween.Sequence();
+        _sequences.Add(resolutionSequence);
 
         foreach (ShelfItem item in match.Items)
         {
@@ -49,12 +52,26 @@ public class MoveResolutionPlayer : MonoBehaviour
 
         resolutionSequence.OnComplete(() =>
         {
-            resolutionSequence = null;
+            if (!_sequences.Remove(resolutionSequence))
+                return;
+
             completed?.Invoke();
         });
 
         resolutionSequence.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
     }
+
+    public void CancelAll()
+    {
+        Sequence[] sequences = new Sequence[_sequences.Count];
+        _sequences.CopyTo(sequences);
+        _sequences.Clear();
+
+        foreach (Sequence sequence in sequences)
+            sequence.Kill();
+    }
+
+    private void OnDestroy() => CancelAll();
 
     private Sequence CreateItemAnimation(ShelfItem item, Vector3 mergePosition)
     {

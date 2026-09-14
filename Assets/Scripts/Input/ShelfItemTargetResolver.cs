@@ -22,12 +22,12 @@ public sealed class ShelfItemTargetResolver
 
         foreach (Shelf shelf in _shelfBoard.Shelves)
         {
-            if (!shelf.isActiveAndEnabled || !shelf.HasActiveLayer)
+            if (!shelf.isActiveAndEnabled || shelf.Capacity == 0)
                 continue;
 
-            foreach (ShelfSlot slot in shelf.ActiveLayer.Slots)
+            foreach (ShelfColumnView columnView in shelf.ColumnViews)
             {
-                if (slot.IsEmpty || !slot.Item.gameObject.activeInHierarchy || !TryGetScreenRect(slot.Item, out Rect screenRect, out float depth))
+                if (!_shelfBoard.CanPickUp(columnView.Column) || !columnView.FrontItem.gameObject.activeInHierarchy || !TryGetScreenRect(columnView.FrontItem, out Rect screenRect, out float depth))
                     continue;
 
                 Vector2 nearestPoint = new Vector2(
@@ -41,7 +41,7 @@ public sealed class ShelfItemTargetResolver
                 if (!IsBetterCandidate(boundsDistance, depth, bestBoundsDistance, bestDepth))
                     continue;
 
-                item = slot.Item;
+                item = columnView.FrontItem;
                 bestBoundsDistance = boundsDistance;
                 bestDepth = depth;
             }
