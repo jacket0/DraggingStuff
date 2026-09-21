@@ -17056,6 +17056,7 @@ GameObject:
   - component: {fileID: 1232863105}
   - component: {fileID: 1232863104}
   - component: {fileID: 1232863103}
+  - component: {fileID: 1232863108}
   m_Layer: 0
   m_Name: ShelfBoard
   m_TagString: Untagged
@@ -17164,6 +17165,20 @@ MonoBehaviour:
   - {fileID: 453822856}
   - {fileID: 1241081447}
   - {fileID: 1880855811}
+--- !u!114 &1232863108
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1232863100}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6dc789258174bce4d9cce72200d65c7a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _segmentDuration: 0.08
+  _rotationStrength: 3
 --- !u!1 &1241081444
 GameObject:
   m_ObjectHideFlags: 0
