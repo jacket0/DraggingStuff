@@ -26,12 +26,12 @@ public static class GameProgressMerger
         GameProgressData normalizedSource = source ?? new GameProgressData();
         GameProgressData clone = new GameProgressData
         {
-            Version = Math.Max(1, normalizedSource.Version),
+            Version = GameProgressData.CurrentVersion,
             LegacyDataImported = normalizedSource.LegacyDataImported,
             EndlessBestScore = Math.Max(0, normalizedSource.EndlessBestScore)
         };
 
-        if (normalizedSource.Levels != null)
+        if (normalizedSource.Version >= GameProgressData.CurrentVersion && normalizedSource.Levels != null)
         {
             foreach (LevelProgressData level in normalizedSource.Levels)
             {
@@ -42,6 +42,8 @@ public static class GameProgressMerger
                 {
                     LevelNumber = level.LevelNumber,
                     BestScore = level.BestScore,
+                    BestCompletionTimeMilliseconds = level.BestCompletionTimeMilliseconds,
+                    Stars = level.Stars,
                     IsCompleted = level.IsCompleted
                 });
             }
@@ -86,6 +88,8 @@ public static class GameProgressMerger
 
             if (firstLevel.LevelNumber != secondLevel.LevelNumber ||
                 firstLevel.BestScore != secondLevel.BestScore ||
+                firstLevel.BestCompletionTimeMilliseconds != secondLevel.BestCompletionTimeMilliseconds ||
+                firstLevel.Stars != secondLevel.Stars ||
                 firstLevel.IsCompleted != secondLevel.IsCompleted)
             {
                 return false;
@@ -110,7 +114,7 @@ public static class GameProgressMerger
     private static GameProgressData Normalize(GameProgressData source)
     {
         GameProgressData data = source ?? new GameProgressData();
-        data.Version = Math.Max(1, data.Version);
+        data.Version = GameProgressData.CurrentVersion;
         data.EndlessBestScore = Math.Max(0, data.EndlessBestScore);
         data.Levels = NormalizeLevels(data.Levels);
         data.Bonuses = NormalizeBonuses(data.Bonuses);
@@ -165,13 +169,30 @@ public static class GameProgressMerger
             {
                 LevelNumber = incoming.LevelNumber,
                 BestScore = Math.Max(0, incoming.BestScore),
+                BestCompletionTimeMilliseconds = Math.Max(0, incoming.BestCompletionTimeMilliseconds),
+                Stars = Math.Max(0, Math.Min(3, incoming.Stars)),
                 IsCompleted = incoming.IsCompleted
             });
             return;
         }
 
         existing.BestScore = Math.Max(existing.BestScore, incoming.BestScore);
+        existing.BestCompletionTimeMilliseconds = SelectBestTime(
+            existing.BestCompletionTimeMilliseconds,
+            incoming.BestCompletionTimeMilliseconds);
+        existing.Stars = Math.Max(existing.Stars, Math.Max(0, Math.Min(3, incoming.Stars)));
         existing.IsCompleted |= incoming.IsCompleted;
+    }
+
+    private static long SelectBestTime(long first, long second)
+    {
+        if (first <= 0)
+            return Math.Max(0, second);
+
+        if (second <= 0)
+            return first;
+
+        return Math.Min(first, second);
     }
 
     private static void MergeBonus(List<BonusAmountData> bonuses, BonusAmountData incoming)

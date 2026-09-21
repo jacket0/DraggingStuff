@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   _number: 7
   _sceneName: SecondLevel
-  _definition: {fileID: 11400000, guid: e66ac9dd50a145ed9fc5aec82fa9b8eb, type: 2}
+  _definition: {fileID: 11400000, guid: 72f78b970b534fb28d5d6cf43b8ddb0f, type: 2}
   _available: 1

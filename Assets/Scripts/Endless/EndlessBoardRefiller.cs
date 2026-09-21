@@ -6,7 +6,7 @@ public sealed class EndlessBoardRefiller : MonoBehaviour
 {
     [SerializeField] private ShelfBoard _shelfBoard;
     [SerializeField] private EndlessGenerationConfig _generationConfig;
-    [SerializeField] private EndlessItemCatalog _itemCatalog;
+    [SerializeField] private ShelfItemCatalog _itemCatalog;
     [SerializeField] private ShelfItemPool _itemPool;
 
     private System.Random _random;

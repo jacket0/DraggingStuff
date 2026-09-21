@@ -112,12 +112,29 @@ public class ShelfItemDragMover : MonoBehaviour
         if (_draggedItem == null)
             throw new InvalidOperationException(nameof(_draggedItem));
 
-        ShelfItem placedItem = _draggedItem;
-        placedItem.transform.SetPositionAndRotation(_placementWorldPosition, _placementWorldRotation);
-        placedItem.transform.localScale = _placementLocalScale;
+        PlaceDraggedItem(completed);
+    }
 
-        ClearState();
-        _placementAnimator.Place(placedItem, _placementDuration, completed);
+    public void PlaceSwap(ShelfItem displacedItem, Action completed)
+    {
+        if (_draggedItem == null)
+            throw new InvalidOperationException(nameof(_draggedItem));
+
+        if (displacedItem == null)
+            throw new ArgumentNullException(nameof(displacedItem));
+
+        int remainingAnimations = 2;
+
+        void CompleteAnimation()
+        {
+            remainingAnimations--;
+
+            if (remainingAnimations == 0)
+                completed?.Invoke();
+        }
+
+        _placementAnimator.Place(displacedItem, _placementDuration, CompleteAnimation);
+        PlaceDraggedItem(CompleteAnimation);
     }
 
     private void ClearState()
@@ -130,6 +147,16 @@ public class ShelfItemDragMover : MonoBehaviour
         _placementLocalScale = Vector3.one;
         _dragPlane = default;
         _movementTween = null;
+    }
+
+    private void PlaceDraggedItem(Action completed)
+    {
+        ShelfItem placedItem = _draggedItem;
+        placedItem.transform.SetPositionAndRotation(_placementWorldPosition, _placementWorldRotation);
+        placedItem.transform.localScale = _placementLocalScale;
+
+        ClearState();
+        _placementAnimator.Place(placedItem, _placementDuration, completed);
     }
 
     private bool TryGetDragPoint(Plane dragPlane, Vector2 pointerPosition, out Vector3 dragPoint)

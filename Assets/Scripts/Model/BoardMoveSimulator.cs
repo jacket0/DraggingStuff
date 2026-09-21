@@ -16,7 +16,12 @@ public sealed class BoardMoveSimulator
         ColumnStateSnapshot sourceColumn = board.Shelves[source.ShelfIndex].Columns[source.ColumnIndex];
         ColumnStateSnapshot targetColumn = board.Shelves[target.ShelfIndex].Columns[target.ColumnIndex];
 
-        if (sourceColumn.IsEmpty || !targetColumn.IsEmpty)
+        if (sourceColumn.IsEmpty)
+            return false;
+
+        bool isSwap = !targetColumn.IsEmpty;
+
+        if (isSwap && sourceColumn.Items[0] == targetColumn.Items[0])
             return false;
 
         ShelfStateSnapshot[] shelves = new ShelfStateSnapshot[board.Shelves.Count];
@@ -24,12 +29,21 @@ public sealed class BoardMoveSimulator
         for (int shelfIndex = 0; shelfIndex < shelves.Length; shelfIndex++)
             shelves[shelfIndex] = board.Shelves[shelfIndex];
 
-        ReplaceColumn(shelves, source, RemoveFront(sourceColumn));
-        ReplaceColumn(shelves, target, new ColumnStateSnapshot(new[] { sourceColumn.Items[0] }));
+        if (isSwap)
+        {
+            ReplaceColumn(shelves, source, ReplaceFront(sourceColumn, targetColumn.Items[0]));
+            ReplaceColumn(shelves, target, ReplaceFront(targetColumn, sourceColumn.Items[0]));
+        }
+        else
+        {
+            ReplaceColumn(shelves, source, RemoveFront(sourceColumn));
+            ReplaceColumn(shelves, target, new ColumnStateSnapshot(new[] { sourceColumn.Items[0] }));
+        }
+
         bool[] affectedShelves = new bool[shelves.Length];
         affectedShelves[source.ShelfIndex] = true;
         affectedShelves[target.ShelfIndex] = true;
-        simulation = Resolve(shelves, affectedShelves);
+        simulation = Resolve(shelves, affectedShelves, isSwap);
         return true;
     }
 
@@ -43,10 +57,10 @@ public sealed class BoardMoveSimulator
         for (int index = 0; index < shelves.Length; index++)
             shelves[index] = board.Shelves[index];
 
-        return Resolve(shelves, new bool[shelves.Length]);
+        return Resolve(shelves, new bool[shelves.Length], false);
     }
 
-    private static BoardMoveSimulation Resolve(ShelfStateSnapshot[] shelves, bool[] affectedShelves)
+    private static BoardMoveSimulation Resolve(ShelfStateSnapshot[] shelves, bool[] affectedShelves, bool isSwap)
     {
         int matchCount = 0;
         bool hasMatches;
@@ -84,7 +98,7 @@ public sealed class BoardMoveSimulator
                 affectedShelfIndexes.Add(shelfIndex);
         }
 
-        return new BoardMoveSimulation(new BoardStateSnapshot(shelves), matchCount, affectedShelfIndexes);
+        return new BoardMoveSimulation(new BoardStateSnapshot(shelves), matchCount, affectedShelfIndexes, isSwap);
     }
 
     private static void ReplaceColumn(ShelfStateSnapshot[] shelves, ColumnPosition position, ColumnStateSnapshot column)
@@ -104,6 +118,17 @@ public sealed class BoardMoveSimulator
 
         for (int index = 0; index < items.Length; index++)
             items[index] = column.Items[index + 1];
+
+        return new ColumnStateSnapshot(items);
+    }
+
+    private static ColumnStateSnapshot ReplaceFront(ColumnStateSnapshot column, ItemType item)
+    {
+        ItemType[] items = new ItemType[column.Count];
+        items[0] = item;
+
+        for (int index = 1; index < items.Length; index++)
+            items[index] = column.Items[index];
 
         return new ColumnStateSnapshot(items);
     }

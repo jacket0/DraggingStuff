@@ -65,9 +65,15 @@ public abstract class GameSession : MonoBehaviour
         if (!outcome.IsSuccessful)
             return outcome;
 
+        HandleMoveAccepted(outcome);
+
         ResolutionWave wave = CreateWave(outcome.AffectedShelves);
-        wave.PendingInitialAnimations = 2;
+        wave.PendingInitialAnimations = outcome.IsSwap ? 1 : 2;
         target.AttachFront(outcome.Item);
+
+        if (outcome.IsSwap)
+            source.AttachFront(outcome.DisplacedItem);
+
         _needsSettlement = true;
         _needsPreparation = true;
         int generation = _generation;
@@ -87,7 +93,9 @@ public abstract class GameSession : MonoBehaviour
             }
         }
 
-        source.Shelf.View.Advance(CompleteInitialAnimation, outcome.Item);
+        if (!outcome.IsSwap)
+            source.Shelf.View.Advance(CompleteInitialAnimation, outcome.Item);
+
         completePlacement = () =>
         {
             if (placementCompleted || this == null || generation != _generation || outcome.Item == null || outcome.Item.Column != target.Column)
@@ -181,6 +189,7 @@ public abstract class GameSession : MonoBehaviour
 
         SetState(LevelState.Paused);
         Time.timeScale = 0;
+        HandlePaused();
         return true;
     }
 
@@ -191,12 +200,16 @@ public abstract class GameSession : MonoBehaviour
 
         Time.timeScale = 1;
         SetState(LevelState.Playing);
+        HandleResumed();
     }
 
     protected abstract void HandleBoardSettled(bool isBoardCleared);
     protected virtual void PrepareBoardAfterMove(Action completed) => completed?.Invoke();
     protected virtual void SettleBoard(Action completed) => completed?.Invoke();
     protected virtual void HandleMatchRegistered(MatchResolution match) { }
+    protected virtual void HandleMoveAccepted(MoveOutcome move) { }
+    protected virtual void HandlePaused() { }
+    protected virtual void HandleResumed() { }
     protected void CompleteAsWon() => SetState(LevelState.Won);
     protected void BeginEnding()
     {

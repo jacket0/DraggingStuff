@@ -8,6 +8,7 @@ public class ShelfItemDragController : MonoBehaviour
     [SerializeField] private ShelfColumnRaycaster _columnRaycaster;
 
     private ShelfColumnView _sourceColumn;
+    private ShelfSwapHoverView _swapHoverView;
     private bool _isDragging;
 
     public event Action<ShelfItem> DragStarting;
@@ -18,6 +19,10 @@ public class ShelfItemDragController : MonoBehaviour
     private void Awake()
     {
         _dragMover.Initialize(_levelSession.ItemAnimations);
+        _swapHoverView = GetComponent<ShelfSwapHoverView>();
+
+        if (_swapHoverView == null)
+            throw new MissingComponentException(nameof(ShelfSwapHoverView));
     }
 
     private void OnEnable()
@@ -64,12 +69,15 @@ public class ShelfItemDragController : MonoBehaviour
         if (!_isDragging) return;
 
         _dragMover.Move(pointerPosition);
+        UpdateSwapHover(pointerPosition);
         InteractionOccurred?.Invoke();
     }
 
     public void EndDrag(Vector2 pointerPosition)
     {
         if (!_isDragging) return;
+
+        _swapHoverView.Stop();
 
         if (!_columnRaycaster.TryGetColumn(_sourceColumn, pointerPosition, out ShelfColumnView targetColumn))
         {
@@ -86,7 +94,11 @@ public class ShelfItemDragController : MonoBehaviour
             return;
         }
 
-        _dragMover.Place(completePlacement);
+        if (outcome.IsSwap)
+            _dragMover.PlaceSwap(outcome.DisplacedItem, completePlacement);
+        else
+            _dragMover.Place(completePlacement);
+
         ClearDragState();
     }
 
@@ -95,6 +107,7 @@ public class ShelfItemDragController : MonoBehaviour
         if (!_isDragging)
             return;
 
+        _swapHoverView.Stop();
         _dragMover.Cancel();
         InteractionOccurred?.Invoke();
         ClearDragState();
@@ -107,6 +120,14 @@ public class ShelfItemDragController : MonoBehaviour
 
         _sourceColumn = null;
         _isDragging = false;
+    }
+
+    private void UpdateSwapHover(Vector2 pointerPosition)
+    {
+        if (_columnRaycaster.TryGetColumn(_sourceColumn, pointerPosition, out ShelfColumnView targetColumn) && !targetColumn.IsEmpty)
+            _swapHoverView.Show(targetColumn.FrontItem);
+        else
+            _swapHoverView.Stop();
     }
 
     private void HandleStateChanged(LevelState state)

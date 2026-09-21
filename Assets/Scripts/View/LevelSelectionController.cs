@@ -73,7 +73,12 @@ public class LevelSelectionController : MonoBehaviour
         for (int i = 0; i < _cards.Count; i++)
         {
             LevelEntry level = _catalog.Levels[i];
-            _cards[i].Bind(level, _progress.IsUnlocked(level), _progress.GetBestScore(level));
+            _cards[i].Bind(
+                level,
+                _progress.IsUnlocked(level),
+                _progress.GetBestScore(level),
+                _progress.GetBestTime(level),
+                _progress.GetStars(level));
         }
 
         RefreshEndlessCard();
