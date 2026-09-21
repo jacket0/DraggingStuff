@@ -393,7 +393,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 5eb3721a23c64cd3ae1327615621290c, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -402,7 +402,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 2
 --- !u!114 &6633329139807732836
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -424,11 +424,11 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 0.41960785, g: 0.23921569, b: 0.12156863, a: 1}
-    m_HighlightedColor: {r: 0.50980395, g: 0.3137255, b: 0.16470589, a: 1}
-    m_PressedColor: {r: 0.2901961, g: 0.15294118, b: 0.078431375, a: 1}
-    m_SelectedColor: {r: 0.50980395, g: 0.3137255, b: 0.16470589, a: 1}
-    m_DisabledColor: {r: 0.22745098, g: 0.16470589, b: 0.13333334, a: 0.69803923}
+    m_NormalColor: {r: 0.2901961, g: 0.14901961, b: 0.078431375, a: 1}
+    m_HighlightedColor: {r: 0.41960785, g: 0.22352941, b: 0.11764706, a: 1}
+    m_PressedColor: {r: 0.2, g: 0.101960786, b: 0.05490196, a: 1}
+    m_SelectedColor: {r: 0.41960785, g: 0.22352941, b: 0.11764706, a: 1}
+    m_DisabledColor: {r: 0.16862746, g: 0.101960786, b: 0.07058824, a: 0.7}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.08
   m_SpriteState:
@@ -565,14 +565,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.41960785, g: 0.23921569, b: 0.12156863, a: 1}
+  m_Color: {r: 0.2901961, g: 0.14901961, b: 0.078431375, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 5eb3721a23c64cd3ae1327615621290c, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -581,7 +581,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 2
 --- !u!1 &3299267733518083260
 GameObject:
   m_ObjectHideFlags: 0
