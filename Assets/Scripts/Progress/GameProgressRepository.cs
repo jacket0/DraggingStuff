@@ -32,33 +32,51 @@ public static class GameProgressRepository
         return record?.BestScore ?? 0;
     }
 
-    public static void RegisterLevelCompletion(int levelNumber, long score)
+    public static int GetLevelStars(int levelNumber)
     {
-        if (levelNumber <= 0)
-            throw new ArgumentOutOfRangeException(nameof(levelNumber));
+        LevelProgressData record = FindLevel(levelNumber);
+        return record?.Stars ?? 0;
+    }
 
-        if (score < 0)
-            throw new ArgumentOutOfRangeException(nameof(score));
+    public static long GetLevelBestTime(int levelNumber)
+    {
+        LevelProgressData record = FindLevel(levelNumber);
+        return record?.BestCompletionTimeMilliseconds ?? 0;
+    }
+
+    public static void RegisterLevelResult(LevelRunResult result)
+    {
+        if (result == null)
+            throw new ArgumentNullException(nameof(result));
+
+        if (!result.Won)
+            return;
 
         EnsureInitialized();
-        LevelProgressData record = FindLevel(levelNumber);
+        LevelProgressData record = FindLevel(result.LevelNumber);
 
         if (record == null)
         {
             record = new LevelProgressData
             {
-                LevelNumber = levelNumber
+                LevelNumber = result.LevelNumber
             };
             _current.Levels.Add(record);
         }
 
-        bool changed = !record.IsCompleted || score > record.BestScore;
+        long bestTime = SelectBestTime(record.BestCompletionTimeMilliseconds, result.ActiveTimeMilliseconds);
+        bool changed = !record.IsCompleted
+            || result.Score > record.BestScore
+            || result.Stars > record.Stars
+            || bestTime != record.BestCompletionTimeMilliseconds;
 
         if (!changed)
             return;
 
         record.IsCompleted = true;
-        record.BestScore = Math.Max(record.BestScore, score);
+        record.BestScore = Math.Max(record.BestScore, result.Score);
+        record.BestCompletionTimeMilliseconds = bestTime;
+        record.Stars = Math.Max(record.Stars, result.Stars);
         Commit();
     }
 
@@ -178,7 +196,7 @@ public static class GameProgressRepository
         if (_current != null)
             return;
 
-        _current = LegacyGameProgressLoader.Load();
+        _current = GameProgressMerger.Clone(LegacyGameProgressLoader.Load());
 
         if (YG2.isSDKEnabled)
             Synchronize(YG2.saves.GameProgress);
@@ -202,5 +220,16 @@ public static class GameProgressRepository
 
         _savePending = false;
         YG2.SaveProgress();
+    }
+
+    private static long SelectBestTime(long currentTime, long newTime)
+    {
+        if (currentTime <= 0)
+            return Math.Max(0, newTime);
+
+        if (newTime <= 0)
+            return currentTime;
+
+        return Math.Min(currentTime, newTime);
     }
 }

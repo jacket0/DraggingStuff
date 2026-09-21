@@ -5,11 +5,11 @@ public class LevelEntry : ScriptableObject
 {
     [SerializeField, Min(1)] private int _number = 1;
     [SerializeField] private string _sceneName;
-    [SerializeField] private LevelDefinition _definition;
+    [SerializeField] private TimedLevelDefinition _definition;
     [SerializeField] private bool _available;
 
     public int Number => _number;
     public string SceneName => _sceneName;
-    public LevelDefinition Definition => _definition;
+    public TimedLevelDefinition Definition => _definition;
     public bool CanBeStarted => _available && _definition != null && !string.IsNullOrWhiteSpace(_sceneName);
 }

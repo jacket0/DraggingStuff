@@ -31,6 +31,9 @@ public sealed class MoveSuggestionProvider : MonoBehaviour, IMoveSuggestionProvi
                 {
                     foreach (ShelfColumnView target in targetShelf.ColumnViews)
                     {
+                        if (!target.IsEmpty)
+                            continue;
+
                         if (!_shelfBoard.TrySimulateMove(source.Column, target.Column, out BoardMoveSimulation simulation))
                             continue;
 

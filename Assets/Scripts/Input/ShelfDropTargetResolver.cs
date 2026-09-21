@@ -22,8 +22,11 @@ public sealed class ShelfDropTargetResolver
         if (sourceColumn == null)
             throw new ArgumentNullException(nameof(sourceColumn));
 
-        if (TryGetDirectShelf(pointerPosition, out Shelf directShelf))
-            return TryGetNearestValidColumn(sourceColumn, directShelf, pointerPosition, out targetColumn);
+        if (TryGetDirectColumn(pointerPosition, out ShelfColumnView directColumn))
+        {
+            targetColumn = _shelfBoard.CanMove(sourceColumn.Column, directColumn.Column) ? directColumn : null;
+            return targetColumn != null;
+        }
 
         if (!TryGetNearestShelf(pointerPosition, out Shelf nearestShelf))
         {
@@ -34,7 +37,7 @@ public sealed class ShelfDropTargetResolver
         return TryGetNearestValidColumn(sourceColumn, nearestShelf, pointerPosition, out targetColumn);
     }
 
-    private bool TryGetDirectShelf(Vector2 pointerPosition, out Shelf shelf)
+    private bool TryGetDirectColumn(Vector2 pointerPosition, out ShelfColumnView column)
     {
         Ray ray = _camera.ScreenPointToRay(pointerPosition);
         RaycastHit[] hits = Physics.RaycastAll(ray, Mathf.Infinity, _columnLayerMask, QueryTriggerInteraction.Collide);
@@ -42,17 +45,17 @@ public sealed class ShelfDropTargetResolver
 
         foreach (RaycastHit hit in hits)
         {
-            ShelfColumnView columnView = hit.collider.GetComponentInParent<ShelfColumnView>();
-            Shelf candidate = columnView != null ? columnView.GetComponentInParent<Shelf>() : null;
+            ShelfColumnView candidate = hit.collider.GetComponentInParent<ShelfColumnView>();
+            Shelf shelf = candidate != null ? candidate.GetComponentInParent<Shelf>() : null;
 
-            if (candidate == null || !candidate.isActiveAndEnabled || columnView.Shelf != candidate || _shelfBoard.IsShelfLocked(candidate) || !ContainsShelf(candidate))
+            if (shelf == null || !shelf.isActiveAndEnabled || candidate.Shelf != shelf || _shelfBoard.IsShelfLocked(shelf) || !ContainsShelf(shelf))
                 continue;
 
-            shelf = candidate;
+            column = candidate;
             return true;
         }
 
-        shelf = null;
+        column = null;
         return false;
     }
 

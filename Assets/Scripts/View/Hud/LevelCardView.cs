@@ -9,6 +9,9 @@ public class LevelCardView : MonoBehaviour
     [SerializeField] private TMP_Text _levelNumberText;
     [SerializeField] private GameObject _recordRoot;
     [SerializeField] private TMP_Text _recordValueText;
+    [SerializeField] private GameObject _timeRoot;
+    [SerializeField] private TMP_Text _bestTimeText;
+    [SerializeField] private StarRatingView _starRating;
     [SerializeField] private GameObject _lockIcon;
 
     private LevelEntry _level;
@@ -25,7 +28,7 @@ public class LevelCardView : MonoBehaviour
         _button?.onClick.RemoveListener(HandleClick);
     }
 
-    public void Bind(LevelEntry level, bool unlocked, long bestScore)
+    public void Bind(LevelEntry level, bool unlocked, long bestScore, long bestTimeMilliseconds, int stars)
     {
         _level = level ?? throw new ArgumentNullException(nameof(level));
 
@@ -33,6 +36,22 @@ public class LevelCardView : MonoBehaviour
 
         _levelNumberText.SetText(level.Number.ToString());
         _recordValueText.SetText(bestScore.ToString());
+
+        bool hasCompletion = canBeStarted && bestTimeMilliseconds > 0;
+
+        if (_timeRoot != null)
+            _timeRoot.SetActive(hasCompletion);
+
+        if (_bestTimeText != null && hasCompletion)
+            _bestTimeText.SetText(TimeTextFormatter.FormatMilliseconds(bestTimeMilliseconds));
+
+        if (_starRating != null)
+        {
+            _starRating.gameObject.SetActive(hasCompletion);
+
+            if (hasCompletion)
+                _starRating.SetRating(stars);
+        }
 
         _button.interactable = canBeStarted;
         _recordRoot.SetActive(canBeStarted);

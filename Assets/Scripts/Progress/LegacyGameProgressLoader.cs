@@ -4,7 +4,6 @@ using UnityEngine;
 
 public static class LegacyGameProgressLoader
 {
-    private const string LevelProgressKey = "level.progress.v2";
     private const string EndlessProgressKey = "endless.progress.v1";
     private const string BonusInventoryKey = "bonus.inventory.v1";
 
@@ -12,35 +11,14 @@ public static class LegacyGameProgressLoader
     {
         GameProgressData progress = new GameProgressData
         {
+            Version = 1,
             LegacyDataImported = true
         };
 
-        LoadLevels(progress);
         LoadEndlessScore(progress);
         LoadBonuses(progress);
 
         return progress;
-    }
-
-    private static void LoadLevels(GameProgressData progress)
-    {
-        LegacyLevelProgress data = Read<LegacyLevelProgress>(LevelProgressKey);
-
-        if (data?.Records == null)
-            return;
-
-        foreach (LegacyLevelRecord record in data.Records)
-        {
-            if (record == null)
-                continue;
-
-            progress.Levels.Add(new LevelProgressData
-            {
-                LevelNumber = record.LevelNumber,
-                BestScore = record.BestScore,
-                IsCompleted = record.IsCompleted
-            });
-        }
     }
 
     private static void LoadEndlessScore(GameProgressData progress)
@@ -88,20 +66,6 @@ public static class LegacyGameProgressLoader
             Debug.LogWarning($"Не удалось перенести сохранение {key}: {exception.Message}");
             return null;
         }
-    }
-
-    [Serializable]
-    private sealed class LegacyLevelProgress
-    {
-        public List<LegacyLevelRecord> Records = new List<LegacyLevelRecord>();
-    }
-
-    [Serializable]
-    private sealed class LegacyLevelRecord
-    {
-        public int LevelNumber = 0;
-        public long BestScore = 0;
-        public bool IsCompleted = false;
     }
 
     [Serializable]

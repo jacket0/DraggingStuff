@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 
+[RequireComponent(typeof(CountdownTimer))]
 public sealed class EndlessTimer : TimerSpeedModifierTarget
 {
     [SerializeField, Min(1f)] private float _startingTime = 35f;
@@ -10,28 +11,47 @@ public sealed class EndlessTimer : TimerSpeedModifierTarget
     [SerializeField, Min(0f)] private float _fiveItemTimeReward = 5f;
     [SerializeField, Min(0.01f)] private float _drainSmoothingDuration = 2f;
     [SerializeField] private AnimationCurve _drainMultiplierByMatchCount;
+    [SerializeField] private CountdownTimer _countdownTimer;
 
-    private float _remainingTime;
     private float _drainMultiplier = 1f;
     private float _targetDrainMultiplier = 1f;
     private float _drainMultiplierVelocity;
-    private bool _isRunning;
-    private bool _hasExpired;
 
-    public float RemainingTime => _remainingTime;
+    public float RemainingTime => _countdownTimer.RemainingTime;
     public float MaximumTime => _maximumTime;
     public float DrainMultiplier => _drainMultiplier;
-    public float NormalizedTime => _maximumTime > 0f ? Mathf.Clamp01(_remainingTime / _maximumTime) : 0f;
+    public float NormalizedTime => _countdownTimer.State.NormalizedTime;
 
     public event Action<EndlessTimerState> StateChanged;
     public event Action<float> TimeAdded;
     public event Action Expired;
 
-    private void Update()
+    private void Awake()
     {
-        if (!_isRunning || _hasExpired)
+        if (_countdownTimer == null)
+            _countdownTimer = GetComponent<CountdownTimer>();
+
+        if (_countdownTimer == null)
+            throw new InvalidOperationException(nameof(_countdownTimer));
+    }
+
+    private void OnEnable()
+    {
+        _countdownTimer.StateChanged += HandleTimerStateChanged;
+        _countdownTimer.Expired += HandleTimerExpired;
+    }
+
+    private void OnDisable()
+    {
+        if (_countdownTimer == null)
             return;
 
+        _countdownTimer.StateChanged -= HandleTimerStateChanged;
+        _countdownTimer.Expired -= HandleTimerExpired;
+    }
+
+    private void Update()
+    {
         _drainMultiplier = Mathf.SmoothDamp(
             _drainMultiplier,
             _targetDrainMultiplier,
@@ -40,23 +60,7 @@ public sealed class EndlessTimer : TimerSpeedModifierTarget
             Mathf.Infinity,
             Time.deltaTime);
 
-        float elapsedTime = Time.deltaTime * TimerSpeedMultiplier * _drainMultiplier;
-
-        if (elapsedTime <= 0f)
-        {
-            PublishState();
-            return;
-        }
-
-        _remainingTime = Mathf.Max(0f, _remainingTime - elapsedTime);
-        PublishState();
-
-        if (_remainingTime > 0f)
-            return;
-
-        _hasExpired = true;
-        _isRunning = false;
-        Expired?.Invoke();
+        _countdownTimer.SetCountdownRate(TimerSpeedMultiplier * _drainMultiplier);
     }
 
     private void OnValidate()
@@ -71,18 +75,17 @@ public sealed class EndlessTimer : TimerSpeedModifierTarget
 
     public void StartTimer()
     {
-        _remainingTime = Mathf.Min(_startingTime, _maximumTime);
         _drainMultiplier = EvaluateDrainMultiplier(0);
         _targetDrainMultiplier = _drainMultiplier;
         _drainMultiplierVelocity = 0f;
-        _hasExpired = false;
-        _isRunning = true;
-        PublishState();
+        _countdownTimer.Configure(_maximumTime, _startingTime);
+        _countdownTimer.SetCountdownRate(TimerSpeedMultiplier * _drainMultiplier);
+        _countdownTimer.StartTimer();
     }
 
     public void StopTimer()
     {
-        _isRunning = false;
+        _countdownTimer.Stop();
     }
 
     public void RegisterMatch(int matchCount, int itemCount)
@@ -107,11 +110,9 @@ public sealed class EndlessTimer : TimerSpeedModifierTarget
         if (seconds < 0f || float.IsNaN(seconds) || float.IsInfinity(seconds))
             throw new ArgumentOutOfRangeException(nameof(seconds));
 
-        float previousTime = _remainingTime;
-        _remainingTime = Mathf.Min(_maximumTime, _remainingTime + seconds);
-        PublishState();
-
-        float addedTime = _remainingTime - previousTime;
+        float previousTime = _countdownTimer.RemainingTime;
+        _countdownTimer.AddTime(seconds);
+        float addedTime = _countdownTimer.RemainingTime - previousTime;
 
         if (addedTime > 0f)
             TimeAdded?.Invoke(addedTime);
@@ -125,8 +126,13 @@ public sealed class EndlessTimer : TimerSpeedModifierTarget
         return Mathf.Max(0f, _drainMultiplierByMatchCount.Evaluate(matchCount));
     }
 
-    private void PublishState()
+    private void HandleTimerStateChanged(CountdownTimerState state)
     {
-        StateChanged?.Invoke(new EndlessTimerState(_remainingTime, _maximumTime, _drainMultiplier));
+        StateChanged?.Invoke(new EndlessTimerState(state.RemainingTime, _maximumTime, _drainMultiplier));
+    }
+
+    private void HandleTimerExpired()
+    {
+        Expired?.Invoke();
     }
 }

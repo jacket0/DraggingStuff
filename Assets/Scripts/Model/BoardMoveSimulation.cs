@@ -6,13 +6,15 @@ public sealed class BoardMoveSimulation
     public BoardStateSnapshot State { get; }
     public int MatchCount { get; }
     public IReadOnlyList<int> AffectedShelfIndexes { get; }
+    public bool IsSwap { get; }
     public int EmptyColumnCount => State.EmptyColumnCount;
-    public bool IsAllowed => MatchCount > 0 || EmptyColumnCount > 0;
+    public bool IsAllowed => IsSwap || MatchCount > 0 || EmptyColumnCount > 0;
 
-    internal BoardMoveSimulation(BoardStateSnapshot state, int matchCount, IReadOnlyList<int> affectedShelfIndexes)
+    internal BoardMoveSimulation(BoardStateSnapshot state, int matchCount, IReadOnlyList<int> affectedShelfIndexes, bool isSwap = false)
     {
         State = state ?? throw new ArgumentNullException(nameof(state));
         MatchCount = matchCount;
+        IsSwap = isSwap;
         int[] copy = new int[affectedShelfIndexes.Count];
 
         for (int index = 0; index < copy.Length; index++)

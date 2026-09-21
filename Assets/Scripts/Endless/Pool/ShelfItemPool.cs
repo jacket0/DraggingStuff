@@ -5,7 +5,7 @@ using UnityEngine;
 
 public sealed class ShelfItemPool : MonoBehaviour
 {
-    [SerializeField] private EndlessItemCatalog _catalog;
+    [SerializeField] private ShelfItemCatalog _catalog;
     [SerializeField] private Transform _poolRoot;
 
     private readonly Dictionary<ItemType, Queue<ShelfItem>> _itemsByType = new Dictionary<ItemType, Queue<ShelfItem>>();
@@ -15,7 +15,7 @@ public sealed class ShelfItemPool : MonoBehaviour
     {
         _catalog.Validate();
 
-        foreach (EndlessItemCatalog.Entry entry in _catalog.Entries)
+        foreach (ShelfItemCatalog.Entry entry in _catalog.Entries)
             _itemsByType.Add(entry.Type, new Queue<ShelfItem>());
     }
 

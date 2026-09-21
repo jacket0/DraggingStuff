@@ -45,6 +45,22 @@ public class LevelProgressService : MonoBehaviour
         return GameProgressRepository.GetLevelBestScore(level.Number);
     }
 
+    public int GetStars(LevelEntry level)
+    {
+        if (level == null)
+            throw new ArgumentNullException(nameof(level));
+
+        return GameProgressRepository.GetLevelStars(level.Number);
+    }
+
+    public long GetBestTime(LevelEntry level)
+    {
+        if (level == null)
+            throw new ArgumentNullException(nameof(level));
+
+        return GameProgressRepository.GetLevelBestTime(level.Number);
+    }
+
     public bool AreAllLevelsCompleted()
     {
         foreach (LevelEntry level in _catalog.Levels)
@@ -59,15 +75,9 @@ public class LevelProgressService : MonoBehaviour
         return _catalog.Levels.Count > 0;
     }
 
-    public void RegisterCompletion(LevelEntry level, long score)
+    public void RegisterLevelResult(LevelRunResult result)
     {
-        if (level == null)
-            throw new ArgumentNullException(nameof(level));
-
-        if (score < 0)
-            throw new ArgumentOutOfRangeException(nameof(score));
-
-        GameProgressRepository.RegisterLevelCompletion(level.Number, score);
+        GameProgressRepository.RegisterLevelResult(result);
     }
 
     private int FindCatalogIndex(LevelEntry level)

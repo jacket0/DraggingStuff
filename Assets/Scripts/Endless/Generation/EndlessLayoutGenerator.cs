@@ -6,9 +6,9 @@ public sealed class EndlessLayoutGenerator
 {
     private readonly System.Random _random;
     private readonly EndlessGenerationConfig _config;
-    private readonly EndlessItemCatalog _catalog;
+    private readonly ShelfItemCatalog _catalog;
 
-    public EndlessLayoutGenerator(System.Random random, EndlessGenerationConfig config, EndlessItemCatalog catalog)
+    public EndlessLayoutGenerator(System.Random random, EndlessGenerationConfig config, ShelfItemCatalog catalog)
     {
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _config = config ?? throw new ArgumentNullException(nameof(config));
@@ -110,14 +110,14 @@ public sealed class EndlessLayoutGenerator
 
         for (int index = 0; index < weights.Length; index++)
         {
-            EndlessItemCatalog.Entry entry = _catalog.Entries[index];
+            ShelfItemCatalog.Entry entry = _catalog.Entries[index];
 
             if (column.Count == 0 && shelf.Count >= Shelf.MinimumMatchCapacity
                 && shelf.Where((_, otherIndex) => otherIndex != columnIndex).All(items => items.Count > 0 && items[0] == entry.Type))
                 continue;
 
             int repeats = shelf.Count(items => items.Count > 0 && items[items.Count - 1] == entry.Type);
-            double weight = entry.Weight / (1d + counts[entry.Type]);
+            double weight = 1d / (1d + counts[entry.Type]);
             weight *= Math.Pow(_config.RepeatedTypeWeight, repeats);
             weights[index] = weight;
             total += weight;

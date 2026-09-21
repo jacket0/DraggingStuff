@@ -85,12 +85,12 @@ public sealed class ShelfBoard : MonoBehaviour
     {
         simulation = null;
 
-        if (!CanPickUp(source) || target == null || !target.IsEmpty || !_positions.TryGetValue(target, out ColumnPosition targetPosition))
+        if (!CanPickUp(source) || target == null || !_positions.TryGetValue(target, out ColumnPosition targetPosition))
             return false;
 
         Shelf targetShelf = _shelves[targetPosition.ShelfIndex];
 
-        if (!targetShelf.isActiveAndEnabled || IsShelfLocked(targetShelf))
+        if (!targetShelf.isActiveAndEnabled || IsShelfLocked(targetShelf) || ItemAnimations.IsAnimating(target.FrontItem))
             return false;
 
         ShelfStateSnapshot[] shelves = _shelves.Select(shelf => shelf.CreateSnapshot()).ToArray();
@@ -109,12 +109,21 @@ public sealed class ShelfBoard : MonoBehaviour
         if (!TrySimulateMove(source, target, out _))
             return MoveOutcome.Rejected();
 
-        ShelfItem item = source.TakeFront();
-        target.PlaceFront(item);
         Shelf sourceShelf = GetView(source).Shelf;
         Shelf targetShelf = GetView(target).Shelf;
         Shelf[] affected = _shelves.Where(shelf => shelf == sourceShelf || shelf == targetShelf).ToArray();
-        return MoveOutcome.Successful(item, source, target, affected);
+
+        if (target.IsEmpty)
+        {
+            ShelfItem item = source.TakeFront();
+            target.PlaceFront(item);
+            return MoveOutcome.Successful(item, source, target, affected);
+        }
+
+        ShelfItem sourceItem = source.FrontItem;
+        ShelfItem targetItem = target.FrontItem;
+        source.SwapFrontWith(target);
+        return MoveOutcome.SuccessfulSwap(sourceItem, targetItem, source, target, affected);
     }
 
     private void OnDestroy() => ItemAnimations.Dispose();

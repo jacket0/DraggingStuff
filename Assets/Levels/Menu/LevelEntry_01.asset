@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _number: 1
   _sceneName: SimpleLevel
-  _definition: {fileID: 11400000, guid: 43a4832d5a3857e43ba00d26adb95b4c, type: 2}
+  _definition: {fileID: 11400000, guid: 86a4c0ad4c2048b3b7e928d6625d0587, type: 2}
   _available: 1

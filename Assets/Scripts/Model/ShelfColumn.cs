@@ -34,6 +34,25 @@ public sealed class ShelfColumn
         Append(item);
     }
 
+    public void SwapFrontWith(ShelfColumn other)
+    {
+        if (other == null)
+            throw new ArgumentNullException(nameof(other));
+
+        if (ReferenceEquals(this, other))
+            throw new InvalidOperationException("A column cannot swap with itself.");
+
+        if (IsEmpty || other.IsEmpty)
+            throw new InvalidOperationException("Both columns must contain a front item.");
+
+        ShelfItem item = _items[0];
+        ShelfItem otherItem = other._items[0];
+        _items[0] = otherItem;
+        other._items[0] = item;
+        otherItem.Column = this;
+        item.Column = other;
+    }
+
     public void Append(ShelfItem item)
     {
         if (item == null)

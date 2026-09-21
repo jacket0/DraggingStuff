@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
 public class LevelUiController : MonoBehaviour
 {
@@ -10,9 +11,9 @@ public class LevelUiController : MonoBehaviour
 
     [SerializeField] private PauseWindowView _pauseWindowView;
     [SerializeField] private LevelHudView _levelHudView;
-    [SerializeField] private LevelCompletionView _levelCompletionView;
+    [FormerlySerializedAs("_levelCompletionView")]
+    [SerializeField] private LevelResultView _levelResultView;
     [SerializeField] private LevelSession _levelSession;
-    [SerializeField] private ScoreSystem _scoreSystem;
     [SerializeField] private YandexGameReviewService _gameReviewService;
     [SerializeField] private YandexInterstitialAdService _interstitialAdService;
     [SerializeField] private LevelCatalog _levelCatalog;
@@ -27,7 +28,7 @@ public class LevelUiController : MonoBehaviour
     {
         _levelHudView.Show();
         _pauseWindowView.Hide();
-        _levelCompletionView.Hide();
+        _levelResultView.Hide();
     }
 
     private void OnEnable()
@@ -35,12 +36,12 @@ public class LevelUiController : MonoBehaviour
         _levelHudView.PauseRequested += HandlePauseRequested;
         _pauseWindowView.ResumeRequested += HandleResumeRequested;
         _pauseWindowView.RestartRequested += HandleRestartRequested;
-        _levelCompletionView.RestartRequested += HandleRestartRequested;
-        _levelSession.LevelCompleted += HandleLevelCompleted;
-        _levelCompletionView.MenuRequested += HandleMenuRequest;
-        _levelCompletionView.NextRequested += HandleNextLevelRequest;
+        _levelResultView.RestartRequested += HandleRestartRequested;
+        _levelSession.RunEnded += HandleRunEnded;
+        _levelResultView.MenuRequested += HandleMenuRequest;
+        _levelResultView.NextRequested += HandleNextLevelRequest;
         _pauseWindowView.MenuRequested += HandleMenuRequest;
-        _levelCompletionView.ReviewRequested += HandleReviewRequested;
+        _levelResultView.ReviewRequested += HandleReviewRequested;
     }
 
     private void OnDisable()
@@ -48,12 +49,12 @@ public class LevelUiController : MonoBehaviour
         _levelHudView.PauseRequested -= HandlePauseRequested;
         _pauseWindowView.ResumeRequested -= HandleResumeRequested;
         _pauseWindowView.RestartRequested -= HandleRestartRequested;
-        _levelCompletionView.RestartRequested -= HandleRestartRequested;
-        _levelSession.LevelCompleted -= HandleLevelCompleted;
-        _levelCompletionView.MenuRequested -= HandleMenuRequest;
-        _levelCompletionView.NextRequested -= HandleNextLevelRequest;
+        _levelResultView.RestartRequested -= HandleRestartRequested;
+        _levelSession.RunEnded -= HandleRunEnded;
+        _levelResultView.MenuRequested -= HandleMenuRequest;
+        _levelResultView.NextRequested -= HandleNextLevelRequest;
         _pauseWindowView.MenuRequested -= HandleMenuRequest;
-        _levelCompletionView.ReviewRequested -= HandleReviewRequested;
+        _levelResultView.ReviewRequested -= HandleReviewRequested;
     }
 
     private void HandlePauseRequested()
@@ -77,16 +78,23 @@ public class LevelUiController : MonoBehaviour
         _levelSession.Restart();
     }
 
-    private void HandleLevelCompleted()
+    private void HandleRunEnded(LevelRunResult result)
     {
         bool isReviewAvailable =
+            result.Won &&
             _levelSession.CurrentLevel.Number == ReviewLevelNumber &&
             GameReviewService.CanRequest;
         bool opensEndlessMode = !_levelCatalog.TryGetNext(_levelSession.CurrentLevel, out _);
+        long previousBestScore = GameProgressRepository.GetLevelBestScore(result.LevelNumber);
+        long bestTime = SelectBestTime(
+            GameProgressRepository.GetLevelBestTime(result.LevelNumber),
+            result.Won ? result.ActiveTimeMilliseconds : 0);
+        long bestScore = Math.Max(previousBestScore, result.Won ? result.Score : 0);
+        bool isNewRecord = result.Won && result.Score > previousBestScore;
 
         _levelHudView.Hide();
         _pauseWindowView.Hide();
-        _levelCompletionView.Show(_scoreSystem.CurrentScore, isReviewAvailable, opensEndlessMode);
+        _levelResultView.Show(result, bestTime, bestScore, isReviewAvailable, opensEndlessMode, isNewRecord);
     }
 
     private void HandleMenuRequest()
@@ -95,7 +103,7 @@ public class LevelUiController : MonoBehaviour
             return;
 
         _isTransitionPending = true;
-        _levelCompletionView.SetInteractable(false);
+        _levelResultView.SetInteractable(false);
         InterstitialAdService.Show(OpenMainMenu);
     }
 
@@ -111,7 +119,7 @@ public class LevelUiController : MonoBehaviour
             return;
 
         if (GameReviewService.TryRequest())
-            _levelCompletionView.HideReviewButton();
+            _levelResultView.HideReviewButton();
     }
 
     private void HandleNextLevelRequest()
@@ -120,7 +128,7 @@ public class LevelUiController : MonoBehaviour
             return;
 
         _isTransitionPending = true;
-        _levelCompletionView.SetInteractable(false);
+        _levelResultView.SetInteractable(false);
         InterstitialAdService.Show(OpenNextLevel);
     }
 
@@ -136,5 +144,16 @@ public class LevelUiController : MonoBehaviour
         }
 
         SceneManager.LoadScene(EndlessLevelSceneName);
+    }
+
+    private static long SelectBestTime(long currentBestTime, long resultTime)
+    {
+        if (currentBestTime <= 0)
+            return Math.Max(0, resultTime);
+
+        if (resultTime <= 0)
+            return currentBestTime;
+
+        return Math.Min(currentBestTime, resultTime);
     }
 }
