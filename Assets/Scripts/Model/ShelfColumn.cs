@@ -53,6 +53,17 @@ public sealed class ShelfColumn
         item.Column = other;
     }
 
+    public bool MoveFrontToBack()
+    {
+        if (Count < 2)
+            return false;
+
+        ShelfItem item = _items[0];
+        _items.RemoveAt(0);
+        _items.Add(item);
+        return true;
+    }
+
     public void Append(ShelfItem item)
     {
         if (item == null)
