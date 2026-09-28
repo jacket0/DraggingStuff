@@ -175,7 +175,7 @@ public sealed class TimedLevelLayoutGenerator
         moves.RemoveAll(move => WouldCreateAutomaticMatch(columns, move, type));
         moves.RemoveAll(move => WouldCreateAdjacentDuplicate(columns, move, type, constraints));
         Shuffle(moves, random);
-        moves.Sort((first, second) => CompareReverseMoves(first, second, columns));
+        moves.Sort((first, second) => CompareReverseMoves(first, second, columns, constraints));
 
         foreach (ReverseMove move in moves)
         {
@@ -376,14 +376,32 @@ public sealed class TimedLevelLayoutGenerator
         return count;
     }
 
-    private static int CompareReverseMoves(ReverseMove first, ReverseMove second, List<ItemType>[][] columns)
+    private static int CompareReverseMoves(ReverseMove first, ReverseMove second, List<ItemType>[][] columns, LayoutConstraints constraints)
     {
+        if (constraints.HasConveyors)
+        {
+            int conveyorComparison = CountItemsAddedToConveyors(second, columns, constraints).CompareTo(CountItemsAddedToConveyors(first, columns, constraints));
+
+            if (conveyorComparison != 0)
+                return conveyorComparison;
+        }
+
         int emptyComparison = second.FilledEmptyColumnCount.CompareTo(first.FilledEmptyColumnCount);
 
         if (emptyComparison != 0)
             return emptyComparison;
 
         return GetResultingDepth(first, columns).CompareTo(GetResultingDepth(second, columns));
+    }
+
+    private static int CountItemsAddedToConveyors(ReverseMove move, List<ItemType>[][] columns, LayoutConstraints constraints)
+    {
+        int count = constraints.IsConveyor(move.SourceShelfIndex) ? 1 : 0;
+
+        if (constraints.IsConveyor(move.TargetShelfIndex))
+            count += columns[move.TargetShelfIndex].Length - 1;
+
+        return count;
     }
 
     private static int GetResultingDepth(ReverseMove move, List<ItemType>[][] columns)
