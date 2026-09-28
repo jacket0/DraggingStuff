@@ -305,7 +305,7 @@ public static class TimedLevelValidator
         if (shelf.Columns.Any(column => column.Count > TimedLevelLayoutRules.MaximumConveyorColumnDepth))
             throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} exceeds the conveyor column depth on shelf {shelfIndex}.");
 
-        if (shelf.Columns.Any(column => column.IsEmpty) || shelf.Columns.All(column => column.Count < 2))
+        if (!TimedLevelLayoutRules.IsConveyorStartFilled(shelf))
             throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} must start with every column of conveyor shelf {shelfIndex} filled and one of them holding two or more items.");
 
         if (shelf.Columns.Any(column => column.Count >= 2 && column.Items[column.Count - 1] == column.Items[0]))
