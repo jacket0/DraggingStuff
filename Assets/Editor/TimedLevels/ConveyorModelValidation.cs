@@ -23,6 +23,7 @@ public static class ConveyorModelValidation
         ValidateShortColumnsKeepOrder();
         ValidateFingerprintMarker();
         ValidateLevelsWithoutConveyors(catalog);
+        ValidateConveyorLevelSolutions(catalog);
         ValidateShelfBoardConveyorMarking();
         ValidateDefinitionErrors(catalog);
     }
@@ -232,6 +233,54 @@ public static class ConveyorModelValidation
                 }
             }
         }
+    }
+
+    private static void ValidateConveyorLevelSolutions(LevelCatalog catalog)
+    {
+        BoardMoveSimulator simulator = new BoardMoveSimulator();
+
+        foreach (LevelEntry level in catalog.Levels.Where(level => level.Definition.HasConveyors))
+        {
+            foreach (TimedLevelVariant variant in level.Definition.Variants)
+            {
+                BoardStateSnapshot state = variant.CreateLayout();
+
+                if (!state.HasConveyors)
+                    throw new InvalidOperationException($"Conveyor solutions: level {level.Number}, seed {variant.Seed} has no conveyor shelf.");
+
+                foreach (TimedLevelMove move in variant.CreateSolution())
+                {
+                    if (!simulator.TrySimulate(state, move.Source, move.Target, out BoardMoveSimulation simulation)
+                        || !simulation.IsAllowed
+                        || simulation.MatchCount != 1
+                        || !simulation.ConveyorsShifted
+                        || simulation.MatchCountAfterShift != 0)
+                    {
+                        throw new InvalidOperationException($"Conveyor solutions: level {level.Number}, seed {variant.Seed} does not replay as one match and one shift per move.");
+                    }
+
+                    Dictionary<ItemType, int> expectedCounts = CountItems(state);
+                    expectedCounts[simulation.Matches[0].Type] -= simulation.Matches[0].ItemCount;
+
+                    if (!CountItems(simulation.State).OrderBy(pair => pair.Key).SequenceEqual(expectedCounts.Where(pair => pair.Value > 0).OrderBy(pair => pair.Key)))
+                        throw new InvalidOperationException($"Conveyor R9: level {level.Number}, seed {variant.Seed} changes item counts beyond the match.");
+
+                    state = simulation.State;
+                }
+
+                if (!state.IsCleared)
+                    throw new InvalidOperationException($"Conveyor solutions: level {level.Number}, seed {variant.Seed} does not clear the board.");
+            }
+        }
+    }
+
+    private static Dictionary<ItemType, int> CountItems(BoardStateSnapshot board)
+    {
+        return board.Shelves
+            .SelectMany(shelf => shelf.Columns)
+            .SelectMany(column => column.Items)
+            .GroupBy(type => type)
+            .ToDictionary(group => group.Key, group => group.Count());
     }
 
     private static void ValidateShelfBoardConveyorMarking()

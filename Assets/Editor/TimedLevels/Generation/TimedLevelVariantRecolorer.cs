@@ -12,6 +12,9 @@ public sealed class TimedLevelVariantRecolorer
         if (variant == null)
             throw new ArgumentNullException(nameof(variant));
 
+        if (definition.HasConveyors)
+            throw new InvalidOperationException($"{definition.name}: recoloring is not supported for conveyor levels.");
+
         BoardStateSnapshot previousLayout = variant.CreateLayout();
         IReadOnlyList<TimedLevelMove> solution = variant.CreateSolution();
         ItemType[] itemTypes = definition.ItemGroups.Select(group => group.Type).ToArray();

@@ -91,6 +91,32 @@ public static class TimedLevelVariantGenerator
         }
     }
 
+    [MenuItem("Tools/Timed Levels/Generate Conveyor Levels")]
+    public static void GenerateConveyorLevels()
+    {
+        LevelCatalog catalog = AssetDatabase.LoadAssetAtPath<LevelCatalog>(CatalogPath);
+
+        if (catalog == null)
+            throw new InvalidOperationException($"Level catalog was not found at {CatalogPath}.");
+
+        SceneSetup[] sceneSetup = EditorSceneManager.GetSceneManagerSetup();
+
+        try
+        {
+            LevelEntry[] levels = catalog.Levels.Where(level => level != null && level.Definition != null && level.Definition.HasConveyors).ToArray();
+
+            foreach (LevelEntry level in levels)
+                Generate(level);
+
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Generated {RequiredVariantCount} verified variants for {levels.Length} conveyor levels.");
+        }
+        finally
+        {
+            EditorSceneManager.RestoreSceneManagerSetup(sceneSetup);
+        }
+    }
+
     private static void Generate(LevelEntry level)
     {
         if (level == null || level.Definition == null)
@@ -122,12 +148,15 @@ public static class TimedLevelVariantGenerator
 
         BoardStateSnapshot shape = CreateShape(board);
         TimedLevelValidator.ValidateForGeneration(definition, shape);
-        List<TimedLevelVariant> candidates = GenerateCandidates(definition, levelNumber, shape);
+        Dictionary<CandidateRejection, int> rejections = new Dictionary<CandidateRejection, int>();
+        List<TimedLevelVariant> candidates = GenerateCandidates(definition, levelNumber, shape, rejections);
         int medianMoveCount = GetMedianMoveCount(candidates);
         List<TimedLevelVariant> accepted = candidates
             .Where(variant => IsWithinDifficultyRange(variant.MoveCount, medianMoveCount))
             .Take(RequiredVariantCount)
             .ToList();
+        rejections[CandidateRejection.DifficultySpread] = candidates.Count(variant => !IsWithinDifficultyRange(variant.MoveCount, medianMoveCount));
+        Debug.Log($"Level {levelNumber}: {accepted.Count} variants accepted, median {medianMoveCount} moves, rejected candidates: {FormatRejections(rejections)}.");
 
         if (accepted.Count < RequiredVariantCount)
         {
@@ -138,7 +167,11 @@ public static class TimedLevelVariantGenerator
         WriteVariants(definition, accepted);
     }
 
-    private static List<TimedLevelVariant> GenerateCandidates(TimedLevelDefinition definition, int levelNumber, BoardStateSnapshot shape)
+    private static List<TimedLevelVariant> GenerateCandidates(
+        TimedLevelDefinition definition,
+        int levelNumber,
+        BoardStateSnapshot shape,
+        Dictionary<CandidateRejection, int> rejections)
     {
         TimedLevelLayoutGenerator generator = new TimedLevelLayoutGenerator();
         List<TimedLevelVariant> candidates = new List<TimedLevelVariant>();
@@ -156,6 +189,13 @@ public static class TimedLevelVariantGenerator
             }
             catch (InvalidOperationException)
             {
+                CountRejection(rejections, CandidateRejection.GenerationFailed);
+                continue;
+            }
+
+            if (!generation.State.Shelves.Where(shelf => shelf.IsConveyor).All(TimedLevelLayoutRules.IsConveyorStartFilled))
+            {
+                CountRejection(rejections, CandidateRejection.ConveyorStart);
                 continue;
             }
 
@@ -166,7 +206,10 @@ public static class TimedLevelVariantGenerator
             TimedLevelSolveResult solveResult = solver.Solve(generation.State, generation.SolutionMoves);
 
             if (solveResult.Status != TimedLevelSolveStatus.Solved)
+            {
+                CountRejection(rejections, CandidateRejection.NotSolved);
                 continue;
+            }
 
             candidates.Add(new TimedLevelVariant(
                 seed,
@@ -181,6 +224,18 @@ public static class TimedLevelVariantGenerator
             throw new InvalidOperationException($"Level {levelNumber}: only {candidates.Count} verified variants were generated.");
 
         return candidates;
+    }
+
+    private static void CountRejection(Dictionary<CandidateRejection, int> rejections, CandidateRejection rejection)
+    {
+        rejections.TryGetValue(rejection, out int count);
+        rejections[rejection] = count + 1;
+    }
+
+    private static string FormatRejections(Dictionary<CandidateRejection, int> rejections)
+    {
+        return string.Join(", ", ((CandidateRejection[])Enum.GetValues(typeof(CandidateRejection)))
+            .Select(rejection => $"{rejection} {(rejections.TryGetValue(rejection, out int count) ? count : 0)}"));
     }
 
     private static BoardStateSnapshot CreateShape(ShelfBoard board)
@@ -245,6 +300,7 @@ public static class TimedLevelVariantGenerator
             ShelfStateSnapshot shelf = layout.Shelves[shelfIndex];
             SerializedProperty shelfProperty = shelvesProperty.GetArrayElementAtIndex(shelfIndex);
             shelfProperty.FindPropertyRelative("_isClosed").boolValue = !shelf.IsOpen;
+            shelfProperty.FindPropertyRelative("_isConveyor").boolValue = shelf.IsConveyor;
             SerializedProperty columnsProperty = shelfProperty.FindPropertyRelative("_columns");
             columnsProperty.arraySize = shelf.Columns.Count;
 
@@ -286,5 +342,13 @@ public static class TimedLevelVariantGenerator
         }
 
         throw new InvalidOperationException($"{scene.path}: {typeof(T).Name} was not found.");
+    }
+
+    private enum CandidateRejection
+    {
+        GenerationFailed,
+        ConveyorStart,
+        NotSolved,
+        DifficultySpread
     }
 }
