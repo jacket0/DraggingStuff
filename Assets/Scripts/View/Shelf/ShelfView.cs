@@ -8,6 +8,9 @@ public sealed class ShelfView : MonoBehaviour
     [SerializeField] private List<ShelfColumnView> _columns = new List<ShelfColumnView>();
     [SerializeField] private Vector3 _previewOffset;
     [SerializeField] private Material _previewMaterial;
+    [SerializeField] private Material _farPreviewMaterial;
+    [SerializeField, Min(1)] private int _visibleDepth = 2;
+    [SerializeField, Range(0.1f, 1f)] private float _depthScaleFactor = 1f;
     [SerializeField, Min(0.01f)] private float _moveDuration = 0.3f;
     [SerializeField] private Ease _moveEase = Ease.OutCubic;
 
@@ -26,7 +29,7 @@ public sealed class ShelfView : MonoBehaviour
             if (!view.IsEmpty)
             {
                 ShelfItem item = view.FrontItem;
-                SetPose(item, view.ItemAnchor, Vector3.zero);
+                SetPose(item, view.ItemAnchor, Vector3.zero, 1f);
                 Presentation(item).ShowFront();
             }
 
@@ -81,16 +84,23 @@ public sealed class ShelfView : MonoBehaviour
 
     private void RefreshDepth(ShelfColumnView view)
     {
-        for (int index = 1; index < view.Column.Count; index++)
+        for (int depth = 1; depth < view.Column.Count; depth++)
         {
-            ShelfItem item = view.Column.Items[index];
-            SetPose(item, view.ItemAnchor, _previewOffset);
+            ShelfItem item = view.Column.Items[depth];
+            SetPose(item, view.ItemAnchor, _previewOffset * depth, GetDepthScale(depth));
 
-            if (index == 1)
-                Presentation(item).ShowPreview(_previewMaterial);
+            if (depth < _visibleDepth)
+                Presentation(item).ShowPreview(GetPreviewMaterial(depth));
             else
                 Presentation(item).Hide();
         }
+    }
+
+    private float GetDepthScale(int depth) => Mathf.Pow(_depthScaleFactor, depth);
+
+    private Material GetPreviewMaterial(int depth)
+    {
+        return depth > 1 && _farPreviewMaterial != null ? _farPreviewMaterial : _previewMaterial;
     }
 
     private static ShelfItemPresentation Presentation(ShelfItem item)
@@ -101,11 +111,11 @@ public sealed class ShelfView : MonoBehaviour
         return presentation;
     }
 
-    private static void SetPose(ShelfItem item, Transform anchor, Vector3 position)
+    private static void SetPose(ShelfItem item, Transform anchor, Vector3 position, float scale)
     {
         item.transform.SetParent(anchor, false);
         item.transform.localPosition = position;
         item.transform.localRotation = Quaternion.identity;
-        item.transform.localScale = Vector3.one;
+        item.transform.localScale = Vector3.one * scale;
     }
 }
