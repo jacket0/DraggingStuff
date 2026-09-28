@@ -16,7 +16,8 @@ public static class BoardStateFingerprint
         {
             List<string> columns = shelf.Columns.Select(CreateColumnKey).ToList();
             columns.Sort(StringComparer.Ordinal);
-            shelves.Add($"[{string.Join("", columns)}]");
+            string marker = shelf.IsOpen ? "" : "C";
+            shelves.Add($"[{marker}{string.Join("", columns)}]");
         }
 
         shelves.Sort(StringComparer.Ordinal);
@@ -32,6 +33,9 @@ public static class BoardStateFingerprint
 
         foreach (ShelfStateSnapshot shelf in board.Shelves)
         {
+            if (!shelf.IsOpen)
+                layout.Append('C');
+
             layout.Append('[');
 
             foreach (ColumnStateSnapshot column in shelf.Columns)

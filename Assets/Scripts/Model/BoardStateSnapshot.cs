@@ -24,7 +24,7 @@ public sealed class BoardStateSnapshot
             {
                 ItemCount += column.Count;
 
-                if (column.IsEmpty)
+                if (shelf.IsOpen && column.IsEmpty)
                     EmptyColumnCount++;
             }
         }

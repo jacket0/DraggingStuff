@@ -48,7 +48,7 @@ public sealed class ShelfDropTargetResolver
             ShelfColumnView candidate = hit.collider.GetComponentInParent<ShelfColumnView>();
             Shelf shelf = candidate != null ? candidate.GetComponentInParent<Shelf>() : null;
 
-            if (shelf == null || !shelf.isActiveAndEnabled || candidate.Shelf != shelf || _shelfBoard.IsShelfLocked(shelf) || !ContainsShelf(shelf))
+            if (shelf == null || !_shelfBoard.IsShelfAvailable(shelf) || candidate.Shelf != shelf || !ContainsShelf(shelf))
                 continue;
 
             column = candidate;
@@ -67,7 +67,7 @@ public sealed class ShelfDropTargetResolver
 
         foreach (Shelf candidate in _shelfBoard.Shelves)
         {
-            if (!candidate.isActiveAndEnabled || _shelfBoard.IsShelfLocked(candidate) || candidate.Capacity == 0 || !TryGetScreenRect(candidate.ColumnViews, out Rect screenRect))
+            if (!_shelfBoard.IsShelfAvailable(candidate) || candidate.Capacity == 0 || !TryGetScreenRect(candidate.ColumnViews, out Rect screenRect))
                 continue;
 
             screenRect.xMin -= _shelfPaddingPixels;

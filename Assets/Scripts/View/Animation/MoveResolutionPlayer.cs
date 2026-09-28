@@ -26,6 +26,8 @@ public class MoveResolutionPlayer : MonoBehaviour
 
     [SerializeField, Min(0f)] private float _postExplosionDelay = 0.1f;
 
+    public event Action<MatchResolution, Vector3> Exploded;
+
     public void Play(MatchResolution match, Action completed)
     {
         if (match == null)
@@ -127,6 +129,7 @@ public class MoveResolutionPlayer : MonoBehaviour
     private void PlayExplosion(MatchResolution match, Vector3 effectPosition)
     {
         _matchAudioPlayer.PlayExplosion();
+        Exploded?.Invoke(match, effectPosition);
 
         foreach (var item in match.Items)
             item?.Delete();

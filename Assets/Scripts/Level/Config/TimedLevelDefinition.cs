@@ -11,6 +11,8 @@ public sealed class TimedLevelDefinition : ScriptableObject
     [SerializeField] private List<TimedLevelItemGroup> _itemGroups = new List<TimedLevelItemGroup>();
     [SerializeField] private List<TimedLevelVariant> _variants = new List<TimedLevelVariant>();
     [SerializeField] private ShelfItemCatalog _itemCatalog;
+    [SerializeField] private List<ClosedShelfDefinition> _closedShelves = new List<ClosedShelfDefinition>();
+    [SerializeField] private ShelfRefillSettings _refillSettings;
 
     public int TimeLimitSeconds => _timeLimitSeconds;
     public int TwoStarTimeSeconds => _twoStarTimeSeconds;
@@ -19,4 +21,7 @@ public sealed class TimedLevelDefinition : ScriptableObject
     public IReadOnlyList<TimedLevelItemGroup> ItemGroups => _itemGroups;
     public IReadOnlyList<TimedLevelVariant> Variants => _variants;
     public ShelfItemCatalog ItemCatalog => _itemCatalog;
+    public IReadOnlyList<ClosedShelfDefinition> ClosedShelves => _closedShelves;
+    public ShelfRefillSettings RefillSettings => _refillSettings;
+    public bool HasClosedShelves => _closedShelves.Count > 0;
 }

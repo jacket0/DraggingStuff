@@ -6,9 +6,12 @@ public class MatchResolution
     private readonly IReadOnlyList<ShelfItem> _items;
 
     public IReadOnlyList<ShelfItem> Items => _items;
+    public Shelf Shelf { get; }
 
-    public MatchResolution(IEnumerable<ShelfItem> items)
+    public MatchResolution(Shelf shelf, IEnumerable<ShelfItem> items)
     {
+        Shelf = shelf ?? throw new ArgumentNullException(nameof(shelf));
+
         if (items == null)
             throw new ArgumentNullException(nameof(items));
 

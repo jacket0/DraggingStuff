@@ -13,6 +13,9 @@ public sealed class BoardMoveSimulator
         if (!board.Contains(source) || !board.Contains(target) || source.Equals(target))
             return false;
 
+        if (!board.Shelves[source.ShelfIndex].IsOpen || !board.Shelves[target.ShelfIndex].IsOpen)
+            return false;
+
         ColumnStateSnapshot sourceColumn = board.Shelves[source.ShelfIndex].Columns[source.ColumnIndex];
         ColumnStateSnapshot targetColumn = board.Shelves[target.ShelfIndex].Columns[target.ColumnIndex];
 
@@ -62,7 +65,7 @@ public sealed class BoardMoveSimulator
 
     private static BoardMoveSimulation Resolve(ShelfStateSnapshot[] shelves, bool[] affectedShelves, bool isSwap)
     {
-        int matchCount = 0;
+        List<MatchInfo> matches = new List<MatchInfo>();
         bool hasMatches;
 
         do
@@ -81,10 +84,10 @@ public sealed class BoardMoveSimulator
                 for (int columnIndex = 0; columnIndex < columns.Length; columnIndex++)
                     columns[columnIndex] = RemoveFront(shelf.Columns[columnIndex]);
 
-                shelves[shelfIndex] = new ShelfStateSnapshot(columns);
+                matches.Add(new MatchInfo(shelfIndex, shelf.Columns[0].Items[0], shelf.Capacity));
+                shelves[shelfIndex] = new ShelfStateSnapshot(columns, shelf.IsOpen);
 
                 affectedShelves[shelfIndex] = true;
-                matchCount++;
                 hasMatches = true;
             }
         }
@@ -98,7 +101,7 @@ public sealed class BoardMoveSimulator
                 affectedShelfIndexes.Add(shelfIndex);
         }
 
-        return new BoardMoveSimulation(new BoardStateSnapshot(shelves), matchCount, affectedShelfIndexes, isSwap);
+        return new BoardMoveSimulation(new BoardStateSnapshot(shelves), matches, affectedShelfIndexes, isSwap);
     }
 
     private static void ReplaceColumn(ShelfStateSnapshot[] shelves, ColumnPosition position, ColumnStateSnapshot column)
@@ -109,7 +112,7 @@ public sealed class BoardMoveSimulator
         for (int columnIndex = 0; columnIndex < columns.Length; columnIndex++)
             columns[columnIndex] = columnIndex == position.ColumnIndex ? column : shelf.Columns[columnIndex];
 
-        shelves[position.ShelfIndex] = new ShelfStateSnapshot(columns);
+        shelves[position.ShelfIndex] = new ShelfStateSnapshot(columns, shelf.IsOpen);
     }
 
     private static ColumnStateSnapshot RemoveFront(ColumnStateSnapshot column)

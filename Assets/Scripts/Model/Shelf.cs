@@ -47,9 +47,9 @@ public sealed class Shelf : MonoBehaviour
         _columns = Array.AsReadOnly(columns);
     }
 
-    public ShelfStateSnapshot CreateSnapshot()
+    public ShelfStateSnapshot CreateSnapshot(bool isOpen = true)
     {
-        return new ShelfStateSnapshot(Columns.Select(column => new ColumnStateSnapshot(column.Items.Select(item => item.Type).ToArray())).ToArray());
+        return new ShelfStateSnapshot(Columns.Select(column => new ColumnStateSnapshot(column.Items.Select(item => item.Type).ToArray())).ToArray(), isOpen);
     }
 
     public bool HasMatch() => CreateSnapshot().HasMatch();
@@ -61,7 +61,7 @@ public sealed class Shelf : MonoBehaviour
         if (!HasMatch())
             return false;
 
-        match = new MatchResolution(Columns.Select(column => column.TakeFront()).ToArray());
+        match = new MatchResolution(this, Columns.Select(column => column.TakeFront()).ToArray());
         return true;
     }
 }

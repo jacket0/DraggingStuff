@@ -99,6 +99,42 @@ public static class TimedLevelValidator
 
             definition.ItemCatalog.GetPrefab(group.Type);
         }
+
+        if ((definition.RefillSettings != null) != definition.HasClosedShelves)
+            throw new InvalidOperationException($"{definition.name}: refill settings must be configured exactly when closed shelves are present.");
+
+        foreach (ClosedShelfDefinition closedShelf in definition.ClosedShelves)
+        {
+            if (closedShelf.RevealedGroupCount <= 0 || closedShelf.RevealedGroupCount % 3 != 0)
+                throw new InvalidOperationException($"{definition.name}: shelf {closedShelf.ShelfIndex} revealed group count must be a positive multiple of three.");
+
+            switch (closedShelf.Condition)
+            {
+                case ShelfUnlockConditionKind.CollectItems:
+                    if (closedShelf.RequiredItems.Count == 0 || closedShelf.RequiredItems.Count > 3)
+                        throw new InvalidOperationException($"{definition.name}: shelf {closedShelf.ShelfIndex} must require one to three item types.");
+
+                    HashSet<ItemType> requiredTypes = new HashSet<ItemType>();
+
+                    foreach (ItemRequirement requirement in closedShelf.RequiredItems)
+                    {
+                        if (!types.Contains(requirement.Type))
+                            throw new InvalidOperationException($"{definition.name}: shelf {closedShelf.ShelfIndex} requires {requirement.Type}, which is not one of the level's item types.");
+
+                        if (requirement.Count <= 0 || requirement.Count % 3 != 0)
+                            throw new InvalidOperationException($"{definition.name}: shelf {closedShelf.ShelfIndex} requires a positive multiple of three of {requirement.Type}.");
+
+                        if (!requiredTypes.Add(requirement.Type))
+                            throw new InvalidOperationException($"{definition.name}: shelf {closedShelf.ShelfIndex} requires {requirement.Type} twice.");
+                    }
+                    break;
+
+                case ShelfUnlockConditionKind.MatchesOnShelf:
+                    if (closedShelf.RequiredCount <= 0)
+                        throw new InvalidOperationException($"{definition.name}: shelf {closedShelf.ShelfIndex} requires a positive count.");
+                    break;
+            }
+        }
     }
 
     private static void ValidateBoard(TimedLevelDefinition definition, BoardStateSnapshot board)
@@ -122,12 +158,49 @@ public static class TimedLevelValidator
         if (definition.EmptyColumnCount >= columnCount)
             throw new InvalidOperationException($"{definition.name}: empty column reserve leaves no space for items.");
 
+        int closedColumnCount = 0;
+
+        if (definition.HasClosedShelves)
+        {
+            if (definition.ClosedShelves.Count >= board.Shelves.Count)
+                throw new InvalidOperationException($"{definition.name}: closed shelves cannot cover the whole board.");
+
+            if (board.Shelves.Any(shelf => shelf.Capacity != 3))
+                throw new InvalidOperationException($"{definition.name}: closed-shelf levels require shelf capacity 3.");
+
+            HashSet<int> closedIndices = new HashSet<int>();
+
+            foreach (ClosedShelfDefinition closedShelf in definition.ClosedShelves)
+            {
+                if (closedShelf.ShelfIndex < 0 || closedShelf.ShelfIndex >= board.Shelves.Count)
+                    throw new InvalidOperationException($"{definition.name}: closed shelf index {closedShelf.ShelfIndex} is out of range.");
+
+                if (!closedIndices.Add(closedShelf.ShelfIndex))
+                    throw new InvalidOperationException($"{definition.name}: shelf {closedShelf.ShelfIndex} is closed twice.");
+            }
+
+            foreach (ClosedShelfDefinition closedShelf in definition.ClosedShelves)
+            {
+                if (closedShelf.Condition != ShelfUnlockConditionKind.MatchesOnShelf)
+                    continue;
+
+                if (closedShelf.TargetShelfIndex < 0 || closedShelf.TargetShelfIndex >= board.Shelves.Count || closedIndices.Contains(closedShelf.TargetShelfIndex))
+                    throw new InvalidOperationException($"{definition.name}: shelf {closedShelf.ShelfIndex} targets a missing or closed shelf.");
+            }
+
+            closedColumnCount = definition.ClosedShelves.Sum(closedShelf => board.Shelves[closedShelf.ShelfIndex].Capacity);
+        }
+
         int itemCount = GetItemCount(definition, matchSize);
 
         if (itemCount <= 0)
             throw new InvalidOperationException($"{definition.name}: the level contains no items.");
 
-        int usableColumnCount = columnCount - definition.EmptyColumnCount;
+        int usableColumnCount = columnCount - definition.EmptyColumnCount - closedColumnCount;
+
+        if (usableColumnCount <= 0)
+            throw new InvalidOperationException($"{definition.name}: closed and reserved columns leave no space for items.");
+
         int requiredDepth = (itemCount + usableColumnCount - 1) / usableColumnCount;
 
         if (requiredDepth > TimedLevelLayoutRules.MaximumColumnDepth)
@@ -141,12 +214,22 @@ public static class TimedLevelValidator
         if (layout.Shelves.Count != board.Shelves.Count)
             throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has an incompatible shelf count.");
 
+        HashSet<int> closedShelfIndices = new HashSet<int>(definition.ClosedShelves.Select(closedShelf => closedShelf.ShelfIndex));
+
         for (int shelfIndex = 0; shelfIndex < layout.Shelves.Count; shelfIndex++)
         {
             ShelfStateSnapshot shelf = layout.Shelves[shelfIndex];
 
             if (shelf.Capacity != board.Shelves[shelfIndex].Capacity)
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has an incompatible shelf capacity.");
+
+            bool shouldBeOpen = !closedShelfIndices.Contains(shelfIndex);
+
+            if (shelf.IsOpen != shouldBeOpen)
+                throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has an incorrect open state for shelf {shelfIndex}.");
+
+            if (!shelf.IsOpen && !shelf.Columns.All(column => column.IsEmpty))
+                throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has items on closed shelf {shelfIndex}.");
 
             if (shelf.HasMatch())
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} starts with an automatic match.");

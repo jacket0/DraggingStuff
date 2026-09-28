@@ -9,8 +9,13 @@ public sealed class ShelfStateSnapshot
 
     public IReadOnlyList<ColumnStateSnapshot> Columns { get; }
     public int Capacity => Columns.Count;
+    public bool IsOpen { get; }
 
-    public ShelfStateSnapshot(IReadOnlyList<ColumnStateSnapshot> columns)
+    public ShelfStateSnapshot(IReadOnlyList<ColumnStateSnapshot> columns) : this(columns, true)
+    {
+    }
+
+    public ShelfStateSnapshot(IReadOnlyList<ColumnStateSnapshot> columns, bool isOpen)
     {
         if (columns == null)
             throw new ArgumentNullException(nameof(columns));
@@ -24,6 +29,7 @@ public sealed class ShelfStateSnapshot
             copy[index] = columns[index] ?? throw new ArgumentException("A shelf contains a null column.", nameof(columns));
 
         Columns = Array.AsReadOnly(copy);
+        IsOpen = isOpen;
     }
 
     public bool HasMatch()

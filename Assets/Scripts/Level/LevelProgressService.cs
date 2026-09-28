@@ -6,7 +6,7 @@ public class LevelProgressService : MonoBehaviour
     private const int FirstCatalogIndex = 0;
 
     [SerializeField] private LevelCatalog _catalog;
-
+    [SerializeField, Min(1)] private int _endlessUnlockLevelNumber = 12;
 
     public event Action ProgressChanged;
 
@@ -61,19 +61,7 @@ public class LevelProgressService : MonoBehaviour
         return GameProgressRepository.GetLevelBestTime(level.Number);
     }
 
-    public bool AreAllLevelsCompleted()
-    {
-        foreach (LevelEntry level in _catalog.Levels)
-        {
-            if (level == null)
-                throw new InvalidOperationException(nameof(_catalog.Levels));
-
-            if (!GameProgressRepository.IsLevelCompleted(level.Number))
-                return false;
-        }
-
-        return _catalog.Levels.Count > 0;
-    }
+    public bool IsEndlessUnlocked() => GameProgressRepository.IsLevelCompleted(_endlessUnlockLevelNumber);
 
     public void RegisterLevelResult(LevelRunResult result)
     {

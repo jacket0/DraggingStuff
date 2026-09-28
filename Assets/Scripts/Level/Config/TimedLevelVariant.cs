@@ -50,7 +50,7 @@ public sealed class TimedLevelVariant
         if (layout != null)
         {
             foreach (ShelfStateSnapshot shelf in layout.Shelves)
-                _shelves.Add(new TimedLevelShelfLayout(shelf.Columns));
+                _shelves.Add(new TimedLevelShelfLayout(shelf.Columns, shelf.IsOpen));
         }
 
         if (solutionMoves != null)
@@ -67,7 +67,8 @@ public sealed class TimedLevelVariant
 
         ShelfStateSnapshot[] shelves = _shelves
             .Select(shelf => new ShelfStateSnapshot(
-                shelf.Columns.Select(column => new ColumnStateSnapshot(column.Items.ToArray())).ToArray()))
+                shelf.Columns.Select(column => new ColumnStateSnapshot(column.Items.ToArray())).ToArray(),
+                shelf.IsOpen))
             .ToArray();
         return new BoardStateSnapshot(shelves);
     }
