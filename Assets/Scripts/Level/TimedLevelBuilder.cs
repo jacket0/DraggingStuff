@@ -65,6 +65,9 @@ public sealed class TimedLevelBuilder : MonoBehaviour
 
             if (!layout.Shelves[shelfIndex].IsOpen)
                 _shelfBoard.CloseShelf(shelf);
+
+            if (layout.Shelves[shelfIndex].IsConveyor)
+                _shelfBoard.MarkConveyor(shelf);
         }
     }
 }

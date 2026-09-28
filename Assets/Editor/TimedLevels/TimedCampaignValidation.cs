@@ -29,6 +29,7 @@ public static class TimedCampaignValidation
         ValidateClosedShelfBoardInvariant(catalog);
         ValidateClosedShelfLevelData(catalog);
         ValidateConveyorLevelScenes(catalog);
+        ConveyorModelValidation.Run(catalog);
         ValidateTripleRefillGenerator();
         ValidateRevealedShelfLatinSquare();
         ValidateCampaignScenes(catalog);
@@ -57,6 +58,7 @@ public static class TimedCampaignValidation
         ValidateClosedShelfBoardInvariant(catalog);
         ValidateClosedShelfLevelData(catalog);
         ValidateConveyorLevelScenes(catalog);
+        ConveyorModelValidation.Run(catalog);
         ValidateTripleRefillGenerator();
         ValidateRevealedShelfLatinSquare();
         ValidateSwapHoverViews();

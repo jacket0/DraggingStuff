@@ -9,6 +9,7 @@ public sealed class ShelfBoard : MonoBehaviour
 
     private readonly HashSet<Shelf> _lockedShelves = new HashSet<Shelf>();
     private readonly HashSet<Shelf> _closedShelves = new HashSet<Shelf>();
+    private readonly HashSet<Shelf> _conveyorShelves = new HashSet<Shelf>();
     private readonly Dictionary<ShelfColumn, ColumnPosition> _positions = new Dictionary<ShelfColumn, ColumnPosition>();
     private readonly BoardMoveSimulator _simulator = new BoardMoveSimulator();
     private bool _initialized;
@@ -17,6 +18,8 @@ public sealed class ShelfBoard : MonoBehaviour
     public bool IsCleared => _closedShelves.Count == 0 && _shelves.All(shelf => shelf.IsCleared);
     public bool HasLockedShelves => _lockedShelves.Count > 0;
     public bool HasClosedShelves => _closedShelves.Count > 0;
+    public bool HasConveyors => _conveyorShelves.Count > 0;
+    public IReadOnlyList<Shelf> ConveyorShelves => _shelves.Where(IsConveyor).ToArray();
     public ShelfItemPlacementAnimator ItemAnimations { get; } = new ShelfItemPlacementAnimator();
 
     public void Initialize()
@@ -63,11 +66,19 @@ public sealed class ShelfBoard : MonoBehaviour
 
     public void CloseShelf(Shelf shelf)
     {
-        if (shelf == null || !_shelves.Contains(shelf) || !shelf.IsCleared || !_closedShelves.Add(shelf))
+        if (shelf == null || !_shelves.Contains(shelf) || !shelf.IsCleared || IsConveyor(shelf) || !_closedShelves.Add(shelf))
             throw new InvalidOperationException("Only an empty shelf on this board can be closed.");
     }
 
     public void OpenShelf(Shelf shelf) => _closedShelves.Remove(shelf);
+
+    public bool IsConveyor(Shelf shelf) => _conveyorShelves.Contains(shelf);
+
+    public void MarkConveyor(Shelf shelf)
+    {
+        if (shelf == null || !_shelves.Contains(shelf) || IsShelfClosed(shelf) || !_conveyorShelves.Add(shelf))
+            throw new InvalidOperationException("Only an open shelf on this board can be marked as a conveyor once.");
+    }
 
     public bool CanPickUp(ShelfColumn column)
     {
@@ -90,7 +101,7 @@ public sealed class ShelfBoard : MonoBehaviour
     public BoardStateSnapshot CreateSnapshot()
     {
         Initialize();
-        return new BoardStateSnapshot(_shelves.Select(shelf => shelf.CreateSnapshot(!IsShelfClosed(shelf))).ToArray());
+        return new BoardStateSnapshot(_shelves.Select(CreateShelfSnapshot).ToArray());
     }
 
     public bool CanMove(ShelfColumn source, ShelfColumn target) => TrySimulateMove(source, target, out _);
@@ -107,7 +118,7 @@ public sealed class ShelfBoard : MonoBehaviour
         if (!IsShelfAvailable(targetShelf) || ItemAnimations.IsAnimating(target.FrontItem))
             return false;
 
-        ShelfStateSnapshot[] shelves = _shelves.Select(shelf => shelf.CreateSnapshot(!IsShelfClosed(shelf))).ToArray();
+        ShelfStateSnapshot[] shelves = _shelves.Select(CreateShelfSnapshot).ToArray();
 
         for (int index = 0; index < shelves.Length; index++)
         {
@@ -139,6 +150,8 @@ public sealed class ShelfBoard : MonoBehaviour
         source.SwapFrontWith(target);
         return MoveOutcome.SuccessfulSwap(sourceItem, targetItem, source, target, affected);
     }
+
+    private ShelfStateSnapshot CreateShelfSnapshot(Shelf shelf) => shelf.CreateSnapshot(!IsShelfClosed(shelf), IsConveyor(shelf));
 
     private void OnDestroy() => ItemAnimations.Dispose();
 }

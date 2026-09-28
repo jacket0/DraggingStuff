@@ -26,4 +26,18 @@ public sealed class ColumnStateSnapshot
 
         Items = Array.AsReadOnly(copy);
     }
+
+    public ColumnStateSnapshot MoveFrontToBack()
+    {
+        if (Count < 2)
+            return this;
+
+        ItemType[] items = new ItemType[Count];
+
+        for (int index = 1; index < Count; index++)
+            items[index - 1] = Items[index];
+
+        items[Count - 1] = Items[0];
+        return new ColumnStateSnapshot(items);
+    }
 }

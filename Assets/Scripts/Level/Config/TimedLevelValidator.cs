@@ -100,6 +100,15 @@ public static class TimedLevelValidator
             definition.ItemCatalog.GetPrefab(group.Type);
         }
 
+        if (definition.ConveyorShelfIndices.Any(index => index < 0))
+            throw new InvalidOperationException($"{definition.name}: conveyor shelf indices must be non-negative.");
+
+        if (definition.ConveyorShelfIndices.Distinct().Count() != definition.ConveyorShelfIndices.Count)
+            throw new InvalidOperationException($"{definition.name}: a conveyor shelf index is duplicated.");
+
+        if (definition.HasConveyors && definition.HasClosedShelves)
+            throw new InvalidOperationException($"{definition.name}: conveyors and closed shelves cannot share a level.");
+
         if ((definition.RefillSettings != null) != definition.HasClosedShelves)
             throw new InvalidOperationException($"{definition.name}: refill settings must be configured exactly when closed shelves are present.");
 
@@ -205,6 +214,29 @@ public static class TimedLevelValidator
 
         if (requiredDepth > TimedLevelLayoutRules.MaximumColumnDepth)
             throw new InvalidOperationException($"{definition.name}: {itemCount} items exceed the supported column depth of {TimedLevelLayoutRules.MaximumColumnDepth}.");
+
+        if (definition.HasConveyors)
+            ValidateConveyorBoard(definition, board, columnCount, itemCount);
+    }
+
+    private static void ValidateConveyorBoard(TimedLevelDefinition definition, BoardStateSnapshot board, int columnCount, int itemCount)
+    {
+        foreach (int shelfIndex in definition.ConveyorShelfIndices)
+        {
+            if (shelfIndex >= board.Shelves.Count)
+                throw new InvalidOperationException($"{definition.name}: conveyor shelf index {shelfIndex} is out of range.");
+
+            if (board.Shelves[shelfIndex].Capacity != TimedLevelLayoutRules.ConveyorShelfCapacity)
+                throw new InvalidOperationException($"{definition.name}: conveyor shelf {shelfIndex} must have capacity {TimedLevelLayoutRules.ConveyorShelfCapacity}.");
+        }
+
+        int conveyorColumnCount = definition.ConveyorShelfIndices.Sum(shelfIndex => board.Shelves[shelfIndex].Capacity);
+        int otherItemColumnCount = columnCount - conveyorColumnCount - definition.EmptyColumnCount;
+        int capacity = conveyorColumnCount * TimedLevelLayoutRules.MaximumConveyorColumnDepth
+            + Math.Max(0, otherItemColumnCount) * TimedLevelLayoutRules.MaximumColumnDepth;
+
+        if (itemCount > capacity)
+            throw new InvalidOperationException($"{definition.name}: {itemCount} items exceed the conveyor board capacity of {capacity}.");
     }
 
     private static void ValidateVariantLayout(TimedLevelDefinition definition, BoardStateSnapshot board, TimedLevelVariant variant, int variantIndex)
@@ -215,6 +247,7 @@ public static class TimedLevelValidator
             throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has an incompatible shelf count.");
 
         HashSet<int> closedShelfIndices = new HashSet<int>(definition.ClosedShelves.Select(closedShelf => closedShelf.ShelfIndex));
+        HashSet<int> conveyorShelfIndices = new HashSet<int>(definition.ConveyorShelfIndices);
 
         for (int shelfIndex = 0; shelfIndex < layout.Shelves.Count; shelfIndex++)
         {
@@ -239,6 +272,12 @@ public static class TimedLevelValidator
 
             if (shelf.Columns.Any(HasAdjacentDuplicate))
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} contains adjacent items of the same type in a column.");
+
+            if (shelf.IsConveyor != conveyorShelfIndices.Contains(shelfIndex))
+                throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has an incorrect conveyor state for shelf {shelfIndex}.");
+
+            if (shelf.IsConveyor)
+                ValidateConveyorShelfLayout(definition, shelf, shelfIndex, variantIndex);
         }
 
         if (layout.EmptyColumnCount != definition.EmptyColumnCount)
@@ -259,6 +298,18 @@ public static class TimedLevelValidator
         {
             throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} item counts differ from the definition.");
         }
+    }
+
+    private static void ValidateConveyorShelfLayout(TimedLevelDefinition definition, ShelfStateSnapshot shelf, int shelfIndex, int variantIndex)
+    {
+        if (shelf.Columns.Any(column => column.Count > TimedLevelLayoutRules.MaximumConveyorColumnDepth))
+            throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} exceeds the conveyor column depth on shelf {shelfIndex}.");
+
+        if (shelf.Columns.Any(column => column.IsEmpty) || shelf.Columns.All(column => column.Count < 2))
+            throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} must start with every column of conveyor shelf {shelfIndex} filled and one of them holding two or more items.");
+
+        if (shelf.Columns.Any(column => column.Count >= 2 && column.Items[column.Count - 1] == column.Items[0]))
+            throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} places the same type at both ends of a column on conveyor shelf {shelfIndex}.");
     }
 
     private static bool HasAdjacentDuplicate(ColumnStateSnapshot column)

@@ -378,7 +378,7 @@ public static class ClosedShelfLevelSimulation
                     : new ColumnStateSnapshot(shelf.Columns[columnIndex].Items.Concat(newItems).ToArray());
             }
 
-            shelves[shelfIndex] = new ShelfStateSnapshot(columns, shelf.IsOpen);
+            shelves[shelfIndex] = shelf.WithColumns(columns);
         }
 
         return new BoardStateSnapshot(shelves);

@@ -16,7 +16,7 @@ public static class BoardStateFingerprint
         {
             List<string> columns = shelf.Columns.Select(CreateColumnKey).ToList();
             columns.Sort(StringComparer.Ordinal);
-            string marker = shelf.IsOpen ? "" : "C";
+            string marker = !shelf.IsOpen ? "C" : shelf.IsConveyor ? "B" : "";
             shelves.Add($"[{marker}{string.Join("", columns)}]");
         }
 
@@ -35,6 +35,9 @@ public static class BoardStateFingerprint
         {
             if (!shelf.IsOpen)
                 layout.Append('C');
+
+            if (shelf.IsConveyor)
+                layout.Append('B');
 
             layout.Append('[');
 
