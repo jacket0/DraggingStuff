@@ -10,8 +10,10 @@ using UnityEngine.UI;
 public static class TimedCampaignValidation
 {
     private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
-    private const int ExpectedLevelCount = 16;
+    private const int ExpectedLevelCount = 20;
     private const int FirstClosedShelfLevelNumber = 13;
+    private const int FirstConveyorLevelNumber = 17;
+    private const string ConveyorSceneName = "FifthLevel";
 
     [MenuItem("Tools/Timed Levels/Validate Campaign")]
     public static void Run()
@@ -26,6 +28,7 @@ public static class TimedCampaignValidation
         ValidateClosedShelfModel();
         ValidateClosedShelfBoardInvariant(catalog);
         ValidateClosedShelfLevelData(catalog);
+        ValidateConveyorLevelScenes(catalog);
         ValidateTripleRefillGenerator();
         ValidateRevealedShelfLatinSquare();
         ValidateCampaignScenes(catalog);
@@ -53,6 +56,7 @@ public static class TimedCampaignValidation
         ValidateClosedShelfModel();
         ValidateClosedShelfBoardInvariant(catalog);
         ValidateClosedShelfLevelData(catalog);
+        ValidateConveyorLevelScenes(catalog);
         ValidateTripleRefillGenerator();
         ValidateRevealedShelfLatinSquare();
         ValidateSwapHoverViews();
@@ -266,13 +270,24 @@ public static class TimedCampaignValidation
     {
         foreach (LevelEntry level in catalog.Levels)
         {
-            bool isClosedShelfLevel = level.Number >= FirstClosedShelfLevelNumber;
+            bool isClosedShelfLevel = level.Number >= FirstClosedShelfLevelNumber && level.Number < FirstConveyorLevelNumber;
 
             if (level.Definition.HasClosedShelves != isClosedShelfLevel)
                 throw new InvalidOperationException($"Level {level.Number}: unexpected closed shelf configuration.");
 
             if (isClosedShelfLevel && level.SceneName != "FourthLevel")
                 throw new InvalidOperationException($"Level {level.Number}: closed shelf levels belong to FourthLevel.");
+        }
+    }
+
+    private static void ValidateConveyorLevelScenes(LevelCatalog catalog)
+    {
+        foreach (LevelEntry level in catalog.Levels)
+        {
+            bool isConveyorLevel = level.Number >= FirstConveyorLevelNumber;
+
+            if ((level.SceneName == ConveyorSceneName) != isConveyorLevel)
+                throw new InvalidOperationException($"Level {level.Number}: only conveyor levels belong to {ConveyorSceneName}.");
         }
     }
 
