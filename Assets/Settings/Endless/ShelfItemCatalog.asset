@@ -15,17 +15,25 @@ MonoBehaviour:
   _entries:
   - _type: 0
     _prefab: {fileID: 1687898032491626668, guid: 761b8bc554e31394081c8eea4fa65122, type: 3}
+    _icon: {fileID: 21300000, guid: 51621f3eb10ef7f45a2bb3d0cc4df9f1, type: 3}
   - _type: 1
     _prefab: {fileID: 485221916132092154, guid: 7ec95db4cb4b7504a8ec40a8846454c2, type: 3}
+    _icon: {fileID: 21300000, guid: f7cf80c71024cf44dadde056eb7bf509, type: 3}
   - _type: 2
     _prefab: {fileID: 8278389911820959414, guid: 6d1ba0d7405338145b35ef6f62024f05, type: 3}
+    _icon: {fileID: 21300000, guid: 1712cc2c5a4e8ad4f8e40d716ce1862b, type: 3}
   - _type: 3
     _prefab: {fileID: 1919988485504724112, guid: f9bb4f1ab4314344a97b1f4598ebe396, type: 3}
+    _icon: {fileID: 21300000, guid: 8461b9fe6f5e6eb448646972c3cacf57, type: 3}
   - _type: 4
     _prefab: {fileID: 4999622451339007216, guid: 77131774ae6fc744085a3d1c153d67bd, type: 3}
+    _icon: {fileID: 21300000, guid: c7ca2369688c0674f8dd27b3432c6271, type: 3}
   - _type: 5
     _prefab: {fileID: 3231335851996003064, guid: 2b1724305ab4a1f4080f6fcb03befac6, type: 3}
+    _icon: {fileID: 21300000, guid: b47beb033cba5504c94b860d65c291bc, type: 3}
   - _type: 6
     _prefab: {fileID: 1265166830081561545, guid: 8ede4d1242a189c45b34d80df4e01388, type: 3}
+    _icon: {fileID: 21300000, guid: ac8469617435f1f4abc2d98f34b4624e, type: 3}
   - _type: 7
     _prefab: {fileID: 9183430704939071, guid: ae5dcb401da050c4faee78c046996c76, type: 3}
+    _icon: {fileID: 21300000, guid: 249cd1333cf99bc439271767cee7a1f7, type: 3}

@@ -56,17 +56,5 @@ public sealed class EndlessBoardRefiller : MonoBehaviour
             shelf.Columns.Select(column => new BoardColumnSnapshot(column.Items.Select(item => item.Type).ToArray())).ToArray())).ToArray());
     }
 
-    private void Materialize(GenerationBatch batch)
-    {
-        for (int shelfIndex = 0; shelfIndex < batch.ShelfCount; shelfIndex++)
-        {
-            Shelf shelf = _shelfBoard.Shelves[shelfIndex];
-
-            for (int columnIndex = 0; columnIndex < shelf.Capacity; columnIndex++)
-            {
-                foreach (ItemType type in batch.GetItems(shelfIndex, columnIndex))
-                    shelf.Columns[columnIndex].Append(_itemPool.Get(type));
-            }
-        }
-    }
+    private void Materialize(GenerationBatch batch) => GenerationBatchMaterializer.Append(_shelfBoard, batch, _itemPool);
 }

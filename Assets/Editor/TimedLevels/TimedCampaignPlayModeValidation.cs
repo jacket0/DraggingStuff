@@ -14,6 +14,9 @@ public static class TimedCampaignPlayModeValidation
     private const string CompletedKey = "TimedCampaignPlayModeValidation.Completed";
     private const string RunInBackgroundKey = "TimedCampaignPlayModeValidation.RunInBackground";
     private const string LevelIndexKey = "TimedCampaignPlayModeValidation.LevelIndex";
+    private const string ClosedShelfLossCheckedKey = "TimedCampaignPlayModeValidation.ClosedShelfLossChecked";
+    private const int ClosedShelfLossLevelNumber = 13;
+    private const int MaximumClosedShelfMoves = 800;
     private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
     private const string SelectionPath = "Assets/Levels/Menu/CurrentLevelSelection.asset";
     private const string OutputDirectory = "C:/Users/Михаил/DruggingStuff/.utmp/timed-campaign-playmode";
@@ -30,6 +33,8 @@ public static class TimedCampaignPlayModeValidation
     private static string _initialLayoutHash;
     private static bool _observedInitialHint;
     private static ShelfSwapHoverView _swapHoverView;
+    private static bool _isLossRun;
+    private static readonly System.Random Random = new System.Random(20260926);
 
     static TimedCampaignPlayModeValidation()
     {
@@ -51,6 +56,7 @@ public static class TimedCampaignPlayModeValidation
         SessionState.SetBool(CompletedKey, false);
         SessionState.SetBool(RunInBackgroundKey, Application.runInBackground);
         SessionState.SetInt(LevelIndexKey, 0);
+        SessionState.SetBool(ClosedShelfLossCheckedKey, false);
         Application.runInBackground = true;
         EditorSceneManager.OpenScene(FindScenePath(catalog.Levels[0].SceneName), OpenSceneMode.Single);
         DisablePersistenceComponents();
@@ -110,7 +116,11 @@ public static class TimedCampaignPlayModeValidation
 
         if (_session.Result != null)
         {
-            HandleResult();
+            if (_isLossRun)
+                HandleClosedShelfLoss();
+            else
+                HandleResult();
+
             return;
         }
 
@@ -133,6 +143,12 @@ public static class TimedCampaignPlayModeValidation
             return;
 
         _settledFrameCount = 0;
+
+        if (_session.CurrentLevel.Definition.HasClosedShelves)
+        {
+            PlayClosedShelfMove();
+            return;
+        }
 
         if (_session.CurrentLevel.Number == 1 && !ValidateSwapRoundTrip())
             return;
@@ -201,8 +217,149 @@ public static class TimedCampaignPlayModeValidation
         if (_session.CurrentLevel.Number == 1)
             BeginSwapHoverValidation();
 
+        if (_session.CurrentLevel.Definition.HasClosedShelves)
+            BeginClosedShelfLevel();
+
         if (_session.CurrentLevel.Number == 1)
             ScreenCapture.CaptureScreenshot($"{OutputDirectory}/level-01-gameplay.png", 1);
+    }
+
+    private static void BeginClosedShelfLevel()
+    {
+        int coverCount = UnityEngine.Object.FindObjectsOfType<ClosedShelfCoverView>().Length;
+
+        if (coverCount != _session.CurrentLevel.Definition.ClosedShelves.Count)
+            throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: expected {_session.CurrentLevel.Definition.ClosedShelves.Count} covers, found {coverCount}.");
+
+        GameObject introBubble = GameObject.Find("ClosedShelfIntroBubble");
+        bool expectsIntro = ClosedShelfIntroHint.GetNewConditionKinds(LoadCatalog(), _session.CurrentLevel).Count > 0;
+
+        if ((introBubble != null) != expectsIntro)
+            throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: intro hint visibility is wrong.");
+
+        _isLossRun = _session.CurrentLevel.Number == ClosedShelfLossLevelNumber && !SessionState.GetBool(ClosedShelfLossCheckedKey, false);
+    }
+
+    private static void PlayClosedShelfMove()
+    {
+        if (_moveIndex >= MaximumClosedShelfMoves)
+            throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: not finished after {MaximumClosedShelfMoves} moves.");
+
+        if (_isLossRun && _moveIndex > 0)
+            return;
+
+        if (!TryChooseClosedShelfMove(out ShelfColumnView source, out ShelfColumnView target))
+            throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: no legal move with the level still running.");
+
+        MoveOutcome outcome = _session.TryStartMove(source, target, out Action completePlacement);
+
+        if (!outcome.IsSuccessful)
+            throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}, move {_moveIndex + 1}: rejected.");
+
+        completePlacement?.Invoke();
+        _moveIndex++;
+
+        if (_moveIndex > 1)
+            return;
+
+        if (!_session.Timer.HasStarted)
+            throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: timer did not start after the first move.");
+
+        if (_isLossRun)
+            Time.timeScale = 20f;
+        else
+            _session.Timer.Pause();
+    }
+
+    private static bool TryChooseClosedShelfMove(out ShelfColumnView bestSource, out ShelfColumnView bestTarget)
+    {
+        HashSet<int> targetShelves = new HashSet<int>(_session.CurrentLevel.Definition.ClosedShelves
+            .Where(shelf => shelf.Condition == ShelfUnlockConditionKind.MatchesOnShelf && _board.IsShelfClosed(_board.Shelves[shelf.ShelfIndex]))
+            .Select(shelf => shelf.TargetShelfIndex));
+        int currentScore = ScoreFronts(_board.CreateSnapshot(), targetShelves);
+        List<ShelfColumnView> columns = _board.Shelves.SelectMany(shelf => shelf.ColumnViews).ToList();
+        List<(ShelfColumnView Source, ShelfColumnView Target)> allowed = new List<(ShelfColumnView, ShelfColumnView)>();
+        int bestScore = int.MinValue;
+        bestSource = null;
+        bestTarget = null;
+
+        foreach (ShelfColumnView source in columns)
+        {
+            if (!_session.CanPickUp(source))
+                continue;
+
+            foreach (ShelfColumnView target in columns)
+            {
+                if (source == target || !_board.TrySimulateMove(source.Column, target.Column, out BoardMoveSimulation simulation) || !simulation.IsAllowed)
+                    continue;
+
+                allowed.Add((source, target));
+                int score = ScoreFronts(simulation.State, targetShelves) - currentScore;
+
+                foreach (MatchInfo match in simulation.Matches)
+                    score += targetShelves.Contains(match.ShelfIndex) ? 2000 : 1000;
+
+                score = score * 8 + Random.Next(8);
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestSource = source;
+                    bestTarget = target;
+                }
+            }
+        }
+
+        if (allowed.Count == 0)
+            return false;
+
+        if (bestScore < 8)
+            (bestSource, bestTarget) = allowed[Random.Next(allowed.Count)];
+
+        return true;
+    }
+
+    private static int ScoreFronts(BoardStateSnapshot state, HashSet<int> targetShelves)
+    {
+        int score = 0;
+
+        for (int shelfIndex = 0; shelfIndex < state.Shelves.Count; shelfIndex++)
+        {
+            ShelfStateSnapshot shelf = state.Shelves[shelfIndex];
+
+            if (!shelf.IsOpen)
+                continue;
+
+            int sameFronts = shelf.Columns
+                .Where(column => column.FrontItem.HasValue)
+                .GroupBy(column => column.FrontItem.Value)
+                .Select(group => group.Count())
+                .DefaultIfEmpty(0)
+                .Max();
+
+            score += sameFronts * sameFronts * (targetShelves.Contains(shelfIndex) ? 3 : 1);
+        }
+
+        return score;
+    }
+
+    private static void HandleClosedShelfLoss()
+    {
+        if (_session.Result.Won || _session.State != LevelState.Lost || !_board.HasClosedShelves)
+            throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: timeout did not end as a loss with closed shelves.");
+
+        _resultFrameCount++;
+
+        if (_resultFrameCount < 8)
+            return;
+
+        SessionState.SetBool(ClosedShelfLossCheckedKey, true);
+        _isLossRun = false;
+        Time.timeScale = 1f;
+        _session.Restart();
+        _session = null;
+        _board = null;
+        _moves = null;
     }
 
     private static void BeginSwapHoverValidation()
@@ -312,6 +469,9 @@ public static class TimedCampaignPlayModeValidation
         if (!_session.Result.Won || _session.State != LevelState.Won || !_board.IsCleared)
             throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: did not finish as a cleared victory.");
 
+        if (UnityEngine.Object.FindObjectsOfType<ClosedShelfCoverView>().Length != 0)
+            throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: won with closed shelf covers still present.");
+
         if (_session.Result.Seed != _session.CurrentSeed || _session.Result.VariantIndex != _session.CurrentVariantIndex)
             throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: result variant metadata differs.");
 
@@ -351,6 +511,7 @@ public static class TimedCampaignPlayModeValidation
         SessionState.EraseBool(FailedKey);
         SessionState.EraseBool(CompletedKey);
         SessionState.EraseInt(LevelIndexKey);
+        SessionState.EraseBool(ClosedShelfLossCheckedKey);
         Application.runInBackground = SessionState.GetBool(RunInBackgroundKey, false);
         SessionState.EraseBool(RunInBackgroundKey);
 

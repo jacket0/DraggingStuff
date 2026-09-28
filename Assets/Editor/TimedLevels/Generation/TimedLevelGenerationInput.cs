@@ -6,12 +6,14 @@ public sealed class TimedLevelGenerationInput
     public string Name { get; }
     public int EmptyColumnCount { get; }
     public IReadOnlyList<TimedLevelGroupCount> Groups { get; }
+    public IReadOnlyList<int> ClosedShelfIndices { get; }
 
-    public TimedLevelGenerationInput(string name, int emptyColumnCount, IReadOnlyList<TimedLevelGroupCount> groups)
+    public TimedLevelGenerationInput(string name, int emptyColumnCount, IReadOnlyList<TimedLevelGroupCount> groups, IReadOnlyList<int> closedShelfIndices)
     {
         Name = !string.IsNullOrWhiteSpace(name) ? name : throw new ArgumentException(nameof(name));
         EmptyColumnCount = emptyColumnCount > 0 ? emptyColumnCount : throw new ArgumentOutOfRangeException(nameof(emptyColumnCount));
         Groups = groups ?? throw new ArgumentNullException(nameof(groups));
+        ClosedShelfIndices = closedShelfIndices ?? Array.Empty<int>();
     }
 }
 

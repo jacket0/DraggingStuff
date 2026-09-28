@@ -8,13 +8,15 @@ public sealed class ShelfBoard : MonoBehaviour
     [SerializeField] private List<Shelf> _shelves;
 
     private readonly HashSet<Shelf> _lockedShelves = new HashSet<Shelf>();
+    private readonly HashSet<Shelf> _closedShelves = new HashSet<Shelf>();
     private readonly Dictionary<ShelfColumn, ColumnPosition> _positions = new Dictionary<ShelfColumn, ColumnPosition>();
     private readonly BoardMoveSimulator _simulator = new BoardMoveSimulator();
     private bool _initialized;
 
     public IReadOnlyList<Shelf> Shelves => _shelves;
-    public bool IsCleared => _shelves.All(shelf => shelf.IsCleared);
+    public bool IsCleared => _closedShelves.Count == 0 && _shelves.All(shelf => shelf.IsCleared);
     public bool HasLockedShelves => _lockedShelves.Count > 0;
+    public bool HasClosedShelves => _closedShelves.Count > 0;
     public ShelfItemPlacementAnimator ItemAnimations { get; } = new ShelfItemPlacementAnimator();
 
     public void Initialize()
@@ -55,11 +57,23 @@ public sealed class ShelfBoard : MonoBehaviour
 
     public void UnlockShelf(Shelf shelf) => _lockedShelves.Remove(shelf);
 
+    public bool IsShelfClosed(Shelf shelf) => _closedShelves.Contains(shelf);
+
+    public bool IsShelfAvailable(Shelf shelf) => shelf.isActiveAndEnabled && !IsShelfLocked(shelf) && !IsShelfClosed(shelf);
+
+    public void CloseShelf(Shelf shelf)
+    {
+        if (shelf == null || !_shelves.Contains(shelf) || !shelf.IsCleared || !_closedShelves.Add(shelf))
+            throw new InvalidOperationException("Only an empty shelf on this board can be closed.");
+    }
+
+    public void OpenShelf(Shelf shelf) => _closedShelves.Remove(shelf);
+
     public bool CanPickUp(ShelfColumn column)
     {
         Initialize();
         return column != null && !column.IsEmpty && _positions.TryGetValue(column, out ColumnPosition position)
-            && _shelves[position.ShelfIndex].isActiveAndEnabled && !IsShelfLocked(_shelves[position.ShelfIndex])
+            && IsShelfAvailable(_shelves[position.ShelfIndex])
             && !ItemAnimations.IsAnimating(column.FrontItem);
     }
 
@@ -76,7 +90,7 @@ public sealed class ShelfBoard : MonoBehaviour
     public BoardStateSnapshot CreateSnapshot()
     {
         Initialize();
-        return new BoardStateSnapshot(_shelves.Select(shelf => shelf.CreateSnapshot()).ToArray());
+        return new BoardStateSnapshot(_shelves.Select(shelf => shelf.CreateSnapshot(!IsShelfClosed(shelf))).ToArray());
     }
 
     public bool CanMove(ShelfColumn source, ShelfColumn target) => TrySimulateMove(source, target, out _);
@@ -90,10 +104,10 @@ public sealed class ShelfBoard : MonoBehaviour
 
         Shelf targetShelf = _shelves[targetPosition.ShelfIndex];
 
-        if (!targetShelf.isActiveAndEnabled || IsShelfLocked(targetShelf) || ItemAnimations.IsAnimating(target.FrontItem))
+        if (!IsShelfAvailable(targetShelf) || ItemAnimations.IsAnimating(target.FrontItem))
             return false;
 
-        ShelfStateSnapshot[] shelves = _shelves.Select(shelf => shelf.CreateSnapshot()).ToArray();
+        ShelfStateSnapshot[] shelves = _shelves.Select(shelf => shelf.CreateSnapshot(!IsShelfClosed(shelf))).ToArray();
 
         for (int index = 0; index < shelves.Length; index++)
         {

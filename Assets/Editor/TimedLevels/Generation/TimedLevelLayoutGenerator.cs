@@ -18,7 +18,8 @@ public sealed class TimedLevelLayoutGenerator
         TimedLevelGenerationInput input = new TimedLevelGenerationInput(
             definition.name,
             definition.EmptyColumnCount,
-            definition.ItemGroups.Select(group => new TimedLevelGroupCount(group.Type, group.GroupCount)).ToArray());
+            definition.ItemGroups.Select(group => new TimedLevelGroupCount(group.Type, group.GroupCount)).ToArray(),
+            definition.ClosedShelves.Select(closedShelf => closedShelf.ShelfIndex).ToArray());
         return GenerateWithSolution(input, boardShape, seed);
     }
 
@@ -58,12 +59,13 @@ public sealed class TimedLevelLayoutGenerator
 
         System.Random random = new System.Random(seed);
         int matchSize = boardShape.Shelves[0].Capacity;
+        HashSet<int> closedShelfIndices = new HashSet<int>(input.ClosedShelfIndices);
 
         for (int attempt = 0; attempt < maximumAttemptCount; attempt++)
         {
             List<ItemType> groups = CreateGroupOrder(input, random);
 
-            if (TryBuild(boardShape, input.EmptyColumnCount, groups, matchSize, random, maximumConstructionNodeCount, out result))
+            if (TryBuild(boardShape, input.EmptyColumnCount, groups, matchSize, random, maximumConstructionNodeCount, closedShelfIndices, out result))
                 return true;
         }
 
@@ -108,19 +110,20 @@ public sealed class TimedLevelLayoutGenerator
         int matchSize,
         System.Random random,
         int maximumConstructionNodeCount,
+        HashSet<int> closedShelfIndices,
         out TimedLevelGenerationResult result)
     {
         List<ItemType>[][] columns = CreateEmptyColumns(boardShape);
         List<ReverseMove> reverseMoves = new List<ReverseMove>();
         int visitedNodeCount = 0;
 
-        if (!TryAddGroups(columns, requiredEmptyColumnCount, groups, 0, random, reverseMoves, maximumConstructionNodeCount, ref visitedNodeCount))
+        if (!TryAddGroups(columns, requiredEmptyColumnCount, groups, 0, random, reverseMoves, maximumConstructionNodeCount, closedShelfIndices, ref visitedNodeCount))
         {
             result = null;
             return false;
         }
 
-        BoardStateSnapshot layout = CreateSnapshot(columns);
+        BoardStateSnapshot layout = CreateSnapshot(columns, closedShelfIndices);
 
         if (layout.EmptyColumnCount != requiredEmptyColumnCount)
         {
@@ -148,17 +151,18 @@ public sealed class TimedLevelLayoutGenerator
         System.Random random,
         List<ReverseMove> reverseMoves,
         int maximumConstructionNodeCount,
+        HashSet<int> closedShelfIndices,
         ref int visitedNodeCount)
     {
         if (groupIndex >= groups.Count)
-            return CountEmptyColumns(columns) == requiredEmptyColumnCount;
+            return CountEmptyColumns(columns, closedShelfIndices) == requiredEmptyColumnCount;
 
         if (visitedNodeCount >= maximumConstructionNodeCount)
             return false;
 
         visitedNodeCount++;
         ItemType type = groups[groupIndex];
-        List<ReverseMove> moves = FindReverseMoves(columns, requiredEmptyColumnCount);
+        List<ReverseMove> moves = FindReverseMoves(columns, requiredEmptyColumnCount, closedShelfIndices);
         moves.RemoveAll(move => WouldCreateAutomaticMatch(columns, move, type));
         moves.RemoveAll(move => WouldCreateAdjacentDuplicate(columns, move, type));
         Shuffle(moves, random);
@@ -169,7 +173,7 @@ public sealed class TimedLevelLayoutGenerator
             PrependGroup(columns, move, type);
             reverseMoves.Add(move);
 
-            if (TryAddGroups(columns, requiredEmptyColumnCount, groups, groupIndex + 1, random, reverseMoves, maximumConstructionNodeCount, ref visitedNodeCount))
+            if (TryAddGroups(columns, requiredEmptyColumnCount, groups, groupIndex + 1, random, reverseMoves, maximumConstructionNodeCount, closedShelfIndices, ref visitedNodeCount))
                 return true;
 
             reverseMoves.RemoveAt(reverseMoves.Count - 1);
@@ -194,13 +198,16 @@ public sealed class TimedLevelLayoutGenerator
         return columns;
     }
 
-    private static List<ReverseMove> FindReverseMoves(List<ItemType>[][] columns, int requiredEmptyColumnCount)
+    private static List<ReverseMove> FindReverseMoves(List<ItemType>[][] columns, int requiredEmptyColumnCount, HashSet<int> closedShelfIndices)
     {
         List<ReverseMove> moves = new List<ReverseMove>();
-        int emptyColumnCount = CountEmptyColumns(columns);
+        int emptyColumnCount = CountEmptyColumns(columns, closedShelfIndices);
 
         for (int targetShelfIndex = 0; targetShelfIndex < columns.Length; targetShelfIndex++)
         {
+            if (closedShelfIndices.Contains(targetShelfIndex))
+                continue;
+
             List<ItemType>[] targetShelf = columns[targetShelfIndex];
 
             for (int targetColumnIndex = 0; targetColumnIndex < targetShelf.Length; targetColumnIndex++)
@@ -210,7 +217,7 @@ public sealed class TimedLevelLayoutGenerator
 
                 for (int sourceShelfIndex = 0; sourceShelfIndex < columns.Length; sourceShelfIndex++)
                 {
-                    if (sourceShelfIndex == targetShelfIndex)
+                    if (sourceShelfIndex == targetShelfIndex || closedShelfIndices.Contains(sourceShelfIndex))
                         continue;
 
                     for (int sourceColumnIndex = 0; sourceColumnIndex < columns[sourceShelfIndex].Length; sourceColumnIndex++)
@@ -378,20 +385,28 @@ public sealed class TimedLevelLayoutGenerator
         return state.IsCleared;
     }
 
-    private static int CountEmptyColumns(IEnumerable<List<ItemType>[]> shelves)
+    private static int CountEmptyColumns(List<ItemType>[][] columns, HashSet<int> closedShelfIndices)
     {
-        return shelves.Sum(shelf => shelf.Count(column => column.Count == 0));
+        int count = 0;
+
+        for (int shelfIndex = 0; shelfIndex < columns.Length; shelfIndex++)
+        {
+            if (!closedShelfIndices.Contains(shelfIndex))
+                count += columns[shelfIndex].Count(column => column.Count == 0);
+        }
+
+        return count;
     }
 
-    private static BoardStateSnapshot CreateSnapshot(IReadOnlyList<List<ItemType>[]> columns)
+    private static BoardStateSnapshot CreateSnapshot(IReadOnlyList<List<ItemType>[]> columns, HashSet<int> closedShelfIndices)
     {
         ShelfStateSnapshot[] shelves = new ShelfStateSnapshot[columns.Count];
 
         for (int shelfIndex = 0; shelfIndex < shelves.Length; shelfIndex++)
         {
-            shelves[shelfIndex] = new ShelfStateSnapshot(columns[shelfIndex]
-                .Select(column => new ColumnStateSnapshot(column.ToArray()))
-                .ToArray());
+            shelves[shelfIndex] = new ShelfStateSnapshot(
+                columns[shelfIndex].Select(column => new ColumnStateSnapshot(column.ToArray())).ToArray(),
+                isOpen: !closedShelfIndices.Contains(shelfIndex));
         }
 
         return new BoardStateSnapshot(shelves);

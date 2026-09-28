@@ -10,17 +10,24 @@ using UnityEngine.UI;
 public static class TimedCampaignValidation
 {
     private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
+    private const int ExpectedLevelCount = 16;
+    private const int FirstClosedShelfLevelNumber = 13;
 
     [MenuItem("Tools/Timed Levels/Validate Campaign")]
     public static void Run()
     {
         LevelCatalog catalog = AssetDatabase.LoadAssetAtPath<LevelCatalog>(CatalogPath);
 
-        if (catalog == null || catalog.Levels.Count != 12)
+        if (catalog == null || catalog.Levels.Count != ExpectedLevelCount)
             throw new InvalidOperationException(nameof(LevelCatalog));
 
         ValidateDefinitions(catalog);
         ValidateMoveSimulation();
+        ValidateClosedShelfModel();
+        ValidateClosedShelfBoardInvariant(catalog);
+        ValidateClosedShelfLevelData(catalog);
+        ValidateTripleRefillGenerator();
+        ValidateRevealedShelfLatinSquare();
         ValidateCampaignScenes(catalog);
         ValidateEndlessScene();
         ValidateSwapHoverViews();
@@ -38,11 +45,16 @@ public static class TimedCampaignValidation
     {
         LevelCatalog catalog = AssetDatabase.LoadAssetAtPath<LevelCatalog>(CatalogPath);
 
-        if (catalog == null || catalog.Levels.Count != 12)
+        if (catalog == null || catalog.Levels.Count != ExpectedLevelCount)
             throw new InvalidOperationException(nameof(LevelCatalog));
 
         ValidateDefinitions(catalog);
         ValidateMoveSimulation();
+        ValidateClosedShelfModel();
+        ValidateClosedShelfBoardInvariant(catalog);
+        ValidateClosedShelfLevelData(catalog);
+        ValidateTripleRefillGenerator();
+        ValidateRevealedShelfLatinSquare();
         ValidateSwapHoverViews();
         Debug.Log("GAMEPLAY_CHANGES_VALIDATION_PASS");
     }
@@ -155,6 +167,358 @@ public static class TimedCampaignValidation
         {
             throw new InvalidOperationException("Matching swap simulation");
         }
+
+        if (matchingSwap.Matches.Count != 1
+            || matchingSwap.Matches[0].ShelfIndex != 1
+            || matchingSwap.Matches[0].Type != ItemType.Ball
+            || matchingSwap.Matches[0].ItemCount != 3)
+        {
+            throw new InvalidOperationException("Matching swap match info");
+        }
+    }
+
+    private static void ValidateClosedShelfModel()
+    {
+        BoardMoveSimulator simulator = new BoardMoveSimulator();
+
+        BoardStateSnapshot closedTargetBoard = new BoardStateSnapshot(new[]
+        {
+            new ShelfStateSnapshot(new[]
+            {
+                new ColumnStateSnapshot(new[] { ItemType.Ball }),
+                new ColumnStateSnapshot(Array.Empty<ItemType>()),
+                new ColumnStateSnapshot(Array.Empty<ItemType>())
+            }),
+            new ShelfStateSnapshot(new[]
+            {
+                new ColumnStateSnapshot(Array.Empty<ItemType>()),
+                new ColumnStateSnapshot(Array.Empty<ItemType>()),
+                new ColumnStateSnapshot(Array.Empty<ItemType>())
+            }, isOpen: false)
+        });
+
+        if (simulator.TrySimulate(closedTargetBoard, new ColumnPosition(0, 0), new ColumnPosition(1, 0), out _))
+            throw new InvalidOperationException("Move into closed shelf");
+
+        BoardStateSnapshot closedSourceBoard = new BoardStateSnapshot(new[]
+        {
+            new ShelfStateSnapshot(new[]
+            {
+                new ColumnStateSnapshot(new[] { ItemType.Ball }),
+                new ColumnStateSnapshot(Array.Empty<ItemType>()),
+                new ColumnStateSnapshot(Array.Empty<ItemType>())
+            }, isOpen: false),
+            new ShelfStateSnapshot(new[]
+            {
+                new ColumnStateSnapshot(Array.Empty<ItemType>()),
+                new ColumnStateSnapshot(Array.Empty<ItemType>()),
+                new ColumnStateSnapshot(Array.Empty<ItemType>())
+            })
+        });
+
+        if (simulator.TrySimulate(closedSourceBoard, new ColumnPosition(0, 0), new ColumnPosition(1, 0), out _))
+            throw new InvalidOperationException("Move out of closed shelf");
+
+        BoardStateSnapshot emptyColumnBoard = new BoardStateSnapshot(new[]
+        {
+            new ShelfStateSnapshot(new[]
+            {
+                new ColumnStateSnapshot(Array.Empty<ItemType>()),
+                new ColumnStateSnapshot(Array.Empty<ItemType>()),
+                new ColumnStateSnapshot(Array.Empty<ItemType>())
+            }, isOpen: false),
+            new ShelfStateSnapshot(new[]
+            {
+                new ColumnStateSnapshot(Array.Empty<ItemType>()),
+                new ColumnStateSnapshot(new[] { ItemType.Ball }),
+                new ColumnStateSnapshot(Array.Empty<ItemType>())
+            })
+        });
+
+        if (emptyColumnBoard.EmptyColumnCount != 2)
+            throw new InvalidOperationException("Closed shelf empty column count");
+    }
+
+    private static void ValidateClosedShelfBoardInvariant(LevelCatalog catalog)
+    {
+        LevelEntry level = catalog.Levels[0];
+        string scenePath = FindScenePath(level.SceneName);
+        Scene scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+        ShelfBoard board = FindInScene<ShelfBoard>(scene);
+        board.Initialize();
+
+        if (!board.IsCleared || board.HasClosedShelves)
+            throw new InvalidOperationException("Closed shelf invariant: unexpected initial state");
+
+        Shelf shelf = board.Shelves[0];
+        board.CloseShelf(shelf);
+
+        if (!board.HasClosedShelves || !board.IsShelfClosed(shelf) || board.IsShelfAvailable(shelf) || board.IsCleared)
+            throw new InvalidOperationException("Closed shelf invariant: board reports cleared with a closed empty shelf");
+
+        board.OpenShelf(shelf);
+
+        if (board.HasClosedShelves || !board.IsCleared)
+            throw new InvalidOperationException("Closed shelf invariant: shelf did not reopen");
+    }
+
+    private static void ValidateClosedShelfLevelData(LevelCatalog catalog)
+    {
+        foreach (LevelEntry level in catalog.Levels)
+        {
+            bool isClosedShelfLevel = level.Number >= FirstClosedShelfLevelNumber;
+
+            if (level.Definition.HasClosedShelves != isClosedShelfLevel)
+                throw new InvalidOperationException($"Level {level.Number}: unexpected closed shelf configuration.");
+
+            if (isClosedShelfLevel && level.SceneName != "FourthLevel")
+                throw new InvalidOperationException($"Level {level.Number}: closed shelf levels belong to FourthLevel.");
+        }
+    }
+
+    private static void ValidateTripleRefillGenerator()
+    {
+        TimedLevelDefinition definition = AssetDatabase.LoadAssetAtPath<TimedLevelDefinition>("Assets/Levels/Timed/TimedLevel_13.asset");
+
+        if (definition == null || definition.RefillSettings == null)
+            throw new InvalidOperationException("TimedLevel_13: missing refill settings for the triple generator check.");
+
+        ShelfRefillSettings settings = definition.RefillSettings;
+        ItemType[] levelTypes = definition.ItemGroups.Select(group => group.Type).Distinct().ToArray();
+
+        if (levelTypes.Length == 0)
+            throw new InvalidOperationException("TimedLevel_13: no item types configured.");
+
+        System.Random random = new System.Random(20260921);
+
+        for (int iteration = 0; iteration < 10000; iteration++)
+        {
+            (List<ItemType>[][] shelves, bool[] shelfOpen) = CreateRandomTripleBoard(random, levelTypes, random.Next(9, 15));
+            BoardStateSnapshot before = ToSnapshot(shelves, shelfOpen);
+            Dictionary<ItemType, int> remaining = CreateRandomRemaining(random, levelTypes);
+            int emptyColumnReserve = Math.Min(before.EmptyColumnCount, random.Next(0, 4));
+
+            TripleRefillGenerator generator = new TripleRefillGenerator(random, settings, levelTypes);
+            GenerationBatch batch = generator.GenerateRefill(before, remaining, emptyColumnReserve);
+
+            VerifyTripleBatch(before, batch, emptyColumnReserve, iteration);
+        }
+    }
+
+    private static (List<ItemType>[][] Shelves, bool[] Open) CreateRandomTripleBoard(System.Random random, IReadOnlyList<ItemType> levelTypes, int shelfCount)
+    {
+        for (int attempt = 0; attempt < 20; attempt++)
+        {
+            bool[] shelfOpen = new bool[shelfCount];
+            int openCount = 0;
+
+            for (int shelfIndex = 0; shelfIndex < shelfCount; shelfIndex++)
+            {
+                shelfOpen[shelfIndex] = random.NextDouble() < 0.75;
+
+                if (shelfOpen[shelfIndex])
+                    openCount++;
+            }
+
+            // Real closed-shelf levels close at most a handful of shelves at once (see the level
+            // table in the design doc, up to 3 of 14); mirror that so forced same-type triples
+            // (from a demanding remaining-count) always have enough distinct columns to land on.
+            int minimumOpenShelves = Math.Max(6, shelfCount - 3);
+
+            for (int shelfIndex = 0; openCount < minimumOpenShelves && shelfIndex < shelfCount; shelfIndex++)
+            {
+                if (shelfOpen[shelfIndex])
+                    continue;
+
+                shelfOpen[shelfIndex] = true;
+                openCount++;
+            }
+
+            List<ItemType>[][] shelves = new List<ItemType>[shelfCount][];
+            List<ColumnPosition> openPositions = new List<ColumnPosition>();
+
+            for (int shelfIndex = 0; shelfIndex < shelfCount; shelfIndex++)
+            {
+                shelves[shelfIndex] = new[] { new List<ItemType>(), new List<ItemType>(), new List<ItemType>() };
+
+                if (shelfOpen[shelfIndex])
+                {
+                    for (int columnIndex = 0; columnIndex < 3; columnIndex++)
+                        openPositions.Add(new ColumnPosition(shelfIndex, columnIndex));
+                }
+            }
+
+            int tripleCount = random.Next(0, 15);
+
+            for (int triple = 0; triple < tripleCount; triple++)
+            {
+                ItemType type = levelTypes[random.Next(levelTypes.Count)];
+
+                for (int placement = 0; placement < 3; placement++)
+                {
+                    ColumnPosition position;
+                    int guard = 0;
+
+                    do
+                    {
+                        position = openPositions[random.Next(openPositions.Count)];
+                        guard++;
+                    }
+                    while (shelves[position.ShelfIndex][position.ColumnIndex].Count >= TimedLevelLayoutRules.MaximumColumnDepth - 1 && guard < 50);
+
+                    shelves[position.ShelfIndex][position.ColumnIndex].Add(type);
+                }
+            }
+
+            if (HasAnyFrontMatch(shelves, shelfOpen))
+                continue;
+
+            return (shelves, shelfOpen);
+        }
+
+        throw new InvalidOperationException("Failed to build a random triple-refill test board.");
+    }
+
+    private static bool HasAnyFrontMatch(List<ItemType>[][] shelves, bool[] shelfOpen)
+    {
+        for (int shelfIndex = 0; shelfIndex < shelves.Length; shelfIndex++)
+        {
+            if (!shelfOpen[shelfIndex])
+                continue;
+
+            List<ItemType>[] columns = shelves[shelfIndex];
+
+            if (columns.All(column => column.Count > 0 && column[0] == columns[0][0]))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static BoardStateSnapshot ToSnapshot(List<ItemType>[][] shelves, bool[] shelfOpen)
+    {
+        ShelfStateSnapshot[] snapshotShelves = new ShelfStateSnapshot[shelves.Length];
+
+        for (int shelfIndex = 0; shelfIndex < shelves.Length; shelfIndex++)
+        {
+            ColumnStateSnapshot[] columns = shelves[shelfIndex].Select(column => new ColumnStateSnapshot(column)).ToArray();
+            snapshotShelves[shelfIndex] = new ShelfStateSnapshot(columns, shelfOpen[shelfIndex]);
+        }
+
+        return new BoardStateSnapshot(snapshotShelves);
+    }
+
+    private static Dictionary<ItemType, int> CreateRandomRemaining(System.Random random, IReadOnlyList<ItemType> levelTypes)
+    {
+        Dictionary<ItemType, int> remaining = new Dictionary<ItemType, int>();
+        int needyCount = random.Next(0, Math.Min(levelTypes.Count, 3) + 1);
+        List<ItemType> pool = new List<ItemType>(levelTypes);
+
+        for (int index = 0; index < needyCount; index++)
+        {
+            int poolIndex = random.Next(pool.Count);
+            ItemType type = pool[poolIndex];
+            pool.RemoveAt(poolIndex);
+            remaining[type] = random.Next(1, 4) * 3;
+        }
+
+        return remaining;
+    }
+
+    private static void VerifyTripleBatch(BoardStateSnapshot before, GenerationBatch batch, int emptyColumnReserve, int iteration)
+    {
+        Dictionary<ItemType, int> totals = new Dictionary<ItemType, int>();
+        int emptyOpenColumnsAfter = 0;
+
+        for (int shelfIndex = 0; shelfIndex < before.Shelves.Count; shelfIndex++)
+        {
+            ShelfStateSnapshot shelf = before.Shelves[shelfIndex];
+            ItemType[][] afterColumns = new ItemType[shelf.Capacity][];
+
+            for (int columnIndex = 0; columnIndex < shelf.Capacity; columnIndex++)
+            {
+                IReadOnlyList<ItemType> newItems = batch.GetItems(shelfIndex, columnIndex);
+
+                if (!shelf.IsOpen && newItems.Count > 0)
+                    throw new InvalidOperationException($"Iteration {iteration}: item placed on a closed shelf {shelfIndex}.");
+
+                IReadOnlyList<ItemType> oldItems = shelf.Columns[columnIndex].Items;
+                ItemType[] combined = oldItems.Concat(newItems).ToArray();
+                afterColumns[columnIndex] = combined;
+
+                if (combined.Length > TimedLevelLayoutRules.MaximumColumnDepth)
+                    throw new InvalidOperationException($"Iteration {iteration}: column {shelfIndex}/{columnIndex} exceeds maximum depth.");
+
+                if (oldItems.Count > 0 && newItems.Count > 0 && oldItems[oldItems.Count - 1] == newItems[0])
+                    throw new InvalidOperationException($"Iteration {iteration}: adjacent duplicate at old tail of {shelfIndex}/{columnIndex}.");
+
+                for (int index = 1; index < newItems.Count; index++)
+                {
+                    if (newItems[index] == newItems[index - 1])
+                        throw new InvalidOperationException($"Iteration {iteration}: adjacent duplicate within new items of {shelfIndex}/{columnIndex}.");
+                }
+
+                foreach (ItemType type in combined)
+                    totals[type] = totals.TryGetValue(type, out int existing) ? existing + 1 : 1;
+
+                if (shelf.IsOpen && combined.Length == 0)
+                    emptyOpenColumnsAfter++;
+            }
+
+            if (shelf.IsOpen && afterColumns.All(column => column.Length > 0) && afterColumns.Select(column => column[0]).Distinct().Count() == 1)
+                throw new InvalidOperationException($"Iteration {iteration}: shelf {shelfIndex} front row became a match after refill.");
+        }
+
+        foreach (KeyValuePair<ItemType, int> pair in totals)
+        {
+            if (pair.Value % 3 != 0)
+                throw new InvalidOperationException($"Iteration {iteration}: type {pair.Key} count {pair.Value} is not a multiple of three.");
+        }
+
+        if (emptyOpenColumnsAfter < emptyColumnReserve)
+            throw new InvalidOperationException($"Iteration {iteration}: empty column reserve violated ({emptyOpenColumnsAfter} < {emptyColumnReserve}).");
+    }
+
+    private static void ValidateRevealedShelfLatinSquare()
+    {
+        TimedLevelDefinition definition = AssetDatabase.LoadAssetAtPath<TimedLevelDefinition>("Assets/Levels/Timed/TimedLevel_13.asset");
+
+        if (definition == null || definition.RefillSettings == null)
+            throw new InvalidOperationException("TimedLevel_13: missing refill settings for the Latin square check.");
+
+        ShelfRefillSettings settings = definition.RefillSettings;
+        ItemType[] levelTypes = definition.ItemGroups.Select(group => group.Type).Distinct().ToArray();
+
+        IEnumerable<int> groupCounts = definition.ClosedShelves.Select(shelf => shelf.RevealedGroupCount)
+            .Concat(new[] { 3, 6, 9, 12 })
+            .Distinct();
+
+        foreach (int groupCount in groupCounts)
+        {
+            for (int seed = 0; seed < 5; seed++)
+            {
+                TripleRefillGenerator generator = new TripleRefillGenerator(new System.Random(seed), settings, levelTypes);
+                IReadOnlyList<IReadOnlyList<ItemType>> columns = generator.CreateRevealedShelf(groupCount, new Dictionary<ItemType, int>());
+
+                if (columns.Count != 3)
+                    throw new InvalidOperationException("Revealed shelf: expected 3 columns.");
+
+                for (int row = 0; row < groupCount; row++)
+                {
+                    if (columns[0][row] == columns[1][row] && columns[1][row] == columns[2][row])
+                        throw new InvalidOperationException($"Revealed shelf row {row} is an instant match (groupCount {groupCount}, seed {seed}).");
+                }
+
+                for (int column = 0; column < 3; column++)
+                {
+                    for (int row = 1; row < groupCount; row++)
+                    {
+                        if (columns[column][row] == columns[column][row - 1])
+                            throw new InvalidOperationException($"Revealed shelf column {column} has adjacent duplicates (groupCount {groupCount}, seed {seed}).");
+                    }
+                }
+            }
+        }
     }
 
     private static void ValidateInitialMatchHint(TimedLevelVariant variant)
@@ -236,7 +600,7 @@ public static class TimedCampaignValidation
             LevelResultView result = FindInScene<LevelResultView>(scene);
             CampaignTimerView timerView = FindInScene<CampaignTimerView>(scene);
             LevelHudView hud = FindInScene<LevelHudView>(scene);
-            ScoreView scoreView = FindAllInScene<ScoreView>(scene).Single(view => view.transform.IsChildOf(hud.transform));
+            _ = FindAllInScene<ScoreView>(scene).Single(view => view.transform.IsChildOf(hud.transform));
 
             if (FindAllInScene<LevelBuilder>(scene).Any())
                 throw new InvalidOperationException($"{sceneName}: old builder");
@@ -257,7 +621,7 @@ public static class TimedCampaignValidation
             RequireReference(result, "_remainingItemsRoot");
             RequireReference(result, "_lightRays");
             RequireReference(result, "_defeatClock");
-            ValidateCampaignHud(sceneName, timerView, scoreView);
+            ValidateCampaignHud(sceneName, timerView);
             ValidateResultLayout(sceneName, result);
         }
     }
@@ -312,7 +676,7 @@ public static class TimedCampaignValidation
         ValidateNoMissingScripts(scene);
         LevelCardView[] cards = FindAllInScene<LevelCardView>(scene).ToArray();
 
-        if (cards.Length != 12)
+        if (cards.Length != ExpectedLevelCount)
             throw new InvalidOperationException($"Level cards: {cards.Length}");
 
         foreach (LevelCardView card in cards)
@@ -324,37 +688,52 @@ public static class TimedCampaignValidation
         }
     }
 
-    private static void ValidateCampaignHud(string sceneName, CampaignTimerView timerView, ScoreView scoreView)
+    private static void ValidateCampaignHud(string sceneName, CampaignTimerView timerView)
     {
-        RectTransform timer = timerView.transform as RectTransform;
-        RectTransform score = scoreView.transform as RectTransform;
-
-        if (timer == null || score == null || timer.anchorMin.x != 0f || score.anchorMin.x != 1f)
-            throw new InvalidOperationException($"{sceneName}: campaign HUD panels are not separated.");
-
-        if (FindAllInScene<CampaignTimerView>(timer.gameObject.scene).Count() != 1)
+        if (FindAllInScene<CampaignTimerView>(timerView.gameObject.scene).Count() != 1)
             throw new InvalidOperationException($"{sceneName}: duplicate campaign timers.");
     }
 
     private static void ValidateResultLayout(string sceneName, LevelResultView result)
     {
-        Transform background = result.transform.Find("Background");
+        RectTransform background = result.transform.Find("Background") as RectTransform;
+        RectTransform content = background != null ? background.Find("TimedResultContent") as RectTransform : null;
         RectTransform reviewButton = background != null ? background.Find("ReviewButton") as RectTransform : null;
         RectTransform actionsRow = background != null ? background.Find("ActionsRow") as RectTransform : null;
 
         if (background == null
-            || background.Find("TimedResultContent") == null
+            || content == null
             || background.Find("ResultBlock") != null
             || background.Find("Title") != null
             || background.Find("Divider") != null
             || background.GetComponent<VerticalLayoutGroup>() != null
             || reviewButton == null
-            || actionsRow == null
-            || reviewButton.anchoredPosition.y != -120f
-            || actionsRow.anchoredPosition.y != -185f)
+            || actionsRow == null)
         {
             throw new InvalidOperationException($"{sceneName}: result layout contains obsolete content.");
         }
+
+        if (!IsStackedInside(background, content, reviewButton) || !IsStackedInside(background, reviewButton, actionsRow))
+            throw new InvalidOperationException($"{sceneName}: result layout elements overlap or leave the background.");
+    }
+
+    private static bool IsStackedInside(RectTransform background, RectTransform upper, RectTransform lower)
+    {
+        Rect bounds = background.rect;
+        Rect upperRect = GetRectInParent(upper);
+        Rect lowerRect = GetRectInParent(lower);
+
+        return upperRect.yMin >= lowerRect.yMax
+            && upperRect.yMax <= bounds.yMax
+            && lowerRect.yMin >= bounds.yMin;
+    }
+
+    private static Rect GetRectInParent(RectTransform rect)
+    {
+        Vector3[] corners = new Vector3[4];
+        rect.GetLocalCorners(corners);
+        Vector2 offset = rect.localPosition;
+        return Rect.MinMaxRect(corners[0].x + offset.x, corners[0].y + offset.y, corners[2].x + offset.x, corners[2].y + offset.y);
     }
 
     private static void ValidateLevelCard(LevelCardView card)

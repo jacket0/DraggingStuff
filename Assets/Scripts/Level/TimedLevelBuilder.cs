@@ -62,6 +62,9 @@ public sealed class TimedLevelBuilder : MonoBehaviour
                     shelf.Columns[columnIndex].Append(Instantiate(prefab));
                 }
             }
+
+            if (!layout.Shelves[shelfIndex].IsOpen)
+                _shelfBoard.CloseShelf(shelf);
         }
     }
 }

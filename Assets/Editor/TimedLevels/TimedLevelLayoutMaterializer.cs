@@ -75,7 +75,9 @@ public static class TimedLevelLayoutMaterializer
         for (int shelfIndex = 0; shelfIndex < layout.Shelves.Count; shelfIndex++)
         {
             ShelfStateSnapshot shelf = layout.Shelves[shelfIndex];
-            SerializedProperty columns = shelvesProperty.GetArrayElementAtIndex(shelfIndex).FindPropertyRelative("_columns");
+            SerializedProperty shelfProperty = shelvesProperty.GetArrayElementAtIndex(shelfIndex);
+            shelfProperty.FindPropertyRelative("_isClosed").boolValue = !shelf.IsOpen;
+            SerializedProperty columns = shelfProperty.FindPropertyRelative("_columns");
             columns.arraySize = shelf.Columns.Count;
 
             for (int columnIndex = 0; columnIndex < shelf.Columns.Count; columnIndex++)

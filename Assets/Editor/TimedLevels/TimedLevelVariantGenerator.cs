@@ -65,13 +65,54 @@ public static class TimedLevelVariantGenerator
         }
     }
 
+    [MenuItem("Tools/Timed Levels/Generate Closed Shelf Levels")]
+    public static void GenerateClosedShelfLevels()
+    {
+        LevelCatalog catalog = AssetDatabase.LoadAssetAtPath<LevelCatalog>(CatalogPath);
+
+        if (catalog == null)
+            throw new InvalidOperationException($"Level catalog was not found at {CatalogPath}.");
+
+        SceneSetup[] sceneSetup = EditorSceneManager.GetSceneManagerSetup();
+
+        try
+        {
+            LevelEntry[] levels = catalog.Levels.Where(level => level != null && level.Definition != null && level.Definition.HasClosedShelves).ToArray();
+
+            foreach (LevelEntry level in levels)
+                Generate(level);
+
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Generated {RequiredVariantCount} verified variants for {levels.Length} closed shelf levels.");
+        }
+        finally
+        {
+            EditorSceneManager.RestoreSceneManagerSetup(sceneSetup);
+        }
+    }
+
     private static void Generate(LevelEntry level)
     {
         if (level == null || level.Definition == null)
             throw new InvalidOperationException("The level catalog contains an incomplete entry.");
 
-        string scenePath = $"Assets/Scenes/{level.SceneName}.unity";
+        GenerateForDefinition(level.Definition, level.SceneName, level.Number);
+    }
+
+    public static void GenerateForDefinition(TimedLevelDefinition definition, string sceneName, int levelNumber)
+    {
+        string definitionPath = AssetDatabase.GetAssetPath(definition);
+        string scenePath = $"Assets/Scenes/{sceneName}.unity";
         Scene scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+
+        // Opening a scene unloads assets not referenced by anything still in memory. A definition
+        // loaded standalone (not through the level catalog) has nothing else keeping it alive,
+        // so it must be reloaded after the scene switch.
+        definition = AssetDatabase.LoadAssetAtPath<TimedLevelDefinition>(definitionPath);
+
+        if (definition == null)
+            throw new InvalidOperationException($"{definitionPath}: definition could not be reloaded after opening {scenePath}.");
+
         LevelSession session = FindComponent<LevelSession>(scene);
         SerializedProperty boardProperty = new SerializedObject(session).FindProperty("_shelfBoard");
         ShelfBoard board = boardProperty?.objectReferenceValue as ShelfBoard;
@@ -80,8 +121,8 @@ public static class TimedLevelVariantGenerator
             throw new InvalidOperationException($"{scenePath}: LevelSession does not reference a ShelfBoard.");
 
         BoardStateSnapshot shape = CreateShape(board);
-        TimedLevelValidator.ValidateForGeneration(level.Definition, shape);
-        List<TimedLevelVariant> candidates = GenerateCandidates(level, shape);
+        TimedLevelValidator.ValidateForGeneration(definition, shape);
+        List<TimedLevelVariant> candidates = GenerateCandidates(definition, levelNumber, shape);
         int medianMoveCount = GetMedianMoveCount(candidates);
         List<TimedLevelVariant> accepted = candidates
             .Where(variant => IsWithinDifficultyRange(variant.MoveCount, medianMoveCount))
@@ -91,13 +132,13 @@ public static class TimedLevelVariantGenerator
         if (accepted.Count < RequiredVariantCount)
         {
             throw new InvalidOperationException(
-                $"Level {level.Number}: only {accepted.Count} variants are within 10% of median {medianMoveCount}.");
+                $"Level {levelNumber}: only {accepted.Count} variants are within 10% of median {medianMoveCount}.");
         }
 
-        WriteVariants(level.Definition, accepted);
+        WriteVariants(definition, accepted);
     }
 
-    private static List<TimedLevelVariant> GenerateCandidates(LevelEntry level, BoardStateSnapshot shape)
+    private static List<TimedLevelVariant> GenerateCandidates(TimedLevelDefinition definition, int levelNumber, BoardStateSnapshot shape)
     {
         TimedLevelLayoutGenerator generator = new TimedLevelLayoutGenerator();
         List<TimedLevelVariant> candidates = new List<TimedLevelVariant>();
@@ -105,13 +146,13 @@ public static class TimedLevelVariantGenerator
 
         while (candidates.Count < CandidatePoolSize && seedOffset <= MaximumSeedAttempts)
         {
-            int seed = checked(level.Number * 100000 + seedOffset);
+            int seed = checked(levelNumber * 100000 + seedOffset);
             seedOffset++;
             TimedLevelGenerationResult generation;
 
             try
             {
-                generation = generator.GenerateWithSolution(level.Definition, shape, seed);
+                generation = generator.GenerateWithSolution(definition, shape, seed);
             }
             catch (InvalidOperationException)
             {
@@ -137,7 +178,7 @@ public static class TimedLevelVariantGenerator
         }
 
         if (candidates.Count < CandidatePoolSize)
-            throw new InvalidOperationException($"Level {level.Number}: only {candidates.Count} verified variants were generated.");
+            throw new InvalidOperationException($"Level {levelNumber}: only {candidates.Count} verified variants were generated.");
 
         return candidates;
     }
@@ -202,7 +243,9 @@ public static class TimedLevelVariantGenerator
         for (int shelfIndex = 0; shelfIndex < layout.Shelves.Count; shelfIndex++)
         {
             ShelfStateSnapshot shelf = layout.Shelves[shelfIndex];
-            SerializedProperty columnsProperty = shelvesProperty.GetArrayElementAtIndex(shelfIndex).FindPropertyRelative("_columns");
+            SerializedProperty shelfProperty = shelvesProperty.GetArrayElementAtIndex(shelfIndex);
+            shelfProperty.FindPropertyRelative("_isClosed").boolValue = !shelf.IsOpen;
+            SerializedProperty columnsProperty = shelfProperty.FindPropertyRelative("_columns");
             columnsProperty.arraySize = shelf.Columns.Count;
 
             for (int columnIndex = 0; columnIndex < shelf.Columns.Count; columnIndex++)

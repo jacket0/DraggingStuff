@@ -10,9 +10,11 @@ public sealed class ShelfItemCatalog : ScriptableObject
     {
         [SerializeField] private ItemType _type;
         [SerializeField] private ShelfItem _prefab;
+        [SerializeField] private Sprite _icon;
 
         public ItemType Type => _type;
         public ShelfItem Prefab => _prefab;
+        public Sprite Icon => _icon;
     }
 
     [SerializeField] private List<Entry> _entries = new List<Entry>();

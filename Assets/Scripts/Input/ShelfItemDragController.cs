@@ -13,6 +13,7 @@ public class ShelfItemDragController : MonoBehaviour
 
     public event Action<ShelfItem> DragStarting;
     public event Action InteractionOccurred;
+    public event Action<Vector2> DropRejected;
 
     public bool IsDragging => _isDragging;
 
@@ -81,7 +82,7 @@ public class ShelfItemDragController : MonoBehaviour
 
         if (!_columnRaycaster.TryGetColumn(_sourceColumn, pointerPosition, out ShelfColumnView targetColumn))
         {
-            CancelDrag();
+            RejectDrop(pointerPosition);
             return;
         }
 
@@ -90,7 +91,7 @@ public class ShelfItemDragController : MonoBehaviour
 
         if (!outcome.IsSuccessful)
         {
-            CancelDrag();
+            RejectDrop(pointerPosition);
             return;
         }
 
@@ -111,6 +112,12 @@ public class ShelfItemDragController : MonoBehaviour
         _dragMover.Cancel();
         InteractionOccurred?.Invoke();
         ClearDragState();
+    }
+
+    private void RejectDrop(Vector2 pointerPosition)
+    {
+        CancelDrag();
+        DropRejected?.Invoke(pointerPosition);
     }
 
     private void ClearDragState()

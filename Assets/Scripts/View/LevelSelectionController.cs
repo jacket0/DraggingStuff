@@ -91,12 +91,12 @@ public class LevelSelectionController : MonoBehaviour
 
     private void RefreshEndlessCard()
     {
-        _endlessCard.Bind(_progress.AreAllLevelsCompleted(), _endlessProgress.BestScore);
+        _endlessCard.Bind(_progress.IsEndlessUnlocked(), _endlessProgress.BestScore);
     }
 
     private void OpenEndlessLevel()
     {
-        if (!_progress.AreAllLevelsCompleted())
+        if (!_progress.IsEndlessUnlocked())
             return;
 
         SceneManager.LoadScene(_endlessSceneName);
