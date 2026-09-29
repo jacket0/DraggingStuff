@@ -12,1657 +12,1921 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f37d9686e98b4f44786fde4b92efa571, type: 3}
   m_Name: TimedLevel_17
   m_EditorClassIdentifier: 
-  _timeLimitSeconds: 145
-  _twoStarTimeSeconds: 110
-  _threeStarTimeSeconds: 80
+  _timeLimitSeconds: 180
+  _twoStarTimeSeconds: 135
+  _threeStarTimeSeconds: 100
   _emptyColumnCount: 3
   _itemGroups:
   - _type: 0
-    _groupCount: 3
+    _groupCount: 4
   - _type: 1
-    _groupCount: 3
+    _groupCount: 4
   - _type: 2
     _groupCount: 3
   - _type: 3
     _groupCount: 3
   - _type: 4
-    _groupCount: 2
+    _groupCount: 3
   - _type: 5
-    _groupCount: 2
+    _groupCount: 3
   _variants:
   - _seed: 1700001
     _generatorVersion: 2
-    _moveCount: 16
-    _layoutHash: 7185BDE1DBE2D498
+    _moveCount: 20
+    _layoutHash: 6283F3765289D26D
     _shelves:
     - _columns:
-      - _items: 0100000002000000
-      - _items: 
-      - _items: 0100000002000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0500000003000000
-      - _items: 
-      - _items: 0500000003000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 010000000000000004000000
-      - _items: 
-      - _items: 010000000000000003000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
       - _items: 04000000
       - _items: 04000000
-      - _items: 05000000
+      - _items: 02000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
+      - _items: 0100000004000000
+      - _items: 
+      - _items: 0100000004000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 03000000
+      - _items: 03000000
       - _items: 00000000
-      - _items: 05000000
-      - _items: 05000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 000000000400000002000000
+      - _items: 
+      - _items: 000000000400000002000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 01000000
+      - _items: 0000000005000000
+      - _items: 0000000005000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 04000000
+      - _items: 01000000
+      - _items: 01000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0300000001000000
+      - _items: 0300000001000000
+      - _items: 01000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
       - _items: 0100000000000000
-      - _items: 01000000
       - _items: 00000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 010000000000000002000000
-      - _items: 03000000
-      - _items: 00000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 02000000
-      - _items: 02000000
-      - _items: 01000000
+      - _items: 0100000000000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
       - _items: 05000000
+      - _items: 0000000005000000
       - _items: 03000000
-      - _items: 0300000002000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 000000000400000003000000
-      - _items: 000000000400000003000000
-      - _items: 040000000300000002000000
+      - _items: 020000000300000001000000
+      - _items: 050000000200000003000000
+      - _items: 020000000100000005000000
       _isClosed: 0
       _isConveyor: 1
     - _columns:
-      - _items: 02000000
-      - _items: 01000000
-      - _items: 02000000
+      - _items: 030000000000000005000000
+      - _items: 050000000400000003000000
+      - _items: 040000000500000002000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 0000000002000000
+      - _items: 0000000002000000
+      - _items: 
       _isClosed: 0
       _isConveyor: 0
     _solutionMoves:
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 2
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 2
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 7
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 0
-      _targetColumnIndex: 1
     - _sourceShelfIndex: 8
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 1
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 3
       _targetColumnIndex: 1
-    - _sourceShelfIndex: 10
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 5
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 8
-      _targetColumnIndex: 0
     - _sourceShelfIndex: 4
       _sourceColumnIndex: 0
-      _targetShelfIndex: 6
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 10
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 3
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 4
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 8
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 0
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 2
       _targetShelfIndex: 1
       _targetColumnIndex: 1
+    - _sourceShelfIndex: 7
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 4
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 6
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 7
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 8
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 6
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 2
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 11
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 5
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 3
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 0
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 11
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 6
+      _targetColumnIndex: 2
     - _sourceShelfIndex: 9
       _sourceColumnIndex: 2
       _targetShelfIndex: 3
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 7
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 2
       _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 0
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 4
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 1
+      _targetColumnIndex: 1
     - _sourceShelfIndex: 9
       _sourceColumnIndex: 2
-      _targetShelfIndex: 7
+      _targetShelfIndex: 5
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 8
       _targetColumnIndex: 2
-    - _sourceShelfIndex: 2
+    - _sourceShelfIndex: 10
       _sourceColumnIndex: 0
       _targetShelfIndex: 9
       _targetColumnIndex: 2
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 9
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 2
+    - _sourceShelfIndex: 10
       _sourceColumnIndex: 2
       _targetShelfIndex: 9
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 10
       _targetColumnIndex: 2
   - _seed: 1700002
     _generatorVersion: 2
-    _moveCount: 16
-    _layoutHash: BB73D5E23276FE70
+    _moveCount: 20
+    _layoutHash: F82F01AB47F7D6FD
     _shelves:
     - _columns:
-      - _items: 
-      - _items: 0100000005000000
+      - _items: 00000000
+      - _items: 01000000
+      - _items: 00000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 04000000
+      - _items: 05000000
+      - _items: 0500000003000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0400000002000000
+      - _items: 0400000002000000
       - _items: 01000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 03000000
-      - _items: 02000000
-      - _items: 03000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0300000004000000
-      - _items: 01000000
-      - _items: 03000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
+      - _items: 0100000002000000
       - _items: 
-      - _items: 0100000004000000
-      - _items: 0100000004000000
+      - _items: 0100000002000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 0000000002000000
-      - _items: 01000000
-      - _items: 0000000002000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
+      - _items: 0400000005000000
+      - _items: 0400000005000000
       - _items: 00000000
-      - _items: 0200000005000000
-      - _items: 0200000001000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 00000000
-      - _items: 03000000
+      - _items: 0100000003000000
+      - _items: 0100000003000000
       - _items: 04000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 02000000
-      - _items: 02000000
-      - _items: 03000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
+      - _items: 0100000000000000
       - _items: 
-      - _items: 010000000300000005000000
-      - _items: 010000000300000005000000
+      - _items: 0100000000000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 050000000000000004000000
-      - _items: 050000000000000004000000
-      - _items: 000000000300000002000000
-      _isClosed: 0
-      _isConveyor: 1
-    - _columns:
-      - _items: 00000000
-      - _items: 02000000
-      - _items: 00000000
-      _isClosed: 0
-      _isConveyor: 0
-    _solutionMoves:
-    - _sourceShelfIndex: 2
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 8
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 4
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 3
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 4
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 8
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 1
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 5
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 0
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 7
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 2
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 10
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 7
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 0
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 8
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 10
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 4
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 1
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 9
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 3
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 9
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 2
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 9
-      _targetColumnIndex: 2
-  - _seed: 1700003
-    _generatorVersion: 2
-    _moveCount: 16
-    _layoutHash: BA7E5416C29B6080
-    _shelves:
-    - _columns:
-      - _items: 03000000
-      - _items: 04000000
-      - _items: 04000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0300000000000000
-      - _items: 02000000
-      - _items: 0300000000000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0200000001000000
+      - _items: 0000000003000000
       - _items: 
-      - _items: 0200000001000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 
-      - _items: 020000000400000005000000
-      - _items: 020000000400000003000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 00000000
-      - _items: 02000000
       - _items: 0000000003000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
       - _items: 02000000
-      - _items: 01000000
-      - _items: 01000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 05000000
-      - _items: 01000000
-      - _items: 05000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
+      - _items: 02000000
       - _items: 04000000
-      - _items: 03000000
-      - _items: 03000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 
-      - _items: 020000000100000000000000
-      - _items: 0200000001000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
+      - _items: 020000000100000005000000
       - _items: 050000000300000000000000
-      - _items: 010000000500000004000000
-      - _items: 050000000300000000000000
+      - _items: 030000000500000000000000
       _isClosed: 0
       _isConveyor: 1
     - _columns:
+      - _items: 000000000200000003000000
+      - _items: 000000000500000002000000
+      - _items: 030000000500000000000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 0400000001000000
       - _items: 01000000
-      - _items: 00000000
-      - _items: 00000000
+      - _items: 0400000001000000
       _isClosed: 0
       _isConveyor: 0
     _solutionMoves:
-    - _sourceShelfIndex: 4
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 8
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 1
+    - _sourceShelfIndex: 11
       _sourceColumnIndex: 1
       _targetShelfIndex: 3
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 7
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 3
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 0
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 1
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 2
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 6
       _targetColumnIndex: 1
     - _sourceShelfIndex: 5
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 2
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 8
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 10
       _sourceColumnIndex: 2
-      _targetShelfIndex: 4
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 3
+      _targetShelfIndex: 2
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 4
       _sourceColumnIndex: 2
       _targetShelfIndex: 7
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 8
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 1
       _targetColumnIndex: 1
-    - _sourceShelfIndex: 10
+    - _sourceShelfIndex: 1
       _sourceColumnIndex: 0
-      _targetShelfIndex: 2
+      _targetShelfIndex: 11
       _targetColumnIndex: 1
+    - _sourceShelfIndex: 0
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 5
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 8
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 4
+      _targetColumnIndex: 2
     - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 1
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 1
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 5
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
       _sourceColumnIndex: 1
       _targetShelfIndex: 6
       _targetColumnIndex: 1
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 5
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 0
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 4
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 8
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
       _sourceColumnIndex: 2
-      _targetShelfIndex: 9
+      _targetShelfIndex: 0
       _targetColumnIndex: 1
-    - _sourceShelfIndex: 3
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 9
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 3
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 7
       _targetColumnIndex: 1
     - _sourceShelfIndex: 10
       _sourceColumnIndex: 1
-      _targetShelfIndex: 9
+      _targetShelfIndex: 2
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 4
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 11
       _targetColumnIndex: 1
-  - _seed: 1700004
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 9
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 9
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 10
+      _targetColumnIndex: 0
+  - _seed: 1700003
     _generatorVersion: 2
-    _moveCount: 16
-    _layoutHash: 30FF47401A3D6C30
+    _moveCount: 20
+    _layoutHash: 683BB62603B253DD
     _shelves:
     - _columns:
-      - _items: 
-      - _items: 030000000100000004000000
-      - _items: 030000000100000004000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0200000001000000
-      - _items: 
-      - _items: 0200000001000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
+      - _items: 0200000005000000
       - _items: 01000000
-      - _items: 04000000
-      - _items: 04000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 05000000
-      - _items: 05000000
-      - _items: 02000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 03000000
-      - _items: 02000000
       - _items: 0200000005000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 00000000
-      - _items: 05000000
+      - _items: 01000000
+      - _items: 0000000001000000
+      - _items: 02000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0500000003000000
+      - _items: 0500000003000000
       - _items: 00000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
       - _items: 02000000
       - _items: 04000000
-      - _items: 00000000
+      - _items: 02000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 0300000002000000
-      - _items: 0300000002000000
+      - _items: 0000000002000000
+      - _items: 01000000
+      - _items: 0000000002000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0100000005000000
+      - _items: 
+      - _items: 0100000005000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0100000000000000
+      - _items: 0100000000000000
+      - _items: 
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 04000000
+      - _items: 04000000
+      - _items: 03000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 05000000
+      - _items: 0400000003000000
+      - _items: 0400000003000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 030000000200000001000000
+      - _items: 030000000500000000000000
+      - _items: 020000000400000000000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 010000000400000000000000
+      - _items: 040000000300000005000000
+      - _items: 000000000300000004000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 
+      - _items: 0000000001000000
+      - _items: 0000000001000000
+      _isClosed: 0
+      _isConveyor: 0
+    _solutionMoves:
+    - _sourceShelfIndex: 1
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 11
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 4
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 6
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 2
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 4
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 0
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 5
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 8
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 2
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 1
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 0
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 3
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 8
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 5
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 11
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 3
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 7
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 2
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 0
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 8
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 4
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 6
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 7
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 1
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 10
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 10
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 9
+      _targetColumnIndex: 0
+  - _seed: 1700004
+    _generatorVersion: 2
+    _moveCount: 20
+    _layoutHash: CB3C71FFB9DFE7D5
+    _shelves:
+    - _columns:
+      - _items: 05000000
+      - _items: 01000000
       - _items: 01000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 03000000
+      - _items: 0000000001000000
+      - _items: 
+      - _items: 0000000001000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 
+      - _items: 0000000001000000
+      - _items: 0000000001000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 00000000
+      - _items: 0500000003000000
+      - _items: 0500000003000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 
+      - _items: 000000000400000002000000
+      - _items: 000000000400000002000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 00000000
+      - _items: 0100000002000000
+      - _items: 0100000002000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 04000000
+      - _items: 04000000
+      - _items: 01000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 05000000
+      - _items: 04000000
+      - _items: 05000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 01000000
       - _items: 0000000003000000
+      - _items: 0000000003000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 030000000500000002000000
+      - _items: 040000000300000002000000
+      - _items: 050000000100000004000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 010000000300000004000000
+      - _items: 030000000200000005000000
+      - _items: 050000000400000003000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 00000000
+      - _items: 02000000
+      - _items: 0000000002000000
+      _isClosed: 0
+      _isConveyor: 0
+    _solutionMoves:
+    - _sourceShelfIndex: 11
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 4
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 5
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 1
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 3
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 2
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 8
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 5
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 11
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 8
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 7
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 4
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 0
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 3
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 6
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 1
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 6
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 2
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 8
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 11
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 3
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 0
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 5
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 7
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 4
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 10
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 10
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 9
+      _targetColumnIndex: 1
+  - _seed: 1700005
+    _generatorVersion: 2
+    _moveCount: 20
+    _layoutHash: 635983708B04FDA5
+    _shelves:
+    - _columns:
+      - _items: 0000000004000000
+      - _items: 0000000004000000
+      - _items: 01000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 01000000
+      - _items: 02000000
+      - _items: 02000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0100000003000000
+      - _items: 0100000003000000
       - _items: 00000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 030000000000000005000000
-      - _items: 030000000000000005000000
-      - _items: 040000000100000002000000
-      _isClosed: 0
-      _isConveyor: 1
-    - _columns:
-      - _items: 0100000000000000
       - _items: 
-      - _items: 0100000000000000
-      _isClosed: 0
-      _isConveyor: 0
-    _solutionMoves:
-    - _sourceShelfIndex: 8
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 0
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 7
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 10
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 4
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 7
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 3
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 1
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 2
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 0
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 8
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 4
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 0
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 3
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 10
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 1
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 2
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 7
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 9
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 8
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 9
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 4
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 9
-      _targetColumnIndex: 2
-  - _seed: 1700005
-    _generatorVersion: 2
-    _moveCount: 16
-    _layoutHash: 757B43DA2432E6C8
-    _shelves:
-    - _columns:
-      - _items: 000000000100000000000000
-      - _items: 
-      - _items: 000000000100000000000000
+      - _items: 010000000000000005000000
+      - _items: 010000000000000005000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 04000000
-      - _items: 04000000
+      - _items: 00000000
+      - _items: 02000000
+      - _items: 00000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0200000004000000
+      - _items: 0200000004000000
+      - _items: 01000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 
+      - _items: 0100000003000000
       - _items: 0100000003000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 03000000
-      - _items: 01000000
-      - _items: 01000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
       - _items: 
-      - _items: 010000000000000003000000
-      - _items: 010000000000000003000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 03000000
-      - _items: 05000000
-      - _items: 03000000
+      - _items: 0000000005000000
+      - _items: 0000000005000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
       - _items: 01000000
-      - _items: 02000000
-      - _items: 02000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0300000005000000
-      - _items: 
-      - _items: 03000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 02000000
       - _items: 00000000
-      - _items: 0200000004000000
+      - _items: 01000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 0000000002000000
-      - _items: 04000000
-      - _items: 02000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 010000000000000003000000
-      - _items: 050000000400000002000000
-      - _items: 050000000400000002000000
+      - _items: 050000000300000004000000
+      - _items: 010000000400000002000000
+      - _items: 030000000200000005000000
       _isClosed: 0
       _isConveyor: 1
     - _columns:
-      - _items: 05000000
-      - _items: 02000000
-      - _items: 05000000
+      - _items: 020000000500000004000000
+      - _items: 020000000500000004000000
+      - _items: 050000000300000000000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 0300000004000000
+      - _items: 03000000
+      - _items: 00000000
       _isClosed: 0
       _isConveyor: 0
     _solutionMoves:
-    - _sourceShelfIndex: 8
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 0
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 1
+    - _sourceShelfIndex: 0
       _sourceColumnIndex: 2
       _targetShelfIndex: 3
       _targetColumnIndex: 0
-    - _sourceShelfIndex: 7
-      _sourceColumnIndex: 1
+    - _sourceShelfIndex: 2
+      _sourceColumnIndex: 2
       _targetShelfIndex: 3
       _targetColumnIndex: 0
     - _sourceShelfIndex: 5
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 0
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 10
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 7
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 1
       _sourceColumnIndex: 2
-      _targetShelfIndex: 6
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 8
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 1
+      _targetShelfIndex: 2
       _targetColumnIndex: 2
+    - _sourceShelfIndex: 11
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 7
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 1
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 6
+      _targetColumnIndex: 0
     - _sourceShelfIndex: 4
       _sourceColumnIndex: 1
-      _targetShelfIndex: 10
+      _targetShelfIndex: 5
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 8
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 0
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 11
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 11
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 0
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 7
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 5
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 3
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 1
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 6
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 4
       _targetColumnIndex: 1
-    - _sourceShelfIndex: 5
+    - _sourceShelfIndex: 9
       _sourceColumnIndex: 1
       _targetShelfIndex: 8
       _targetColumnIndex: 1
-    - _sourceShelfIndex: 2
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 3
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 0
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
       _targetShelfIndex: 2
-      _targetColumnIndex: 0
+      _targetColumnIndex: 2
     - _sourceShelfIndex: 9
       _sourceColumnIndex: 0
-      _targetShelfIndex: 4
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 7
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 9
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 6
+      _targetShelfIndex: 10
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
       _sourceColumnIndex: 0
-      _targetShelfIndex: 9
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 2
+      _targetShelfIndex: 10
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
       _targetShelfIndex: 9
       _targetColumnIndex: 0
   - _seed: 1700006
     _generatorVersion: 2
-    _moveCount: 16
-    _layoutHash: E9B1836EFB2D62A0
+    _moveCount: 20
+    _layoutHash: 5D9D2E9F0CE049F5
     _shelves:
     - _columns:
-      - _items: 0200000005000000
-      - _items: 02000000
       - _items: 01000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0100000004000000
-      - _items: 0100000004000000
-      - _items: 00000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 
-      - _items: 000000000200000003000000
-      - _items: 000000000200000005000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 
-      - _items: 0200000000000000
-      - _items: 0200000000000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0400000001000000
-      - _items: 04000000
       - _items: 01000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
       - _items: 03000000
-      - _items: 03000000
-      - _items: 02000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
       - _items: 04000000
-      - _items: 03000000
-      - _items: 03000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0200000000000000
-      - _items: 
-      - _items: 00000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0100000003000000
-      - _items: 02000000
-      - _items: 01000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 000000000400000003000000
-      - _items: 010000000300000005000000
-      - _items: 010000000300000005000000
-      _isClosed: 0
-      _isConveyor: 1
-    - _columns:
-      - _items: 05000000
-      - _items: 00000000
-      - _items: 05000000
-      _isClosed: 0
-      _isConveyor: 0
-    _solutionMoves:
-    - _sourceShelfIndex: 7
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 3
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 1
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 2
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 8
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 2
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 4
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 1
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 4
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 0
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 8
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 0
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 10
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 7
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 5
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 1
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 3
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 8
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 6
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 0
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 10
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 2
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 9
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 4
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 9
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 2
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 9
-      _targetColumnIndex: 0
-  - _seed: 1700007
-    _generatorVersion: 2
-    _moveCount: 16
-    _layoutHash: 3B343B2B602B1308
-    _shelves:
-    - _columns:
-      - _items: 04000000
-      - _items: 0200000001000000
-      - _items: 02000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 04000000
-      - _items: 05000000
-      - _items: 05000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 01000000
-      - _items: 02000000
-      - _items: 02000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 00000000
-      - _items: 00000000
-      - _items: 03000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 03000000
-      - _items: 0300000002000000
-      - _items: 00000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0000000001000000
-      - _items: 
-      - _items: 0000000001000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 03000000
-      - _items: 0500000002000000
-      - _items: 02000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0400000003000000
       - _items: 04000000
       - _items: 00000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 0400000003000000
       - _items: 
-      - _items: 0400000003000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 030000000100000002000000
-      - _items: 010000000500000000000000
-      - _items: 030000000100000002000000
-      _isClosed: 0
-      _isConveyor: 1
-    - _columns:
-      - _items: 050000000000000001000000
-      - _items: 050000000000000001000000
-      - _items: 
-      _isClosed: 0
-      _isConveyor: 0
-    _solutionMoves:
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 10
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 4
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 5
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 0
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 8
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 7
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 10
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 4
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 0
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 1
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 7
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 2
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 5
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 3
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 8
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 4
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 2
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 1
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 10
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 3
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 0
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 9
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 7
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 9
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 9
-      _targetColumnIndex: 1
-  - _seed: 1700008
-    _generatorVersion: 2
-    _moveCount: 16
-    _layoutHash: 54499366174EE188
-    _shelves:
-    - _columns:
-      - _items: 03000000
-      - _items: 03000000
-      - _items: 00000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0200000001000000
-      - _items: 00000000
-      - _items: 0200000001000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 05000000
-      - _items: 05000000
-      - _items: 00000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 020000000000000003000000
-      - _items: 
-      - _items: 020000000000000003000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0000000004000000
-      - _items: 0000000004000000
-      - _items: 
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 02000000
-      - _items: 0100000005000000
-      - _items: 01000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 01000000
-      - _items: 03000000
-      - _items: 01000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0300000002000000
-      - _items: 02000000
-      - _items: 0300000002000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 
-      - _items: 00000000
-      - _items: 0000000004000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 010000000400000005000000
-      - _items: 010000000400000005000000
-      - _items: 020000000100000003000000
-      _isClosed: 0
-      _isConveyor: 1
-    - _columns:
-      - _items: 04000000
-      - _items: 03000000
-      - _items: 05000000
-      _isClosed: 0
-      _isConveyor: 0
-    _solutionMoves:
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 3
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 1
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 3
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 7
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 1
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 7
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 0
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 4
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 1
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 5
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 2
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 8
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 6
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 7
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 10
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 3
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 10
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 4
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 0
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 1
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 9
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 2
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 8
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 9
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 10
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 9
-      _targetColumnIndex: 2
-  - _seed: 1700009
-    _generatorVersion: 2
-    _moveCount: 16
-    _layoutHash: 6D00FA1BC81F4020
-    _shelves:
-    - _columns:
-      - _items: 0500000003000000
-      - _items: 00000000
-      - _items: 05000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 02000000
-      - _items: 02000000
-      - _items: 01000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0300000001000000
-      - _items: 
-      - _items: 0300000001000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
       - _items: 0500000004000000
       - _items: 0500000004000000
-      - _items: 0100000002000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0200000000000000
-      - _items: 
-      - _items: 0200000000000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0000000002000000
-      - _items: 05000000
-      - _items: 0000000003000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 00000000
-      - _items: 02000000
-      - _items: 05000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 
-      - _items: 0100000003000000
-      - _items: 0100000003000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 03000000
-      - _items: 04000000
-      - _items: 04000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 010000000000000004000000
-      - _items: 030000000200000000000000
-      - _items: 030000000200000000000000
-      _isClosed: 0
-      _isConveyor: 1
-    - _columns:
-      - _items: 01000000
-      - _items: 04000000
-      - _items: 01000000
-      _isClosed: 0
-      _isConveyor: 0
-    _solutionMoves:
-    - _sourceShelfIndex: 3
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 7
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 3
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 4
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 8
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 2
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 3
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 0
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 5
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 0
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 10
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 3
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 1
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 2
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 7
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 1
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 4
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 10
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 8
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 9
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 0
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 9
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 9
-      _targetColumnIndex: 0
-  - _seed: 1700010
-    _generatorVersion: 2
-    _moveCount: 16
-    _layoutHash: 03A6C49A16996978
-    _shelves:
-    - _columns:
-      - _items: 010000000300000002000000
-      - _items: 
-      - _items: 0100000003000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0000000003000000
-      - _items: 05000000
-      - _items: 0000000002000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 04000000
-      - _items: 01000000
-      - _items: 0400000003000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 03000000
-      - _items: 00000000
-      - _items: 03000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 
-      - _items: 0100000002000000
-      - _items: 0100000002000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 04000000
-      - _items: 04000000
-      - _items: 02000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 03000000
-      - _items: 01000000
-      - _items: 01000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0500000000000000
-      - _items: 0500000000000000
-      - _items: 
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 0200000005000000
-      - _items: 01000000
-      - _items: 0200000005000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 020000000300000000000000
-      - _items: 020000000300000000000000
-      - _items: 040000000500000001000000
-      _isClosed: 0
-      _isConveyor: 1
-    - _columns:
-      - _items: 00000000
-      - _items: 04000000
-      - _items: 00000000
-      _isClosed: 0
-      _isConveyor: 0
-    _solutionMoves:
-    - _sourceShelfIndex: 2
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 0
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 8
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 4
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 1
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 7
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 3
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 1
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 8
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 0
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 10
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 2
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 1
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 4
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 6
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 8
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 2
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 3
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 5
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 0
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 9
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 7
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 10
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 1
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 9
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 7
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 9
-      _targetColumnIndex: 2
-  - _seed: 1700011
-    _generatorVersion: 2
-    _moveCount: 16
-    _layoutHash: 1D448D3D31348C80
-    _shelves:
-    - _columns:
-      - _items: 01000000
-      - _items: 05000000
-      - _items: 01000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 02000000
-      - _items: 04000000
-      - _items: 04000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 03000000
-      - _items: 0000000001000000
-      - _items: 0000000002000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 00000000
-      - _items: 04000000
-      - _items: 00000000
-      _isClosed: 0
-      _isConveyor: 0
-    - _columns:
-      - _items: 
-      - _items: 05000000
-      - _items: 0500000001000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
       - _items: 0000000005000000
-      - _items: 02000000
+      - _items: 0000000005000000
+      - _items: 05000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0100000002000000
+      - _items: 0100000002000000
       - _items: 02000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 03000000
       - _items: 02000000
       - _items: 02000000
+      - _items: 0500000001000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 0300000001000000
-      - _items: 030000000100000003000000
+      - _items: 01000000
+      - _items: 00000000
+      - _items: 00000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0100000003000000
+      - _items: 0100000003000000
       - _items: 
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 000000000300000004000000
-      - _items: 000000000300000004000000
+      - _items: 050000000400000000000000
       - _items: 
+      - _items: 050000000400000000000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 030000000200000001000000
-      - _items: 020000000000000004000000
-      - _items: 030000000200000001000000
+      - _items: 040000000300000000000000
+      - _items: 010000000000000002000000
+      - _items: 030000000500000001000000
       _isClosed: 0
       _isConveyor: 1
     - _columns:
-      - _items: 00000000
-      - _items: 05000000
-      - _items: 0500000001000000
+      - _items: 030000000000000001000000
+      - _items: 020000000000000004000000
+      - _items: 030000000100000000000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 0200000003000000
+      - _items: 0200000003000000
+      - _items: 04000000
       _isClosed: 0
       _isConveyor: 0
     _solutionMoves:
     - _sourceShelfIndex: 5
-      _sourceColumnIndex: 0
+      _sourceColumnIndex: 2
       _targetShelfIndex: 8
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 2
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 7
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 10
-      _sourceColumnIndex: 0
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 3
+      _sourceColumnIndex: 2
       _targetShelfIndex: 2
       _targetColumnIndex: 0
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 8
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 5
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 4
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 2
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 7
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 0
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 10
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 1
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 6
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 3
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 8
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 5
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 1
-      _targetColumnIndex: 0
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 3
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 10
+    - _sourceShelfIndex: 11
       _sourceColumnIndex: 2
-      _targetShelfIndex: 0
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 2
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 9
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 7
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 9
+      _targetShelfIndex: 8
       _targetColumnIndex: 1
     - _sourceShelfIndex: 4
       _sourceColumnIndex: 2
+      _targetShelfIndex: 11
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 5
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 7
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 1
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 3
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 6
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 4
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 0
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 11
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 4
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 7
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 6
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 0
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 2
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 8
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 3
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 5
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 1
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 10
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 10
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
       _targetShelfIndex: 9
       _targetColumnIndex: 1
-  - _seed: 1700012
+  - _seed: 1700007
     _generatorVersion: 2
-    _moveCount: 16
-    _layoutHash: F7F7836B061B0F10
+    _moveCount: 20
+    _layoutHash: 8169B808717C5925
     _shelves:
     - _columns:
-      - _items: 0300000001000000
-      - _items: 0300000001000000
+      - _items: 0400000001000000
+      - _items: 0400000001000000
+      - _items: 
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 
+      - _items: 040000000000000005000000
+      - _items: 040000000000000005000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 02000000
+      - _items: 04000000
+      - _items: 02000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0200000004000000
+      - _items: 0200000004000000
+      - _items: 05000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 03000000
+      - _items: 03000000
+      - _items: 00000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 01000000
+      - _items: 02000000
       - _items: 01000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 02000000
-      - _items: 03000000
-      - _items: 02000000
+      - _items: 
+      - _items: 0000000003000000
+      - _items: 0000000003000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 05000000
-      - _items: 02000000
+      - _items: 0000000001000000
+      - _items: 00000000
       - _items: 05000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 03000000
+      - _items: 0500000000000000
       - _items: 04000000
+      - _items: 0500000000000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 020000000300000001000000
+      - _items: 010000000400000003000000
+      - _items: 010000000200000000000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 030000000200000001000000
+      - _items: 020000000100000003000000
+      - _items: 050000000000000003000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 0500000001000000
+      - _items: 00000000
+      - _items: 0500000001000000
+      _isClosed: 0
+      _isConveyor: 0
+    _solutionMoves:
+    - _sourceShelfIndex: 8
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 1
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 7
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 8
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 2
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 0
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 11
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 1
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 3
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 11
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 4
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 6
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 5
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 3
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 7
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 6
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 5
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 3
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 7
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 0
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 4
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 2
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 1
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 11
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 8
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 9
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 9
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 10
+      _targetColumnIndex: 2
+  - _seed: 1700008
+    _generatorVersion: 2
+    _moveCount: 20
+    _layoutHash: 6928859007775415
+    _shelves:
+    - _columns:
+      - _items: 
+      - _items: 0000000005000000
+      - _items: 0000000005000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 01000000
+      - _items: 04000000
+      - _items: 01000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 00000000
+      - _items: 0300000001000000
+      - _items: 0300000001000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0000000003000000
+      - _items: 0000000003000000
+      - _items: 
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0400000005000000
+      - _items: 03000000
+      - _items: 0400000005000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 000000000300000004000000
+      - _items: 
+      - _items: 000000000300000004000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 02000000
+      - _items: 00000000
+      - _items: 02000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 02000000
+      - _items: 01000000
+      - _items: 02000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0000000003000000
+      - _items: 0100000000000000
+      - _items: 0100000000000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 020000000400000005000000
+      - _items: 020000000300000004000000
+      - _items: 050000000200000004000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 000000000200000001000000
+      - _items: 040000000100000005000000
+      - _items: 050000000100000002000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 01000000
+      - _items: 05000000
+      - _items: 01000000
+      _isClosed: 0
+      _isConveyor: 0
+    _solutionMoves:
+    - _sourceShelfIndex: 8
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 5
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 4
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 5
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 2
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 0
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 8
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 2
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 1
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 4
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 7
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 8
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 6
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 3
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 2
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 11
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 4
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 8
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 1
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 5
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 11
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 7
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 0
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 6
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 3
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 9
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 9
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 10
+      _targetColumnIndex: 0
+  - _seed: 1700009
+    _generatorVersion: 2
+    _moveCount: 20
+    _layoutHash: 1B5538216B79C81D
+    _shelves:
+    - _columns:
+      - _items: 
+      - _items: 0200000000000000
+      - _items: 0200000000000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0300000001000000
+      - _items: 01000000
+      - _items: 0300000001000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 03000000
+      - _items: 05000000
+      - _items: 05000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 03000000
+      - _items: 00000000
+      - _items: 00000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 04000000
+      - _items: 0000000001000000
+      - _items: 04000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0100000005000000
+      - _items: 0100000005000000
+      - _items: 02000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 02000000
+      - _items: 02000000
+      - _items: 04000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 000000000300000001000000
+      - _items: 000000000300000001000000
+      - _items: 
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 00000000
+      - _items: 0400000001000000
+      - _items: 0400000001000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 050000000400000002000000
+      - _items: 050000000400000002000000
+      - _items: 000000000500000001000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 050000000000000004000000
+      - _items: 050000000200000003000000
+      - _items: 010000000200000004000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 0000000003000000
+      - _items: 0000000003000000
+      - _items: 
+      _isClosed: 0
+      _isConveyor: 0
+    _solutionMoves:
+    - _sourceShelfIndex: 4
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 7
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 5
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 0
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 8
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 11
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 6
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 8
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 3
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 7
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 1
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 5
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 2
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 1
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 4
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 8
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 4
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 1
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 5
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 11
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 2
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 3
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 6
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 0
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 7
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 9
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 9
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 10
+      _targetColumnIndex: 2
+  - _seed: 1700010
+    _generatorVersion: 2
+    _moveCount: 20
+    _layoutHash: EBC8DBBDECF49A2D
+    _shelves:
+    - _columns:
+      - _items: 02000000
+      - _items: 02000000
+      - _items: 00000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 05000000
+      - _items: 05000000
       - _items: 03000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 030000000200000000000000
-      - _items: 0300000002000000
+      - _items: 01000000
+      - _items: 0300000004000000
+      - _items: 0300000004000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
       - _items: 
+      - _items: 0000000003000000
+      - _items: 010000000000000003000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 00000000
+      - _items: 01000000
+      - _items: 00000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
       - _items: 0100000004000000
       - _items: 0100000004000000
+      - _items: 00000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 010000000000000005000000
+      - _items: 
+      - _items: 010000000000000005000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 000000000100000002000000
+      - _items: 000000000100000002000000
       - _items: 
       _isClosed: 0
       _isConveyor: 0
     - _columns:
       - _items: 00000000
+      - _items: 04000000
+      - _items: 04000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 040000000500000003000000
+      - _items: 050000000200000001000000
+      - _items: 050000000200000001000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 020000000100000005000000
+      - _items: 040000000200000003000000
+      - _items: 050000000200000004000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 03000000
+      - _items: 03000000
+      - _items: 00000000
+      _isClosed: 0
+      _isConveyor: 0
+    _solutionMoves:
+    - _sourceShelfIndex: 3
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 6
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 5
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 7
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 2
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 5
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 11
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 6
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 4
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 7
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 0
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 3
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 1
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 2
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 8
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 4
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 8
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 0
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 1
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 11
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 6
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 2
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 3
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 7
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 5
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 9
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 9
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 10
+      _targetColumnIndex: 1
+  - _seed: 1700011
+    _generatorVersion: 2
+    _moveCount: 20
+    _layoutHash: F81A72927FC190CD
+    _shelves:
+    - _columns:
+      - _items: 0000000004000000
       - _items: 05000000
-      - _items: 00000000
+      - _items: 0000000004000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 05000000
+      - _items: 01000000
+      - _items: 05000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
       - _items: 01000000
       - _items: 0200000005000000
-      - _items: 02000000
+      - _items: 0200000005000000
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 010000000000000004000000
-      - _items: 010000000000000004000000
+      - _items: 0100000002000000
+      - _items: 0500000002000000
+      - _items: 0500000002000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 03000000
+      - _items: 00000000
+      - _items: 03000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 
+      - _items: 0100000000000000
+      - _items: 0100000000000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0000000001000000
+      - _items: 0000000001000000
       - _items: 
       _isClosed: 0
       _isConveyor: 0
     - _columns:
-      - _items: 050000000300000000000000
-      - _items: 040000000200000001000000
-      - _items: 050000000300000000000000
+      - _items: 0100000002000000
+      - _items: 00000000
+      - _items: 0100000002000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 04000000
+      - _items: 04000000
+      - _items: 05000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 020000000100000003000000
+      - _items: 030000000400000000000000
+      - _items: 030000000200000004000000
       _isClosed: 0
       _isConveyor: 1
     - _columns:
+      - _items: 040000000000000003000000
+      - _items: 030000000400000000000000
+      - _items: 040000000000000005000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 0100000003000000
+      - _items: 0100000003000000
+      - _items: 
+      _isClosed: 0
+      _isConveyor: 0
+    _solutionMoves:
+    - _sourceShelfIndex: 3
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 5
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 7
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 6
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 2
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 11
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 3
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 2
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 1
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 7
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 0
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 3
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 4
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 0
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 8
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 2
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 4
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 7
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 5
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 0
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 11
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 6
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 3
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 8
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 1
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 10
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 10
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 9
+      _targetColumnIndex: 1
+  - _seed: 1700012
+    _generatorVersion: 2
+    _moveCount: 20
+    _layoutHash: AB18FF57D9FB54AD
+    _shelves:
+    - _columns:
+      - _items: 
+      - _items: 000000000100000000000000
+      - _items: 000000000100000000000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 010000000000000001000000
+      - _items: 010000000000000001000000
+      - _items: 
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 03000000
+      - _items: 03000000
+      - _items: 00000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0000000004000000
+      - _items: 
+      - _items: 0000000004000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 0400000002000000
+      - _items: 01000000
+      - _items: 0400000002000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 03000000
+      - _items: 00000000
+      - _items: 03000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 05000000
+      - _items: 05000000
+      - _items: 01000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
       - _items: 02000000
-      - _items: 00000000
-      - _items: 00000000
+      - _items: 02000000
+      - _items: 0000000004000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 01000000
+      - _items: 0500000004000000
+      - _items: 0500000004000000
+      _isClosed: 0
+      _isConveyor: 0
+    - _columns:
+      - _items: 020000000300000005000000
+      - _items: 030000000500000004000000
+      - _items: 050000000300000002000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 050000000400000002000000
+      - _items: 010000000200000003000000
+      - _items: 030000000200000000000000
+      _isClosed: 0
+      _isConveyor: 1
+    - _columns:
+      - _items: 01000000
+      - _items: 05000000
+      - _items: 01000000
       _isClosed: 0
       _isConveyor: 0
     _solutionMoves:
     - _sourceShelfIndex: 7
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 8
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 3
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 4
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 0
       _sourceColumnIndex: 2
-      _targetShelfIndex: 5
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 1
-      _sourceColumnIndex: 1
       _targetShelfIndex: 0
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 10
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 4
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 2
-      _targetShelfIndex: 8
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 2
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 7
       _targetColumnIndex: 0
-    - _sourceShelfIndex: 3
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 5
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 7
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 2
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 8
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 9
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 0
-      _targetColumnIndex: 2
-    - _sourceShelfIndex: 9
+    - _sourceShelfIndex: 4
       _sourceColumnIndex: 1
       _targetShelfIndex: 1
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 5
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 1
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 8
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 0
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 2
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 3
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 11
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 8
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 7
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 4
       _targetColumnIndex: 1
     - _sourceShelfIndex: 6
-      _sourceColumnIndex: 0
-      _targetShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 1
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 0
       _targetColumnIndex: 0
-    - _sourceShelfIndex: 3
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 11
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 3
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 4
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 2
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 2
+      _targetShelfIndex: 7
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 6
+      _targetColumnIndex: 2
+    - _sourceShelfIndex: 9
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 8
+      _targetColumnIndex: 0
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 1
+      _targetShelfIndex: 5
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
+      _sourceColumnIndex: 0
+      _targetShelfIndex: 9
+      _targetColumnIndex: 1
+    - _sourceShelfIndex: 10
       _sourceColumnIndex: 2
       _targetShelfIndex: 9
       _targetColumnIndex: 1
-    - _sourceShelfIndex: 6
-      _sourceColumnIndex: 1
-      _targetShelfIndex: 9
-      _targetColumnIndex: 1
-    - _sourceShelfIndex: 4
+    - _sourceShelfIndex: 9
       _sourceColumnIndex: 0
-      _targetShelfIndex: 9
-      _targetColumnIndex: 1
+      _targetShelfIndex: 10
+      _targetColumnIndex: 2
   _itemCatalog: {fileID: 11400000, guid: 14e6a9edc9de79b4f8ccd30c9a290387, type: 2}
   _closedShelves: []
   _refillSettings: {fileID: 0}
-  _conveyorShelfIndices: 09000000
+  _conveyorShelfIndices: 090000000a000000

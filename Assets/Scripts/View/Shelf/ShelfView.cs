@@ -40,6 +40,20 @@ public sealed class ShelfView : MonoBehaviour
         }
     }
 
+    public void ApplyQueueLayout(Vector3 previewOffset, int visibleDepth, float depthScaleFactor)
+    {
+        if (visibleDepth < 1)
+            throw new ArgumentOutOfRangeException(nameof(visibleDepth));
+
+        if (depthScaleFactor <= 0f || depthScaleFactor > 1f)
+            throw new ArgumentOutOfRangeException(nameof(depthScaleFactor));
+
+        _previewOffset = previewOffset;
+        _visibleDepth = visibleDepth;
+        _depthScaleFactor = depthScaleFactor;
+        Refresh();
+    }
+
     public void Advance(Action completed, ShelfItem placedItem = null)
     {
         if (IsAnimating)
@@ -117,7 +131,7 @@ public sealed class ShelfView : MonoBehaviour
         for (int depth = 1; depth < view.Column.Count; depth++)
         {
             ShelfItem item = view.Column.Items[depth];
-            SetPose(item, view.ItemAnchor, GetDepthPosition(depth), GetDepthScale(depth));
+            SetPose(item, view.ItemAnchor, GetDepthPosition(view, depth), GetDepthScale(depth));
             ShowAtDepth(item, depth);
         }
     }
@@ -131,16 +145,17 @@ public sealed class ShelfView : MonoBehaviour
         {
             ShelfItem item = items[depth];
             ShowAtDepth(item, depth);
-            transition.Insert(0f, item.transform.DOLocalMove(GetDepthPosition(depth), duration).SetEase(Ease.InOutSine));
+            transition.Insert(0f, item.transform.DOLocalMove(GetDepthPosition(view, depth), duration).SetEase(Ease.InOutSine));
             transition.Insert(0f, item.transform.DOScale(Vector3.one * GetDepthScale(depth), duration).SetEase(Ease.InOutSine));
         }
 
         ShelfItem returningItem = items[returningDepth];
-        Vector3 returningPosition = GetDepthPosition(returningDepth);
+        Vector3 returningPosition = GetDepthPosition(view, returningDepth);
+        Vector3 returnDrop = ToAnchorSpace(view, _conveyorReturnDrop);
         Vector3[] returnPath =
         {
-            returningItem.transform.localPosition + _conveyorReturnDrop,
-            returningPosition + _conveyorReturnDrop,
+            returningItem.transform.localPosition + returnDrop,
+            returningPosition + returnDrop,
             returningPosition
         };
         transition.Insert(0f, returningItem.transform.DOLocalPath(returnPath, duration, PathType.CatmullRom).SetEase(Ease.InOutSine));
@@ -158,7 +173,12 @@ public sealed class ShelfView : MonoBehaviour
             Presentation(item).Hide();
     }
 
-    private Vector3 GetDepthPosition(int depth) => _previewOffset * depth;
+    private Vector3 GetDepthPosition(ShelfColumnView view, int depth) => ToAnchorSpace(view, _previewOffset * depth);
+
+    private Vector3 ToAnchorSpace(ShelfColumnView view, Vector3 shelfOffset)
+    {
+        return view.ItemAnchor.InverseTransformVector(transform.TransformVector(shelfOffset));
+    }
 
     private float GetDepthScale(int depth) => Mathf.Pow(_depthScaleFactor, depth);
 
