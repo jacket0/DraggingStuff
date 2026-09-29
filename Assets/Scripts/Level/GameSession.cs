@@ -12,6 +12,7 @@ public abstract class GameSession : MonoBehaviour
 
     private readonly Dictionary<Shelf, ShelfOperation> _operations = new Dictionary<Shelf, ShelfOperation>();
     private readonly List<ResolutionWave> _waves = new List<ResolutionWave>();
+    private readonly Queue<BoardChangeRequest> _boardChanges = new Queue<BoardChangeRequest>();
     private ShelfColumn _dragSource;
     private bool _needsSettlement;
     private bool _needsPreparation;
@@ -21,13 +22,18 @@ public abstract class GameSession : MonoBehaviour
     public LevelState State { get; private set; }
     public bool IsPlaying => State == LevelState.Playing;
     public bool CanInteract => IsPlaying && !_isPreparing;
-    public bool IsBoardSettled => !_needsSettlement && !_isPreparing && _operations.Count == 0 && _dragSource == null && !ItemAnimations.HasAnimations;
+    public bool IsBoardSettled => !_needsSettlement && !_isPreparing && _operations.Count == 0 && _dragSource == null && !ItemAnimations.HasAnimations && _boardChanges.Count == 0;
+    public bool HasPendingBoardChanges => _boardChanges.Count > 0;
     public ShelfItemPlacementAnimator ItemAnimations => _shelfBoard.ItemAnimations;
     protected bool IsResolvingMove => !IsBoardSettled;
     protected ShelfBoard ShelfBoard => _shelfBoard;
 
+    public delegate void BoardChange(Action completed);
+
     public event Action<MatchResolution> MatchSucceeded;
     public event Action<LevelState> StateChanged;
+    public event Action MatchingMoveResolved;
+    public event Action<Shelf> ShelfReserved;
 
     protected void StartSession()
     {
@@ -67,7 +73,7 @@ public abstract class GameSession : MonoBehaviour
 
         HandleMoveAccepted(outcome);
 
-        ResolutionWave wave = CreateWave(outcome.AffectedShelves);
+        ResolutionWave wave = CreateWave(outcome.AffectedShelves, true);
         wave.PendingInitialAnimations = outcome.IsSwap ? 1 : 2;
         target.AttachFront(outcome.Item);
 
@@ -135,10 +141,17 @@ public abstract class GameSession : MonoBehaviour
             }
 
             if (wave.Operations.Count == 0)
+            {
                 _waves.Remove(wave);
+
+                if (wave.IsMove && wave.HasMatch)
+                    MatchingMoveResolved?.Invoke();
+            }
         }
 
-        if (_operations.Count > 0 || _dragSource != null || ItemAnimations.HasAnimations)
+        AdvanceBoardChanges();
+
+        if (_operations.Count > 0 || _dragSource != null || ItemAnimations.HasAnimations || _boardChanges.Count > 0)
             return;
 
         _isPreparing = true;
@@ -157,7 +170,7 @@ public abstract class GameSession : MonoBehaviour
 
                 if (matchedShelves.Length > 0)
                 {
-                    foreach (ShelfOperation operation in CreateWave(matchedShelves).Operations)
+                    foreach (ShelfOperation operation in CreateWave(matchedShelves, false).Operations)
                         operation.IsReady = true;
                 }
             });
@@ -173,6 +186,25 @@ public abstract class GameSession : MonoBehaviour
             _needsSettlement = false;
             HandleBoardSettled(_shelfBoard.IsCleared);
         });
+    }
+
+    public void RequestBoardChange(IReadOnlyList<Shelf> shelves, BoardChange change)
+    {
+        if (change == null)
+            throw new ArgumentNullException(nameof(change));
+
+        if (shelves == null || shelves.Count == 0 || shelves.Any(shelf => shelf == null || !_shelfBoard.Shelves.Contains(shelf)) || shelves.Distinct().Count() != shelves.Count)
+            throw new ArgumentException("A board change requires unique shelves of this board.", nameof(shelves));
+
+        if (State == LevelState.Won || State == LevelState.Lost)
+            return;
+
+        BoardChangeRequest request = new BoardChangeRequest(shelves, change);
+        _boardChanges.Enqueue(request);
+        _needsSettlement = true;
+
+        if (_boardChanges.Peek() == request)
+            ReserveAvailableShelves(request);
     }
 
     public void Restart()
@@ -218,13 +250,71 @@ public abstract class GameSession : MonoBehaviour
     }
     protected void CompleteAsLost() => SetState(LevelState.Lost);
 
-    private ResolutionWave CreateWave(IReadOnlyList<Shelf> shelves)
+    private void AdvanceBoardChanges()
     {
-        ResolutionWave wave = new ResolutionWave();
+        if (_boardChanges.Count == 0)
+            return;
+
+        BoardChangeRequest request = _boardChanges.Peek();
+
+        if (request.IsRunning)
+            return;
+
+        ReserveAvailableShelves(request);
+
+        if (request.Reserved.Count < request.Shelves.Count || request.Shelves.Any(IsShelfBusy))
+            return;
+
+        request.IsRunning = true;
+        int generation = _generation;
+        request.Change(() => CompleteBoardChange(request, generation));
+    }
+
+    private void ReserveAvailableShelves(BoardChangeRequest request)
+    {
+        foreach (Shelf shelf in request.Shelves)
+        {
+            if (request.Reserved.Contains(shelf) || _operations.ContainsKey(shelf))
+                continue;
+
+            _shelfBoard.LockShelf(shelf);
+            request.Reserved.Add(shelf);
+            ShelfReserved?.Invoke(shelf);
+        }
+    }
+
+    private bool IsShelfBusy(Shelf shelf)
+    {
+        return shelf.View.IsAnimating
+            || _dragSource != null && _shelfBoard.GetView(_dragSource).Shelf == shelf
+            || shelf.Columns.Any(column => column.Items.Any(ItemAnimations.IsAnimating));
+    }
+
+    private void CompleteBoardChange(BoardChangeRequest request, int generation)
+    {
+        if (this == null || generation != _generation || request.IsCompleted)
+            return;
+
+        request.IsCompleted = true;
+        _boardChanges.Dequeue();
+
+        foreach (Shelf shelf in request.Shelves)
+            _shelfBoard.UnlockShelf(shelf);
+
+        foreach (ShelfOperation operation in CreateWave(request.Shelves, false).Operations)
+            operation.IsReady = true;
+
+        if (_boardChanges.Count > 0)
+            ReserveAvailableShelves(_boardChanges.Peek());
+    }
+
+    private ResolutionWave CreateWave(IReadOnlyList<Shelf> shelves, bool isMove)
+    {
+        ResolutionWave wave = new ResolutionWave(isMove);
 
         foreach (Shelf shelf in shelves)
         {
-            ShelfOperation operation = new ShelfOperation(shelf);
+            ShelfOperation operation = new ShelfOperation(shelf, wave);
             _shelfBoard.LockShelf(shelf);
             _operations.Add(shelf, operation);
             wave.Operations.Add(operation);
@@ -242,6 +332,7 @@ public abstract class GameSession : MonoBehaviour
     private void PlayMatch(ShelfOperation operation, MatchResolution match)
     {
         operation.IsReady = false;
+        operation.Wave.HasMatch = true;
         _needsPreparation = true;
         MatchSucceeded?.Invoke(match);
         HandleMatchRegistered(match);
@@ -270,6 +361,18 @@ public abstract class GameSession : MonoBehaviour
         }
 
         _operations.Clear();
+
+        if (_boardChanges.Count > 0)
+        {
+            foreach (Shelf shelf in _boardChanges.Peek().Reserved)
+            {
+                shelf.View.Cancel();
+                _shelfBoard.UnlockShelf(shelf);
+            }
+
+            _boardChanges.Clear();
+        }
+
         _moveResolutionPlayer.CancelAll();
         ItemAnimations.Dispose();
     }
@@ -300,13 +403,38 @@ public abstract class GameSession : MonoBehaviour
     private sealed class ShelfOperation
     {
         public Shelf Shelf { get; }
+        public ResolutionWave Wave { get; }
         public bool IsReady { get; set; }
-        public ShelfOperation(Shelf shelf) => Shelf = shelf;
+
+        public ShelfOperation(Shelf shelf, ResolutionWave wave)
+        {
+            Shelf = shelf;
+            Wave = wave;
+        }
     }
 
     private sealed class ResolutionWave
     {
         public List<ShelfOperation> Operations { get; } = new List<ShelfOperation>();
         public int PendingInitialAnimations { get; set; }
+        public bool IsMove { get; }
+        public bool HasMatch { get; set; }
+
+        public ResolutionWave(bool isMove) => IsMove = isMove;
+    }
+
+    private sealed class BoardChangeRequest
+    {
+        public IReadOnlyList<Shelf> Shelves { get; }
+        public BoardChange Change { get; }
+        public HashSet<Shelf> Reserved { get; } = new HashSet<Shelf>();
+        public bool IsRunning { get; set; }
+        public bool IsCompleted { get; set; }
+
+        public BoardChangeRequest(IReadOnlyList<Shelf> shelves, BoardChange change)
+        {
+            Shelves = shelves.ToArray();
+            Change = change;
+        }
     }
 }

@@ -29,12 +29,17 @@ public class ShelfItemDragController : MonoBehaviour
     private void OnEnable()
     {
         _levelSession.StateChanged += HandleStateChanged;
+        _levelSession.ShelfReserved += HandleShelfReserved;
     }
 
     private void OnDisable()
     {
         if (_levelSession != null)
+        {
             _levelSession.StateChanged -= HandleStateChanged;
+            _levelSession.ShelfReserved -= HandleShelfReserved;
+        }
+
         CancelDrag();
     }
 
@@ -140,6 +145,14 @@ public class ShelfItemDragController : MonoBehaviour
     private void HandleStateChanged(LevelState state)
     {
         if (state != LevelState.Playing)
+            CancelDrag();
+    }
+
+    private void HandleShelfReserved(Shelf shelf)
+    {
+        _swapHoverView.Stop();
+
+        if (_isDragging && _sourceColumn.Shelf == shelf)
             CancelDrag();
     }
 }
