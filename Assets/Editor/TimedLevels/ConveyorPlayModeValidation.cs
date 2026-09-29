@@ -360,8 +360,8 @@ public static class ConveyorPlayModeValidation
         _conveyor = UnityEngine.Object.FindObjectOfType<ConveyorController>();
         _drag = UnityEngine.Object.FindObjectOfType<ShelfItemDragController>();
 
-        if (_board.ConveyorShelves.Count != 3)
-            throw new InvalidOperationException("Conveyor scenarios require all three conveyor shelves.");
+        if (_board.ConveyorShelves.Count != 4)
+            throw new InvalidOperationException("Conveyor scenarios require all four conveyor shelves.");
     }
 
     private static BoardStateSnapshot Arrange(params (int ShelfIndex, ColumnStateSnapshot[] Columns)[] shelves)

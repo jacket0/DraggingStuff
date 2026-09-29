@@ -9,13 +9,16 @@ public sealed class ConveyorBeltView : MonoBehaviour
 
     [SerializeField] private Shelf _shelf;
     [SerializeField] private List<Renderer> _belts = new List<Renderer>();
-    [SerializeField] private List<ConveyorRoller> _rollers = new List<ConveyorRoller>();
-    [SerializeField] private GameObject _idleDeck;
-    [SerializeField] private float _beltStepUv = 0.25f;
-    [SerializeField] private float _rollerStepDegrees = 90f;
+    [SerializeField] private float _beltStepUv = 2f;
+    [SerializeField] private Transform _shelfColumns;
+    [SerializeField] private Vector3 _stoppedColumnsOffset = new Vector3(0f, -0.065f, 0f);
+    [SerializeField] private Vector3 _stoppedPreviewOffset = new Vector3(0f, 0f, -0.2f);
+    [SerializeField, Min(1)] private int _stoppedVisibleDepth = 2;
+    [SerializeField, Range(0.1f, 1f)] private float _stoppedDepthScaleFactor = 1f;
 
     private MaterialPropertyBlock _propertyBlock;
     private float[] _beltOffsets;
+    private Vector3 _runningColumnsPosition;
     private Tween _shift;
 
     public Shelf Shelf => _shelf;
@@ -25,26 +28,29 @@ public sealed class ConveyorBeltView : MonoBehaviour
         if (_shelf == null)
             throw new InvalidOperationException($"{name}: {nameof(_shelf)} is required.");
 
-        if (_belts.Count != 0 && _belts.Count != _shelf.Capacity || _belts.Contains(null))
-            throw new InvalidOperationException($"{name}: one belt renderer per shelf column is required.");
+        if (_shelfColumns == null)
+            throw new InvalidOperationException($"{name}: {nameof(_shelfColumns)} is required.");
 
-        if (_rollers.Exists(roller => roller == null || !roller.IsValidFor(_belts.Count)))
-            throw new InvalidOperationException($"{name}: every roller needs a transform and an existing lane.");
+        if (_belts.Count != _shelf.Capacity || _belts.Contains(null))
+            throw new InvalidOperationException($"{name}: one belt renderer per shelf column is required.");
 
         _propertyBlock = new MaterialPropertyBlock();
         _beltOffsets = new float[_belts.Count];
+        _runningColumnsPosition = _shelfColumns.localPosition;
     }
 
     public void SetRunning(bool isRunning)
     {
-        foreach (Renderer belt in _belts)
-            belt.gameObject.SetActive(isRunning);
+        gameObject.SetActive(isRunning);
 
-        foreach (ConveyorRoller roller in _rollers)
-            roller.Transform.gameObject.SetActive(isRunning);
+        if (isRunning)
+        {
+            _shelfColumns.localPosition = _runningColumnsPosition;
+            return;
+        }
 
-        if (_idleDeck != null)
-            _idleDeck.SetActive(!isRunning);
+        _shelfColumns.localPosition = _runningColumnsPosition + _stoppedColumnsOffset;
+        _shelf.View.ApplyQueueLayout(_stoppedPreviewOffset, _stoppedVisibleDepth, _stoppedDepthScaleFactor);
     }
 
     public void PlayShift(IReadOnlyList<int> lanes, float duration, Action completed)
@@ -54,9 +60,8 @@ public sealed class ConveyorBeltView : MonoBehaviour
 
         _shift?.Kill(true);
         float[] startOffsets = (float[])_beltOffsets.Clone();
-        Quaternion[] startRotations = _rollers.ConvertAll(roller => roller.Transform.localRotation).ToArray();
         Tween shift = null;
-        shift = DOTween.To(() => 0f, progress => ApplyShift(lanes, startOffsets, startRotations, progress), 1f, duration)
+        shift = DOTween.To(() => 0f, progress => ApplyShift(lanes, startOffsets, progress), 1f, duration)
             .SetEase(Ease.InOutSine)
             .SetLink(gameObject, LinkBehaviour.KillOnDestroy)
             .OnComplete(() =>
@@ -69,23 +74,12 @@ public sealed class ConveyorBeltView : MonoBehaviour
         _shift = shift;
     }
 
-    private void ApplyShift(IReadOnlyList<int> lanes, float[] startOffsets, Quaternion[] startRotations, float progress)
+    private void ApplyShift(IReadOnlyList<int> lanes, float[] startOffsets, float progress)
     {
         foreach (int lane in lanes)
         {
-            if (lane >= _belts.Count)
-                continue;
-
             _beltOffsets[lane] = Mathf.Repeat(startOffsets[lane] + _beltStepUv * progress, 1f);
             ApplyBeltOffset(_belts[lane], _beltOffsets[lane]);
-        }
-
-        for (int index = 0; index < _rollers.Count; index++)
-        {
-            if (!Contains(lanes, _rollers[index].Lane))
-                continue;
-
-            _rollers[index].Transform.localRotation = startRotations[index] * Quaternion.AngleAxis(_rollerStepDegrees * progress, Vector3.right);
         }
     }
 
@@ -96,27 +90,4 @@ public sealed class ConveyorBeltView : MonoBehaviour
         _propertyBlock.SetVector(MainTextureTransformId, new Vector4(scale.x, scale.y, 0f, offset));
         belt.SetPropertyBlock(_propertyBlock);
     }
-
-    private static bool Contains(IReadOnlyList<int> lanes, int lane)
-    {
-        for (int index = 0; index < lanes.Count; index++)
-        {
-            if (lanes[index] == lane)
-                return true;
-        }
-
-        return false;
-    }
-}
-
-[Serializable]
-public sealed class ConveyorRoller
-{
-    [SerializeField] private Transform _transform;
-    [SerializeField, Min(0)] private int _lane;
-
-    public Transform Transform => _transform;
-    public int Lane => _lane;
-
-    public bool IsValidFor(int laneCount) => _transform != null && _lane < laneCount;
 }
