@@ -34,6 +34,14 @@ public static class TimedCampaignPlayModeValidation
     private static bool _observedInitialHint;
     private static ShelfSwapHoverView _swapHoverView;
     private static bool _isLossRun;
+    private static BoardStateSnapshot _expectedState;
+    private static MoveSuggestionProvider _suggestionProvider;
+    private static ConveyorController _conveyorController;
+    private static int _pendingBoardChangeFrameCount;
+    private static int _shiftCount;
+    private static int _shiftStartItemCount;
+    private static string _shiftFailure;
+    private static readonly BoardMoveSimulator Simulator = new BoardMoveSimulator();
     private static readonly System.Random Random = new System.Random(20260926);
 
     static TimedCampaignPlayModeValidation()
@@ -134,6 +142,8 @@ public static class TimedCampaignPlayModeValidation
             return;
         }
 
+        ValidatePendingBoardChanges();
+
         if (!_session.IsBoardSettled)
             return;
 
@@ -165,6 +175,14 @@ public static class TimedCampaignPlayModeValidation
             throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: solution ended before the run result.");
 
         TimedLevelMove move = _moves[_moveIndex];
+
+        if (BoardStateFingerprint.CreateHash(_board.CreateSnapshot()) != BoardStateFingerprint.CreateHash(_expectedState))
+            throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}, move {_moveIndex + 1}: runtime board differs from the simulated state.");
+
+        if (!Simulator.TrySimulate(_expectedState, move.Source, move.Target, out BoardMoveSimulation expectedMove))
+            throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}, move {_moveIndex + 1}: the simulator rejects the stored move.");
+
+        _expectedState = expectedMove.State;
         ShelfColumnView source = _board.Shelves[move.Source.ShelfIndex].ColumnViews[move.Source.ColumnIndex];
         ShelfColumnView target = _board.Shelves[move.Target.ShelfIndex].ColumnViews[move.Target.ColumnIndex];
         MoveOutcome outcome = _session.TryStartMove(source, target, out Action completePlacement);
@@ -205,6 +223,9 @@ public static class TimedCampaignPlayModeValidation
             throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: timer started before a move.");
 
         _moves = variant.CreateSolution();
+        _expectedState = runtimeState;
+        _suggestionProvider = UnityEngine.Object.FindObjectOfType<MoveSuggestionProvider>();
+        BeginConveyorObservation();
         _moveIndex = 0;
         _settledFrameCount = 0;
         _resultFrameCount = 0;
@@ -464,10 +485,68 @@ public static class TimedCampaignPlayModeValidation
         completePlacement?.Invoke();
     }
 
+    private static void BeginConveyorObservation()
+    {
+        _pendingBoardChangeFrameCount = 0;
+        _shiftCount = 0;
+        _shiftFailure = null;
+        _conveyorController = UnityEngine.Object.FindObjectOfType<ConveyorController>();
+
+        if (_conveyorController == null)
+            return;
+
+        _conveyorController.ShiftStarted += HandleShiftStarted;
+        _conveyorController.ShiftCompleted += HandleShiftCompleted;
+    }
+
+    private static void HandleShiftStarted()
+    {
+        _shiftCount++;
+        _shiftStartItemCount = _board.CreateSnapshot().ItemCount;
+    }
+
+    private static void HandleShiftCompleted()
+    {
+        if (_board.CreateSnapshot().ItemCount != _shiftStartItemCount)
+            _shiftFailure = $"Level {_session.CurrentLevel.Number}: a conveyor shift changed the item count.";
+    }
+
+    private static void ValidatePendingBoardChanges()
+    {
+        if (_shiftFailure != null)
+            throw new InvalidOperationException(_shiftFailure);
+
+        if (!_session.HasPendingBoardChanges)
+            return;
+
+        _pendingBoardChangeFrameCount++;
+
+        if (!_board.HasLockedShelves)
+            throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: a pending board change left every shelf unlocked.");
+
+        if (_suggestionProvider != null && _suggestionProvider.TryGetSuggestion(out _))
+            throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: a hint was offered while a board change was pending.");
+    }
+
+    private static void ValidateConveyorObservation()
+    {
+        if (!_session.CurrentLevel.Definition.HasConveyors)
+            return;
+
+        if (_shiftCount == 0 || _pendingBoardChangeFrameCount == 0)
+            throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: no conveyor shift was observed.");
+
+        _conveyorController.ShiftStarted -= HandleShiftStarted;
+        _conveyorController.ShiftCompleted -= HandleShiftCompleted;
+    }
+
     private static void HandleResult()
     {
         if (!_session.Result.Won || _session.State != LevelState.Won || !_board.IsCleared)
             throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: did not finish as a cleared victory.");
+
+        if (_resultFrameCount == 0)
+            ValidateConveyorObservation();
 
         if (UnityEngine.Object.FindObjectsOfType<ClosedShelfCoverView>().Length != 0)
             throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: won with closed shelf covers still present.");
