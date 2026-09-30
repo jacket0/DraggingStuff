@@ -41,7 +41,6 @@ BODY_COLOR = (0.05, 0.05, 0.065, 1.0)
 PLATE_RGB = (0.30, 0.29, 0.33)
 PLATE_EDGE_RGB = (0.21, 0.20, 0.23)
 GAP_RGB = (0.07, 0.07, 0.08)
-PLATE_UV = (0.5, 0.5)
 
 EXPORT_SETTINGS = dict(
     use_selection=True,
@@ -163,31 +162,28 @@ def build_track_mesh(name):
     return mesh_from_bmesh(bm, name)
 
 
-def add_prism(bm, profile_yz, x_min, x_max, material_index):
+def add_prism(bm, profile_yz, x_min, x_max):
     left = [bm.verts.new((x_min, y, z)) for y, z in profile_yz]
     right = [bm.verts.new((x_max, y, z)) for y, z in profile_yz]
-    faces = [bm.faces.new(left), bm.faces.new(list(reversed(right)))]
+    bm.faces.new(left)
+    bm.faces.new(list(reversed(right)))
     count = len(profile_yz)
     for index in range(count):
         following = (index + 1) % count
-        faces.append(bm.faces.new((left[index], left[following], right[following], right[index])))
-    for face in faces:
-        face.material_index = material_index
+        bm.faces.new((left[index], left[following], right[following], right[index]))
 
 
-def add_box(bm, x_range, y_range, z_range, material_index):
+def add_box(bm, x_range, y_range, z_range):
     profile = [(y_range[1], z_range[1]), (y_range[1], z_range[0]), (y_range[0], z_range[0]), (y_range[0], z_range[1])]
-    add_prism(bm, profile, x_range[0], x_range[1], material_index)
+    add_prism(bm, profile, x_range[0], x_range[1])
 
 
-def add_foot(bm, x, y, z, material_index):
+def add_foot(bm, x, y, z):
     up = world_up_in_mount()
     rotation = Vector((0.0, 0.0, 1.0)).rotation_difference(up).to_matrix().to_4x4()
     placement = Matrix.Translation((x, y, z)) @ rotation @ Matrix.Translation((0.0, 0.0, FOOT_HEIGHT / 2))
-    result = bmesh.ops.create_cone(bm, cap_ends=True, segments=FOOT_SEGMENTS, radius1=FOOT_RADIUS,
-                                   radius2=FOOT_RADIUS, depth=FOOT_HEIGHT, matrix=placement)
-    for face in {face for vertex in result["verts"] for face in vertex.link_faces}:
-        face.material_index = material_index
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=FOOT_SEGMENTS, radius1=FOOT_RADIUS,
+                          radius2=FOOT_RADIUS, depth=FOOT_HEIGHT, matrix=placement)
 
 
 def add_leg(bm, side, leg_y):
@@ -196,7 +192,7 @@ def add_leg(bm, side, leg_y):
     outer_x = side * LEG_OUTER_X
     inner_x = side * (LEG_OUTER_X - LEG_THICKNESS)
     body_x = side * BODY_WIDTH / 2
-    add_box(bm, sorted((body_x, outer_x)), (leg_y - half, leg_y + half), (axle_z() - half, axle_z() + half), 0)
+    add_box(bm, sorted((body_x, outer_x)), (leg_y - half, leg_y + half), (axle_z() - half, axle_z() + half))
     top_z = axle_z() - half
     up = world_up_in_mount()
     column = []
@@ -204,23 +200,20 @@ def add_leg(bm, side, leg_y):
         ground_y, ground_z = drop_to_plank(y, top_z)
         column.append(((y, top_z), (ground_y + up.y * FOOT_HEIGHT, ground_z + up.z * FOOT_HEIGHT)))
     (front_top, front_bottom), (back_top, back_bottom) = column
-    add_prism(bm, [front_top, front_bottom, back_bottom, back_top], *sorted((inner_x, outer_x)), 0)
+    add_prism(bm, [front_top, front_bottom, back_bottom, back_top], *sorted((inner_x, outer_x)))
     foot_y, foot_z = drop_to_plank(leg_y, top_z)
-    add_foot(bm, column_x, foot_y, foot_z, 1)
+    add_foot(bm, column_x, foot_y, foot_z)
 
 
 def build_frame_mesh(name):
     bm = bmesh.new()
     body_profile = [path_point(sample, BODY_RADIUS) for sample in loop_samples()]
-    add_prism(bm, body_profile, -BODY_WIDTH / 2, BODY_WIDTH / 2, 0)
+    add_prism(bm, body_profile, -BODY_WIDTH / 2, BODY_WIDTH / 2)
     for side in (1, -1):
         for leg_y in (FRONT_LEG_Y, BACK_LEG_Y):
             add_leg(bm, side, leg_y)
-    uv_layer = bm.loops.layers.uv.verify()
     for face in bm.faces:
         face.smooth = False
-        for loop in face.loops:
-            loop[uv_layer].uv = PLATE_UV
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     return mesh_from_bmesh(bm, name)
 
@@ -312,7 +305,6 @@ def build():
     track.data.materials.append(belt_material)
     frame = add_object(collection, "Frame", build_frame_mesh("Frame"), root)
     frame.data.materials.append(frame_material)
-    frame.data.materials.append(belt_material)
     bpy.context.view_layer.update()
     return root
 

@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f37d9686e98b4f44786fde4b92efa571, type: 3}
   m_Name: TimedLevel_20
   m_EditorClassIdentifier: 
-  _timeLimitSeconds: 260
-  _twoStarTimeSeconds: 205
-  _threeStarTimeSeconds: 155
+  _timeLimitSeconds: 120
+  _twoStarTimeSeconds: 95
+  _threeStarTimeSeconds: 70
   _emptyColumnCount: 5
   _itemGroups:
   - _type: 0
