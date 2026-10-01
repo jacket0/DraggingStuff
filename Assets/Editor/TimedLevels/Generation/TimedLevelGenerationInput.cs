@@ -8,19 +8,22 @@ public sealed class TimedLevelGenerationInput
     public IReadOnlyList<TimedLevelGroupCount> Groups { get; }
     public IReadOnlyList<int> ClosedShelfIndices { get; }
     public IReadOnlyList<int> ConveyorShelfIndices { get; }
+    public int ShuffleSwapCount { get; }
 
     public TimedLevelGenerationInput(
         string name,
         int emptyColumnCount,
         IReadOnlyList<TimedLevelGroupCount> groups,
         IReadOnlyList<int> closedShelfIndices,
-        IReadOnlyList<int> conveyorShelfIndices = null)
+        IReadOnlyList<int> conveyorShelfIndices = null,
+        int shuffleSwapCount = 0)
     {
         Name = !string.IsNullOrWhiteSpace(name) ? name : throw new ArgumentException(nameof(name));
         EmptyColumnCount = emptyColumnCount > 0 ? emptyColumnCount : throw new ArgumentOutOfRangeException(nameof(emptyColumnCount));
         Groups = groups ?? throw new ArgumentNullException(nameof(groups));
         ClosedShelfIndices = closedShelfIndices ?? Array.Empty<int>();
         ConveyorShelfIndices = conveyorShelfIndices ?? Array.Empty<int>();
+        ShuffleSwapCount = shuffleSwapCount >= 0 ? shuffleSwapCount : throw new ArgumentOutOfRangeException(nameof(shuffleSwapCount));
     }
 }
 
