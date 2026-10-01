@@ -104,8 +104,25 @@ public sealed class ClosedShelfIntroHint : MonoBehaviour
         Camera canvasCamera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
         Vector2 screenPoint = _camera.WorldToScreenPoint(_target.TagBottom);
 
-        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPoint, canvasCamera, out Vector2 localPoint))
-            _bubble.anchoredPosition = localPoint - AnchorReference(parent) + _bubbleOffset;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPoint, canvasCamera, out Vector2 localPoint))
+            return;
+
+        _bubble.anchoredPosition = localPoint - AnchorReference(parent) + _bubbleOffset;
+        KeepBubbleInside(parent);
+    }
+
+    // In narrow windows a tag near the screen edge would push the bubble out of view.
+    private void KeepBubbleInside(RectTransform parent)
+    {
+        Vector3[] corners = new Vector3[4];
+        _bubble.GetWorldCorners(corners);
+        Vector2 min = parent.InverseTransformPoint(corners[0]);
+        Vector2 max = parent.InverseTransformPoint(corners[2]);
+        Rect bounds = parent.rect;
+        Vector2 shift = new Vector2(
+            Mathf.Max(0f, bounds.xMin - min.x) - Mathf.Max(0f, max.x - bounds.xMax),
+            Mathf.Max(0f, bounds.yMin - min.y) - Mathf.Max(0f, max.y - bounds.yMax));
+        _bubble.anchoredPosition += shift;
     }
 
     public static IReadOnlyList<ShelfUnlockConditionKind> GetNewConditionKinds(LevelCatalog catalog, LevelEntry level)

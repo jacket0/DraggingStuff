@@ -41,8 +41,10 @@ public static class TimedCampaignPlayModeValidation
     private static int _shiftCount;
     private static int _shiftStartItemCount;
     private static string _shiftFailure;
+    private static bool _isFramingValidated;
     private static readonly BoardMoveSimulator Simulator = new BoardMoveSimulator();
     private static readonly System.Random Random = new System.Random(20260926);
+    private static readonly float[] FramingAspects = { 21f / 9f, 16f / 9f, 16f / 10f, 3f / 2f, 4f / 3f, 1f, 3f / 4f, 9f / 16f };
 
     static TimedCampaignPlayModeValidation()
     {
@@ -147,6 +149,12 @@ public static class TimedCampaignPlayModeValidation
         if (!_session.IsBoardSettled)
             return;
 
+        if (!_isFramingValidated)
+        {
+            ValidateCameraFraming();
+            _isFramingValidated = true;
+        }
+
         _settledFrameCount++;
 
         if (_settledFrameCount < 2)
@@ -226,6 +234,7 @@ public static class TimedCampaignPlayModeValidation
         _expectedState = runtimeState;
         _suggestionProvider = UnityEngine.Object.FindObjectOfType<MoveSuggestionProvider>();
         BeginConveyorObservation();
+        _isFramingValidated = false;
         _moveIndex = 0;
         _settledFrameCount = 0;
         _resultFrameCount = 0;
@@ -483,6 +492,79 @@ public static class TimedCampaignPlayModeValidation
             throw new InvalidOperationException("Level 1: runtime swap was rejected.");
 
         completePlacement?.Invoke();
+    }
+
+    private static void ValidateCameraFraming()
+    {
+        BoardCameraFramer framer = UnityEngine.Object.FindObjectOfType<BoardCameraFramer>();
+
+        if (framer == null)
+            throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: {nameof(BoardCameraFramer)} is missing.");
+
+        framer.CaptureLayout();
+        // Items resting in columns, the same set the framer measures.
+        Bounds[] items = _board.Shelves
+            .SelectMany(shelf => shelf.ColumnViews)
+            .SelectMany(column => column.ItemAnchor.GetComponentsInChildren<Renderer>())
+            .Select(renderer => renderer.bounds)
+            .ToArray();
+
+        List<string> fieldsOfView = new List<string>();
+
+        foreach (float aspect in FramingAspects)
+        {
+            float viewAspect = framer.ClampAspect(aspect);
+            float fieldOfView = framer.ComputeFieldOfView(framer.DesignFieldOfView, viewAspect);
+            fieldsOfView.Add($"{aspect:F2}={fieldOfView:F1}");
+
+            if (!framer.FitsBounds(items, fieldOfView, viewAspect))
+                throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: items do not fit at aspect {aspect:F2} (fov {fieldOfView:F1}).");
+
+            int emptyPixels = CountEmptyPixels(Camera.main, viewAspect, fieldOfView);
+
+            if (emptyPixels > 0)
+                throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: {emptyPixels} pixels beyond the set are visible at aspect {aspect:F2} (fov {fieldOfView:F1}).");
+        }
+
+        Debug.Log($"CAMERA_FRAMING level {_session.CurrentLevel.Number}: design {framer.DesignFieldOfView:F1}, {string.Join(", ", fieldsOfView)}");
+    }
+
+    // Renders the view over a magenta background; any magenta left means the camera sees past the edges of the set.
+    private static int CountEmptyPixels(Camera camera, float aspect, float fieldOfView)
+    {
+        const int Height = 270;
+        CameraClearFlags clearFlags = camera.clearFlags;
+        Color backgroundColor = camera.backgroundColor;
+        float originalFieldOfView = camera.fieldOfView;
+        Rect rect = camera.rect;
+        RenderTexture target = new RenderTexture(Mathf.RoundToInt(Height * aspect), Height, 24);
+        Texture2D pixels = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+
+        try
+        {
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = Color.magenta;
+            camera.rect = new Rect(0f, 0f, 1f, 1f);
+            camera.targetTexture = target;
+            camera.aspect = aspect;
+            camera.fieldOfView = fieldOfView;
+            camera.Render();
+            RenderTexture.active = target;
+            pixels.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+            return pixels.GetPixels32().Count(pixel => pixel.r > 230 && pixel.g < 25 && pixel.b > 230);
+        }
+        finally
+        {
+            RenderTexture.active = null;
+            camera.targetTexture = null;
+            camera.rect = rect;
+            camera.ResetAspect();
+            camera.fieldOfView = originalFieldOfView;
+            camera.clearFlags = clearFlags;
+            camera.backgroundColor = backgroundColor;
+            UnityEngine.Object.DestroyImmediate(target);
+            UnityEngine.Object.DestroyImmediate(pixels);
+        }
     }
 
     private static void BeginConveyorObservation()
