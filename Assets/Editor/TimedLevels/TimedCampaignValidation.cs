@@ -103,7 +103,7 @@ public static class TimedCampaignValidation
         {
             if (!simulator.TrySimulate(state, move.Source, move.Target, out BoardMoveSimulation simulation)
                 || !simulation.IsAllowed
-                || simulation.MatchCount != 1)
+                || simulation.MatchCount != (simulation.IsSwap ? 0 : 1))
             {
                 throw new InvalidOperationException($"Level {levelNumber}, seed {variant.Seed}: invalid solution.");
             }

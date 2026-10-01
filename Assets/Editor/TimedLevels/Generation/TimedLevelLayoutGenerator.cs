@@ -20,7 +20,8 @@ public sealed class TimedLevelLayoutGenerator
             definition.EmptyColumnCount,
             definition.ItemGroups.Select(group => new TimedLevelGroupCount(group.Type, group.GroupCount)).ToArray(),
             definition.ClosedShelves.Select(closedShelf => closedShelf.ShelfIndex).ToArray(),
-            definition.ConveyorShelfIndices.ToArray());
+            definition.ConveyorShelfIndices.ToArray(),
+            definition.ShuffleSwapCount);
         return GenerateWithSolution(input, boardShape, seed);
     }
 
@@ -114,9 +115,10 @@ public sealed class TimedLevelLayoutGenerator
     {
         List<ItemType>[][] columns = CreateEmptyColumns(boardShape);
         List<ReverseMove> reverseMoves = new List<ReverseMove>();
+        bool[] swapSteps = ChooseSwapSteps(groups.Count, constraints.ShuffleSwapCount, random);
         int visitedNodeCount = 0;
 
-        if (!TryAddGroups(columns, groups, 0, random, reverseMoves, constraints, ref visitedNodeCount))
+        if (!TryAddGroups(columns, groups, 0, swapSteps, random, reverseMoves, constraints, ref visitedNodeCount))
         {
             result = null;
             return false;
@@ -146,6 +148,7 @@ public sealed class TimedLevelLayoutGenerator
         List<ItemType>[][] columns,
         IReadOnlyList<ItemType> groups,
         int groupIndex,
+        bool[] swapSteps,
         System.Random random,
         List<ReverseMove> reverseMoves,
         LayoutConstraints constraints,
@@ -159,6 +162,30 @@ public sealed class TimedLevelLayoutGenerator
 
         visitedNodeCount++;
 
+        // A shuffle swap breaks shelves that are one placement away from a match, so not every forward move is a ready match.
+        if (!swapSteps[groupIndex] || !TryApplyShuffleSwap(columns, random, constraints, out ReverseMove swap))
+            return TryPlaceGroup(columns, groups, groupIndex, swapSteps, random, reverseMoves, constraints, ref visitedNodeCount);
+
+        reverseMoves.Add(swap);
+
+        if (TryPlaceGroup(columns, groups, groupIndex, swapSteps, random, reverseMoves, constraints, ref visitedNodeCount))
+            return true;
+
+        reverseMoves.RemoveAt(reverseMoves.Count - 1);
+        SwapFronts(columns, swap);
+        return false;
+    }
+
+    private static bool TryPlaceGroup(
+        List<ItemType>[][] columns,
+        IReadOnlyList<ItemType> groups,
+        int groupIndex,
+        bool[] swapSteps,
+        System.Random random,
+        List<ReverseMove> reverseMoves,
+        LayoutConstraints constraints,
+        ref int visitedNodeCount)
+    {
         if (constraints.HasConveyors)
         {
             UndoConveyorShift(columns, constraints);
@@ -182,7 +209,7 @@ public sealed class TimedLevelLayoutGenerator
             PrependGroup(columns, move, type);
             reverseMoves.Add(move);
 
-            if (TryAddGroups(columns, groups, groupIndex + 1, random, reverseMoves, constraints, ref visitedNodeCount))
+            if (TryAddGroups(columns, groups, groupIndex + 1, swapSteps, random, reverseMoves, constraints, ref visitedNodeCount))
                 return true;
 
             reverseMoves.RemoveAt(reverseMoves.Count - 1);
@@ -193,6 +220,98 @@ public sealed class TimedLevelLayoutGenerator
             RedoConveyorShift(columns, constraints);
 
         return false;
+    }
+
+    private static bool[] ChooseSwapSteps(int groupCount, int swapCount, System.Random random)
+    {
+        bool[] steps = new bool[groupCount];
+
+        if (swapCount == 0 || groupCount < 3)
+            return steps;
+
+        // The swap before the last group thins out ready shelves at the start; a group always follows a swap,
+        // so the player's first move stays a plain match.
+        List<int> candidates = Enumerable.Range(2, groupCount - 3).ToList();
+        Shuffle(candidates, random);
+        candidates.Insert(0, groupCount - 1);
+
+        foreach (int groupIndex in candidates.Take(swapCount))
+            steps[groupIndex] = true;
+
+        return steps;
+    }
+
+    private static bool TryApplyShuffleSwap(List<ItemType>[][] columns, System.Random random, LayoutConstraints constraints, out ReverseMove swap)
+    {
+        List<ReverseMove> candidates = new List<ReverseMove>();
+
+        for (int firstShelfIndex = 0; firstShelfIndex < columns.Length; firstShelfIndex++)
+        {
+            for (int secondShelfIndex = firstShelfIndex + 1; secondShelfIndex < columns.Length; secondShelfIndex++)
+            {
+                if (!constraints.CanSwap(firstShelfIndex) || !constraints.CanSwap(secondShelfIndex))
+                    continue;
+
+                for (int firstColumnIndex = 0; firstColumnIndex < columns[firstShelfIndex].Length; firstColumnIndex++)
+                {
+                    for (int secondColumnIndex = 0; secondColumnIndex < columns[secondShelfIndex].Length; secondColumnIndex++)
+                    {
+                        ReverseMove candidate = ReverseMove.Swap(firstShelfIndex, firstColumnIndex, secondShelfIndex, secondColumnIndex);
+
+                        if (CanSwap(columns, candidate) && CountReadyShelves(columns, candidate) > 0)
+                            candidates.Add(candidate);
+                    }
+                }
+            }
+        }
+
+        Shuffle(candidates, random);
+
+        foreach (ReverseMove candidate in candidates.OrderByDescending(candidate => CountReadyShelves(columns, candidate)).ToList())
+        {
+            SwapFronts(columns, candidate);
+
+            if (!HasAnyMatch(columns))
+            {
+                swap = candidate;
+                return true;
+            }
+
+            SwapFronts(columns, candidate);
+        }
+
+        swap = default;
+        return false;
+    }
+
+    private static int CountReadyShelves(List<ItemType>[][] columns, ReverseMove swap)
+    {
+        return (IsReadyShelf(columns[swap.TargetShelfIndex]) ? 1 : 0) + (IsReadyShelf(columns[swap.SourceShelfIndex]) ? 1 : 0);
+    }
+
+    private static bool IsReadyShelf(List<ItemType>[] shelf)
+    {
+        List<ItemType>[] filledColumns = shelf.Where(column => column.Count > 0).ToArray();
+        return filledColumns.Length == shelf.Length - 1 && filledColumns.All(column => column[0] == filledColumns[0][0]);
+    }
+
+    private static bool CanSwap(List<ItemType>[][] columns, ReverseMove swap)
+    {
+        List<ItemType> first = columns[swap.TargetShelfIndex][swap.TargetColumnIndex];
+        List<ItemType> second = columns[swap.SourceShelfIndex][swap.SourceColumnIndex];
+
+        return first.Count > 0
+            && second.Count > 0
+            && first[0] != second[0]
+            && (first.Count < 2 || first[1] != second[0])
+            && (second.Count < 2 || second[1] != first[0]);
+    }
+
+    private static void SwapFronts(List<ItemType>[][] columns, ReverseMove swap)
+    {
+        List<ItemType> first = columns[swap.TargetShelfIndex][swap.TargetColumnIndex];
+        List<ItemType> second = columns[swap.SourceShelfIndex][swap.SourceColumnIndex];
+        (first[0], second[0]) = (second[0], first[0]);
     }
 
     private static void UndoConveyorShift(List<ItemType>[][] columns, LayoutConstraints constraints)
@@ -467,7 +586,7 @@ public sealed class TimedLevelLayoutGenerator
         {
             if (!simulator.TrySimulate(state, move.Source, move.Target, out BoardMoveSimulation simulation)
                 || !simulation.IsAllowed
-                || simulation.MatchCount != 1)
+                || simulation.MatchCount != (simulation.IsSwap ? 0 : 1))
             {
                 return false;
             }
@@ -527,6 +646,7 @@ public sealed class TimedLevelLayoutGenerator
 
         public int RequiredEmptyColumnCount { get; }
         public int MaximumConstructionNodeCount { get; }
+        public int ShuffleSwapCount { get; }
         public IReadOnlyCollection<int> ConveyorShelfIndices => _conveyorShelfIndices;
         public bool HasConveyors => _conveyorShelfIndices.Count > 0;
 
@@ -536,11 +656,14 @@ public sealed class TimedLevelLayoutGenerator
             _conveyorShelfIndices = new HashSet<int>(input.ConveyorShelfIndices);
             RequiredEmptyColumnCount = input.EmptyColumnCount;
             MaximumConstructionNodeCount = maximumConstructionNodeCount;
+            ShuffleSwapCount = input.ShuffleSwapCount;
         }
 
         public bool IsClosed(int shelfIndex) => _closedShelfIndices.Contains(shelfIndex);
 
         public bool IsConveyor(int shelfIndex) => _conveyorShelfIndices.Contains(shelfIndex);
+
+        public bool CanSwap(int shelfIndex) => !IsClosed(shelfIndex) && !IsConveyor(shelfIndex);
 
         public int GetMaximumColumnDepth(int shelfIndex)
         {
@@ -563,6 +686,12 @@ public sealed class TimedLevelLayoutGenerator
             SourceShelfIndex = sourceShelfIndex;
             SourceColumnIndex = sourceColumnIndex;
             FilledEmptyColumnCount = filledEmptyColumnCount;
+        }
+
+        // A swap exchanges the front items of the two columns; replaying it forward restores them.
+        public static ReverseMove Swap(int firstShelfIndex, int firstColumnIndex, int secondShelfIndex, int secondColumnIndex)
+        {
+            return new ReverseMove(firstShelfIndex, firstColumnIndex, secondShelfIndex, secondColumnIndex, 0);
         }
     }
 }

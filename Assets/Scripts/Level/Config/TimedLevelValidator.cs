@@ -109,6 +109,9 @@ public static class TimedLevelValidator
         if (definition.HasConveyors && definition.HasClosedShelves)
             throw new InvalidOperationException($"{definition.name}: conveyors and closed shelves cannot share a level.");
 
+        if (definition.HasConveyors && definition.ShuffleSwapCount > 0)
+            throw new InvalidOperationException($"{definition.name}: shuffle swaps are not supported on conveyor levels.");
+
         if ((definition.RefillSettings != null) != definition.HasClosedShelves)
             throw new InvalidOperationException($"{definition.name}: refill settings must be configured exactly when closed shelves are present.");
 
