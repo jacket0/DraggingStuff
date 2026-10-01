@@ -5859,8 +5859,12 @@ MonoBehaviour:
   - {fileID: 6000525}
   _previewOffset: {x: 0.000000029802322, y: 0, z: -0.19999996}
   _previewMaterial: {fileID: 2100000, guid: 5acdf87b22e0cf4499dc54646aac7c44, type: 2}
+  _farPreviewMaterial: {fileID: 0}
+  _visibleDepth: 2
+  _depthScaleFactor: 1
   _moveDuration: 0.1
   _moveEase: 9
+  _conveyorReturnDrop: {x: 0, y: 0, z: 0}
 --- !u!1 &461043306
 GameObject:
   m_ObjectHideFlags: 0
@@ -17248,8 +17252,12 @@ MonoBehaviour:
   - {fileID: 1678322912}
   _previewOffset: {x: 0.000000029802322, y: 0, z: -0.19999996}
   _previewMaterial: {fileID: 2100000, guid: 5acdf87b22e0cf4499dc54646aac7c44, type: 2}
+  _farPreviewMaterial: {fileID: 0}
+  _visibleDepth: 2
+  _depthScaleFactor: 1
   _moveDuration: 0.1
   _moveEase: 9
+  _conveyorReturnDrop: {x: 0, y: 0, z: 0}
 --- !u!1001 &1332272529
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -23353,8 +23361,12 @@ MonoBehaviour:
   - {fileID: 374581130}
   _previewOffset: {x: 0.000000029802322, y: -0.000000044151587, z: -0.19999996}
   _previewMaterial: {fileID: 2100000, guid: 5acdf87b22e0cf4499dc54646aac7c44, type: 2}
+  _farPreviewMaterial: {fileID: 0}
+  _visibleDepth: 2
+  _depthScaleFactor: 1
   _moveDuration: 0.1
   _moveEase: 9
+  _conveyorReturnDrop: {x: 0, y: 0, z: 0}
 --- !u!1001 &1884955353
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -28503,6 +28515,7 @@ GameObject:
   - component: {fileID: 1979442974}
   - component: {fileID: 1979442973}
   - component: {fileID: 1979442972}
+  - component: {fileID: 1979442975}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -28584,6 +28597,25 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 16, y: 180, z: 0}
+--- !u!114 &1979442975
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1979442971}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 386e01b9c642e1d419a0d197f484ef35, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _camera: {fileID: 1979442973}
+  _board: {fileID: 1232863107}
+  _session: {fileID: 1627670741}
+  _hudObstacles: []
+  _hudMargin: 4
+  _minimumAspect: 1.3333334
+  _maximumAspect: 2
 --- !u!1 &1995400829
 GameObject:
   m_ObjectHideFlags: 0

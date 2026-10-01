@@ -57,7 +57,9 @@ public sealed class CampaignTimerView : MonoBehaviour
     private void ApplyState(CountdownTimerState state)
     {
         _timeText.SetText(TimeTextFormatter.FormatSeconds(state.RemainingTime));
+        // Until the first move the start hint takes the star row's place inside the timer frame.
         _startHint.SetActive(!state.HasStarted);
+        _availableStars.gameObject.SetActive(state.HasStarted);
 
         long activeTimeMilliseconds = (long)Mathf.Round(state.ActiveTime * 1000f);
         int availableRating = LevelStarCalculator.Calculate(true, activeTimeMilliseconds, _definition);
