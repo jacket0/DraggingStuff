@@ -5,9 +5,11 @@ using System.Collections.Generic;
 public sealed class GameProgressData
 {
     public const int CurrentVersion = 2;
+    public const int FirstTimedCampaignVersion = 2;
 
     public int Version = CurrentVersion;
     public bool LegacyDataImported;
+    public bool TutorialCompleted;
     public List<LevelProgressData> Levels = new List<LevelProgressData>();
     public long EndlessBestScore;
     public List<BonusAmountData> Bonuses = new List<BonusAmountData>();
