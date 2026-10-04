@@ -301,6 +301,12 @@ public static class TimedLevelVariantGenerator
             SerializedProperty shelfProperty = shelvesProperty.GetArrayElementAtIndex(shelfIndex);
             shelfProperty.FindPropertyRelative("_isClosed").boolValue = !shelf.IsOpen;
             shelfProperty.FindPropertyRelative("_isConveyor").boolValue = shelf.IsConveyor;
+            SerializedProperty acceptedTypesProperty = shelfProperty.FindPropertyRelative("_acceptedTypes");
+            acceptedTypesProperty.arraySize = shelf.AcceptedTypes.Count;
+
+            for (int typeIndex = 0; typeIndex < shelf.AcceptedTypes.Count; typeIndex++)
+                acceptedTypesProperty.GetArrayElementAtIndex(typeIndex).enumValueIndex = (int)shelf.AcceptedTypes[typeIndex];
+
             SerializedProperty columnsProperty = shelfProperty.FindPropertyRelative("_columns");
             columnsProperty.arraySize = shelf.Columns.Count;
 

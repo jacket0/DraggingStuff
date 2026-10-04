@@ -10,6 +10,7 @@ public sealed class ShelfBoard : MonoBehaviour
     private readonly HashSet<Shelf> _lockedShelves = new HashSet<Shelf>();
     private readonly HashSet<Shelf> _closedShelves = new HashSet<Shelf>();
     private readonly HashSet<Shelf> _conveyorShelves = new HashSet<Shelf>();
+    private readonly Dictionary<Shelf, IReadOnlyList<ItemType>> _shelfFilters = new Dictionary<Shelf, IReadOnlyList<ItemType>>();
     private readonly Dictionary<ShelfColumn, ColumnPosition> _positions = new Dictionary<ShelfColumn, ColumnPosition>();
     private readonly BoardMoveSimulator _simulator = new BoardMoveSimulator();
     private bool _initialized;
@@ -20,6 +21,7 @@ public sealed class ShelfBoard : MonoBehaviour
     public bool HasClosedShelves => _closedShelves.Count > 0;
     public bool HasConveyors => _conveyorShelves.Count > 0;
     public IReadOnlyList<Shelf> ConveyorShelves => _shelves.Where(IsConveyor).ToArray();
+    public bool HasFilters => _shelfFilters.Count > 0;
     public ShelfItemPlacementAnimator ItemAnimations { get; } = new ShelfItemPlacementAnimator();
 
     public void Initialize()
@@ -66,7 +68,7 @@ public sealed class ShelfBoard : MonoBehaviour
 
     public void CloseShelf(Shelf shelf)
     {
-        if (shelf == null || !_shelves.Contains(shelf) || !shelf.IsCleared || IsConveyor(shelf) || !_closedShelves.Add(shelf))
+        if (shelf == null || !_shelves.Contains(shelf) || !shelf.IsCleared || IsConveyor(shelf) || IsFiltered(shelf) || !_closedShelves.Add(shelf))
             throw new InvalidOperationException("Only an empty shelf on this board can be closed.");
     }
 
@@ -76,8 +78,30 @@ public sealed class ShelfBoard : MonoBehaviour
 
     public void MarkConveyor(Shelf shelf)
     {
-        if (shelf == null || !_shelves.Contains(shelf) || IsShelfClosed(shelf) || !_conveyorShelves.Add(shelf))
+        if (shelf == null || !_shelves.Contains(shelf) || IsShelfClosed(shelf) || IsFiltered(shelf) || !_conveyorShelves.Add(shelf))
             throw new InvalidOperationException("Only an open shelf on this board can be marked as a conveyor once.");
+    }
+
+    public bool IsFiltered(Shelf shelf) => shelf != null && _shelfFilters.ContainsKey(shelf);
+
+    public IReadOnlyList<ItemType> GetAcceptedTypes(Shelf shelf)
+    {
+        return shelf != null && _shelfFilters.TryGetValue(shelf, out IReadOnlyList<ItemType> acceptedTypes) ? acceptedTypes : Array.Empty<ItemType>();
+    }
+
+    public bool Accepts(Shelf shelf, ItemType type) => !IsFiltered(shelf) || _shelfFilters[shelf].Contains(type);
+
+    public void SetFilter(Shelf shelf, IReadOnlyList<ItemType> acceptedTypes)
+    {
+        if (shelf == null || !_shelves.Contains(shelf) || IsShelfClosed(shelf) || IsConveyor(shelf) || IsFiltered(shelf))
+            throw new InvalidOperationException("Only an open regular shelf on this board can be filtered once.");
+
+        ItemType[] normalizedTypes = acceptedTypes?.Distinct().OrderBy(type => type).ToArray() ?? Array.Empty<ItemType>();
+
+        if (normalizedTypes.Length == 0 || normalizedTypes.Length > ShelfStateSnapshot.MaximumAcceptedTypeCount)
+            throw new InvalidOperationException($"A shelf filter must accept one to {ShelfStateSnapshot.MaximumAcceptedTypeCount} item types.");
+
+        _shelfFilters.Add(shelf, Array.AsReadOnly(normalizedTypes));
     }
 
     public bool CanPickUp(ShelfColumn column)
@@ -151,7 +175,7 @@ public sealed class ShelfBoard : MonoBehaviour
         return MoveOutcome.SuccessfulSwap(sourceItem, targetItem, source, target, affected);
     }
 
-    private ShelfStateSnapshot CreateShelfSnapshot(Shelf shelf) => shelf.CreateSnapshot(!IsShelfClosed(shelf), IsConveyor(shelf));
+    private ShelfStateSnapshot CreateShelfSnapshot(Shelf shelf) => shelf.CreateSnapshot(!IsShelfClosed(shelf), IsConveyor(shelf), GetAcceptedTypes(shelf));
 
     private void OnDestroy() => ItemAnimations.Dispose();
 }

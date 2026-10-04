@@ -16,7 +16,7 @@ public static class BoardStateFingerprint
         {
             List<string> columns = shelf.Columns.Select(CreateColumnKey).ToList();
             columns.Sort(StringComparer.Ordinal);
-            string marker = !shelf.IsOpen ? "C" : shelf.IsConveyor ? "B" : "";
+            string marker = !shelf.IsOpen ? "C" : shelf.IsConveyor ? "B" : shelf.IsFiltered ? $"{CreateFilterMarker(shelf)}|" : "";
             shelves.Add($"[{marker}{string.Join("", columns)}]");
         }
 
@@ -39,6 +39,9 @@ public static class BoardStateFingerprint
             if (shelf.IsConveyor)
                 layout.Append('B');
 
+            if (shelf.IsFiltered)
+                layout.Append(CreateFilterMarker(shelf));
+
             layout.Append('[');
 
             foreach (ColumnStateSnapshot column in shelf.Columns)
@@ -59,6 +62,11 @@ public static class BoardStateFingerprint
         }
 
         return hash.ToString("X16");
+    }
+
+    private static string CreateFilterMarker(ShelfStateSnapshot shelf)
+    {
+        return "F" + string.Join(".", shelf.AcceptedTypes.Select(type => (int)type));
     }
 
     private static string CreateColumnKey(ColumnStateSnapshot column)

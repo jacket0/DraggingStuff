@@ -47,9 +47,13 @@ public sealed class Shelf : MonoBehaviour
         _columns = Array.AsReadOnly(columns);
     }
 
-    public ShelfStateSnapshot CreateSnapshot(bool isOpen = true, bool isConveyor = false)
+    public ShelfStateSnapshot CreateSnapshot(bool isOpen = true, bool isConveyor = false, IReadOnlyList<ItemType> acceptedTypes = null)
     {
-        return new ShelfStateSnapshot(Columns.Select(column => new ColumnStateSnapshot(column.Items.Select(item => item.Type).ToArray())).ToArray(), isOpen, isConveyor);
+        return new ShelfStateSnapshot(
+            Columns.Select(column => new ColumnStateSnapshot(column.Items.Select(item => item.Type).ToArray())).ToArray(),
+            isOpen,
+            isConveyor,
+            acceptedTypes ?? Array.Empty<ItemType>());
     }
 
     public bool ShiftConveyor()

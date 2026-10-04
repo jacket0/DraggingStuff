@@ -4,6 +4,7 @@ public static class TimedLevelLayoutRules
     public const int MaximumColumnDepth = 8;
     public const int MaximumConveyorColumnDepth = 3;
     public const int ConveyorShelfCapacity = 3;
+    public const int MaximumAcceptedTypeCount = ShelfStateSnapshot.MaximumAcceptedTypeCount;
 
     public static bool IsConveyorStartFilled(ShelfStateSnapshot shelf)
     {

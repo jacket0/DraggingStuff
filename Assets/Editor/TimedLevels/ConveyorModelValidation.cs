@@ -41,7 +41,7 @@ public static class ConveyorModelValidation
                 ShelfColumn column = new ShelfColumn();
 
                 for (int index = 0; index < count; index++)
-                    column.Append(CreateTemporaryItem(types[index], temporaryObjects));
+                    column.Append(TemporaryShelfFactory.CreateItem(types[index], temporaryObjects));
 
                 ShelfItem[] before = column.Items.ToArray();
                 bool isShifted = column.MoveFrontToBack();
@@ -58,8 +58,7 @@ public static class ConveyorModelValidation
         }
         finally
         {
-            foreach (GameObject temporaryObject in temporaryObjects)
-                UnityEngine.Object.DestroyImmediate(temporaryObject);
+            TemporaryShelfFactory.Destroy(temporaryObjects);
         }
     }
 
@@ -289,10 +288,10 @@ public static class ConveyorModelValidation
 
         try
         {
-            Shelf closedShelf = CreateTemporaryShelf("ClosedShelf", temporaryObjects);
-            Shelf conveyorShelf = CreateTemporaryShelf("ConveyorShelf", temporaryObjects);
-            Shelf foreignShelf = CreateTemporaryShelf("ForeignShelf", temporaryObjects);
-            ShelfBoard board = CreateTemporaryBoard(temporaryObjects, closedShelf, conveyorShelf);
+            Shelf closedShelf = TemporaryShelfFactory.CreateShelf("ClosedShelf", temporaryObjects);
+            Shelf conveyorShelf = TemporaryShelfFactory.CreateShelf("ConveyorShelf", temporaryObjects);
+            Shelf foreignShelf = TemporaryShelfFactory.CreateShelf("ForeignShelf", temporaryObjects);
+            ShelfBoard board = TemporaryShelfFactory.CreateBoard(temporaryObjects, closedShelf, conveyorShelf);
             board.Initialize();
             board.CloseShelf(closedShelf);
 
@@ -315,8 +314,7 @@ public static class ConveyorModelValidation
         }
         finally
         {
-            foreach (GameObject temporaryObject in temporaryObjects)
-                UnityEngine.Object.DestroyImmediate(temporaryObject);
+            TemporaryShelfFactory.Destroy(temporaryObjects);
         }
     }
 
@@ -364,65 +362,6 @@ public static class ConveyorModelValidation
         serializedDefinition.FindProperty("_closedShelves").arraySize = hasClosedShelf ? 1 : 0;
         serializedDefinition.ApplyModifiedPropertiesWithoutUndo();
         return definition;
-    }
-
-    private static ShelfItem CreateTemporaryItem(ItemType type, List<GameObject> temporaryObjects)
-    {
-        GameObject itemObject = EditorUtility.CreateGameObjectWithHideFlags($"ConveyorValidationItem_{type}", HideFlags.HideAndDontSave);
-        temporaryObjects.Add(itemObject);
-        ShelfItem item = itemObject.AddComponent<ShelfItem>();
-        SerializedObject serializedItem = new SerializedObject(item);
-        serializedItem.FindProperty("_type").enumValueIndex = (int)type;
-        serializedItem.ApplyModifiedPropertiesWithoutUndo();
-        return item;
-    }
-
-    private static Shelf CreateTemporaryShelf(string name, List<GameObject> temporaryObjects)
-    {
-        GameObject shelfObject = EditorUtility.CreateGameObjectWithHideFlags(name, HideFlags.HideAndDontSave);
-        temporaryObjects.Add(shelfObject);
-        Shelf shelf = shelfObject.AddComponent<Shelf>();
-        ShelfView view = shelfObject.AddComponent<ShelfView>();
-        ShelfColumnView[] columnViews = new ShelfColumnView[TimedLevelLayoutRules.ConveyorShelfCapacity];
-
-        for (int index = 0; index < columnViews.Length; index++)
-        {
-            GameObject columnObject = EditorUtility.CreateGameObjectWithHideFlags($"{name}_Column_{index}", HideFlags.HideAndDontSave);
-            temporaryObjects.Add(columnObject);
-            BoxCollider dropCollider = columnObject.AddComponent<BoxCollider>();
-            columnViews[index] = columnObject.AddComponent<ShelfColumnView>();
-            SerializedObject serializedColumn = new SerializedObject(columnViews[index]);
-            serializedColumn.FindProperty("_itemAnchor").objectReferenceValue = columnObject.transform;
-            serializedColumn.FindProperty("_dropCollider").objectReferenceValue = dropCollider;
-            serializedColumn.ApplyModifiedPropertiesWithoutUndo();
-        }
-
-        AssignReferences(new SerializedObject(shelf), "_columnViews", columnViews);
-        AssignReferences(new SerializedObject(view), "_columns", columnViews);
-        SerializedObject serializedShelf = new SerializedObject(shelf);
-        serializedShelf.FindProperty("_view").objectReferenceValue = view;
-        serializedShelf.ApplyModifiedPropertiesWithoutUndo();
-        return shelf;
-    }
-
-    private static ShelfBoard CreateTemporaryBoard(List<GameObject> temporaryObjects, params Shelf[] shelves)
-    {
-        GameObject boardObject = EditorUtility.CreateGameObjectWithHideFlags("ConveyorValidationBoard", HideFlags.HideAndDontSave);
-        temporaryObjects.Add(boardObject);
-        ShelfBoard board = boardObject.AddComponent<ShelfBoard>();
-        AssignReferences(new SerializedObject(board), "_shelves", shelves);
-        return board;
-    }
-
-    private static void AssignReferences(SerializedObject serializedObject, string propertyName, IReadOnlyList<UnityEngine.Object> references)
-    {
-        SerializedProperty property = serializedObject.FindProperty(propertyName);
-        property.arraySize = references.Count;
-
-        for (int index = 0; index < references.Count; index++)
-            property.GetArrayElementAtIndex(index).objectReferenceValue = references[index];
-
-        serializedObject.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static BoardMoveSimulation Simulate(BoardStateSnapshot board, ColumnPosition source, ColumnPosition target, string caseName)

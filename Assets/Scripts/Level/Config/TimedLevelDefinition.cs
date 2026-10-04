@@ -15,6 +15,9 @@ public sealed class TimedLevelDefinition : ScriptableObject
     [SerializeField] private ShelfRefillSettings _refillSettings;
     [SerializeField] private List<int> _conveyorShelfIndices = new List<int>();
     [SerializeField, Min(0)] private int _shuffleSwapCount;
+    [SerializeField] private List<ShelfFilterDefinition> _shelfFilters = new List<ShelfFilterDefinition>();
+    [SerializeField, Min(0)] private int _filteredEmptyColumnCount;
+    [SerializeField, Min(0)] private int _minimumFilteredMoveCount;
 
     public int TimeLimitSeconds => _timeLimitSeconds;
     public int TwoStarTimeSeconds => _twoStarTimeSeconds;
@@ -29,4 +32,8 @@ public sealed class TimedLevelDefinition : ScriptableObject
     public IReadOnlyList<int> ConveyorShelfIndices => _conveyorShelfIndices;
     public bool HasConveyors => _conveyorShelfIndices.Count > 0;
     public int ShuffleSwapCount => _shuffleSwapCount;
+    public IReadOnlyList<ShelfFilterDefinition> ShelfFilters => _shelfFilters;
+    public bool HasShelfFilters => _shelfFilters.Count > 0;
+    public int FilteredEmptyColumnCount => _filteredEmptyColumnCount;
+    public int MinimumFilteredMoveCount => _minimumFilteredMoveCount;
 }
