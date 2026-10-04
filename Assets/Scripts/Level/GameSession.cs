@@ -160,20 +160,30 @@ public abstract class GameSession : MonoBehaviour
         if (_needsPreparation)
         {
             _needsPreparation = false;
-            PrepareBoardAfterMove(() =>
+
+            try
             {
-                if (this == null || generation != _generation)
-                    return;
-
-                _isPreparing = false;
-                Shelf[] matchedShelves = _shelfBoard.Shelves.Where(shelf => shelf.HasMatch()).ToArray();
-
-                if (matchedShelves.Length > 0)
+                PrepareBoardAfterMove(() =>
                 {
-                    foreach (ShelfOperation operation in CreateWave(matchedShelves, false).Operations)
-                        operation.IsReady = true;
-                }
-            });
+                    if (this == null || generation != _generation)
+                        return;
+
+                    _isPreparing = false;
+                    Shelf[] matchedShelves = _shelfBoard.Shelves.Where(shelf => shelf.HasMatch()).ToArray();
+
+                    if (matchedShelves.Length > 0)
+                    {
+                        foreach (ShelfOperation operation in CreateWave(matchedShelves, false).Operations)
+                            operation.IsReady = true;
+                    }
+                });
+            }
+            catch
+            {
+                _isPreparing = false;
+                throw;
+            }
+
             return;
         }
 
