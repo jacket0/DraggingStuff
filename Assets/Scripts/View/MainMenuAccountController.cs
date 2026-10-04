@@ -7,18 +7,14 @@ using YG.LanguageLegacy;
 public sealed class MainMenuAccountController : MonoBehaviour
 {
     [SerializeField] private Button _accountButton;
-    [SerializeField] private TMP_Text _accountButtonText;
     [SerializeField] private GameObject _dialogRoot;
     [SerializeField] private TMP_Text _dialogTitleText;
     [SerializeField] private TMP_Text _dialogMessageText;
     [SerializeField] private Button _authorizeButton;
     [SerializeField] private TMP_Text _authorizeButtonText;
     [SerializeField] private Button _closeButton;
-    [SerializeField] private LanguageYG _signInLocalization;
-    [SerializeField] private LanguageYG _anonymousNameLocalization;
     [SerializeField] private LanguageYG _guestTitleLocalization;
     [SerializeField] private LanguageYG _anonymousTitleLocalization;
-    [SerializeField] private LanguageYG _accountTitleLocalization;
     [SerializeField] private LanguageYG _guestMessageLocalization;
     [SerializeField] private LanguageYG _anonymousMessageLocalization;
     [SerializeField] private LanguageYG _accountMessageLocalization;
@@ -71,7 +67,6 @@ public sealed class MainMenuAccountController : MonoBehaviour
     private void Refresh()
     {
         PlayerAccountState state = _accountService.State;
-        RefreshAccountButton(state);
         RefreshDialog(state);
 
         bool authorizationAvailable = state == PlayerAccountState.Guest;
@@ -82,35 +77,8 @@ public sealed class MainMenuAccountController : MonoBehaviour
             _authorizeButtonLocalization.SwitchLanguage();
     }
 
-    private void RefreshAccountButton(PlayerAccountState state)
-    {
-        bool showsPlayerName = state == PlayerAccountState.AuthorizedNamed;
-        _signInLocalization.enabled = state == PlayerAccountState.Guest;
-        _anonymousNameLocalization.enabled = state == PlayerAccountState.AuthorizedAnonymous;
-
-        if (showsPlayerName)
-        {
-            _accountButtonText.text = _accountService.PlayerName;
-            return;
-        }
-
-        LanguageYG selectedLocalization = state == PlayerAccountState.Guest
-            ? _signInLocalization
-            : _anonymousNameLocalization;
-
-        if (selectedLocalization.gameObject.activeInHierarchy)
-            selectedLocalization.SwitchLanguage();
-    }
-
     private void RefreshDialog(PlayerAccountState state)
     {
-        LanguageYG titleLocalization = state switch
-        {
-            PlayerAccountState.Guest => _guestTitleLocalization,
-            PlayerAccountState.AuthorizedAnonymous => _anonymousTitleLocalization,
-            _ => _accountTitleLocalization
-        };
-
         LanguageYG messageLocalization = state switch
         {
             PlayerAccountState.Guest => _guestMessageLocalization,
@@ -118,15 +86,31 @@ public sealed class MainMenuAccountController : MonoBehaviour
             _ => _accountMessageLocalization
         };
 
-        SelectLocalization(titleLocalization,
-            _guestTitleLocalization,
-            _anonymousTitleLocalization,
-            _accountTitleLocalization);
+        RefreshDialogTitle(state);
 
         SelectLocalization(messageLocalization,
             _guestMessageLocalization,
             _anonymousMessageLocalization,
             _accountMessageLocalization);
+    }
+
+    private void RefreshDialogTitle(PlayerAccountState state)
+    {
+        _guestTitleLocalization.enabled = state == PlayerAccountState.Guest;
+        _anonymousTitleLocalization.enabled = state == PlayerAccountState.AuthorizedAnonymous;
+
+        if (state == PlayerAccountState.AuthorizedNamed)
+        {
+            _dialogTitleText.text = _accountService.PlayerName;
+            return;
+        }
+
+        LanguageYG selectedLocalization = state == PlayerAccountState.Guest
+            ? _guestTitleLocalization
+            : _anonymousTitleLocalization;
+
+        if (selectedLocalization.gameObject.activeInHierarchy)
+            selectedLocalization.SwitchLanguage();
     }
 
     private static void SelectLocalization(
@@ -144,16 +128,15 @@ public sealed class MainMenuAccountController : MonoBehaviour
 
     private void ValidateDependencies()
     {
-        if (_accountButton == null || _accountButtonText == null || _dialogRoot == null ||
+        if (_accountButton == null || _dialogRoot == null ||
             _dialogTitleText == null || _dialogMessageText == null || _authorizeButton == null ||
             _authorizeButtonText == null || _closeButton == null)
         {
             throw new InvalidOperationException(nameof(MainMenuAccountController));
         }
 
-        if (_signInLocalization == null || _anonymousNameLocalization == null ||
-            _guestTitleLocalization == null || _anonymousTitleLocalization == null ||
-            _accountTitleLocalization == null || _guestMessageLocalization == null ||
+        if (_guestTitleLocalization == null || _anonymousTitleLocalization == null ||
+            _guestMessageLocalization == null ||
             _anonymousMessageLocalization == null || _accountMessageLocalization == null ||
             _authorizeButtonLocalization == null)
         {

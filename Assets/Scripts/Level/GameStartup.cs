@@ -14,6 +14,7 @@ public sealed class GameStartup : MonoBehaviour
         Time.timeScale = 1f;
         yield return null;
 
+        LanguagePreference.ApplySaved();
         string sceneName = TutorialProgress.IsCompleted ? "MainMenu" : "TutorialLevel";
         yield return SceneManager.LoadSceneAsync(sceneName);
         yield return null;
