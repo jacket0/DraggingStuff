@@ -13,11 +13,14 @@ public sealed class BoardMoveSimulator
         if (!board.Contains(source) || !board.Contains(target) || source.Equals(target))
             return false;
 
-        if (!board.Shelves[source.ShelfIndex].IsOpen || !board.Shelves[target.ShelfIndex].IsOpen)
+        ShelfStateSnapshot sourceShelf = board.Shelves[source.ShelfIndex];
+        ShelfStateSnapshot targetShelf = board.Shelves[target.ShelfIndex];
+
+        if (!sourceShelf.IsOpen || !targetShelf.IsOpen)
             return false;
 
-        ColumnStateSnapshot sourceColumn = board.Shelves[source.ShelfIndex].Columns[source.ColumnIndex];
-        ColumnStateSnapshot targetColumn = board.Shelves[target.ShelfIndex].Columns[target.ColumnIndex];
+        ColumnStateSnapshot sourceColumn = sourceShelf.Columns[source.ColumnIndex];
+        ColumnStateSnapshot targetColumn = targetShelf.Columns[target.ColumnIndex];
 
         if (sourceColumn.IsEmpty)
             return false;
@@ -25,6 +28,12 @@ public sealed class BoardMoveSimulator
         bool isSwap = !targetColumn.IsEmpty;
 
         if (isSwap && sourceColumn.Items[0] == targetColumn.Items[0])
+            return false;
+
+        if (!targetShelf.Accepts(sourceColumn.Items[0]))
+            return false;
+
+        if (isSwap && !sourceShelf.Accepts(targetColumn.Items[0]))
             return false;
 
         ShelfStateSnapshot[] shelves = CopyShelves(board);

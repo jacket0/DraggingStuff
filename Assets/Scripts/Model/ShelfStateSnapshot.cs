@@ -1,16 +1,22 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 public sealed class ShelfStateSnapshot
 {
     public const int MinimumCapacity = 1;
     public const int MaximumCapacity = 5;
     public const int MinimumMatchCapacity = 3;
+    public const int MaximumAcceptedTypeCount = 3;
+
+    private static readonly IReadOnlyList<ItemType> NoAcceptedTypes = Array.AsReadOnly(Array.Empty<ItemType>());
 
     public IReadOnlyList<ColumnStateSnapshot> Columns { get; }
     public int Capacity => Columns.Count;
     public bool IsOpen { get; }
     public bool IsConveyor { get; }
+    public IReadOnlyList<ItemType> AcceptedTypes { get; }
+    public bool IsFiltered => AcceptedTypes.Count > 0;
 
     public ShelfStateSnapshot(IReadOnlyList<ColumnStateSnapshot> columns) : this(columns, true)
     {
@@ -21,9 +27,17 @@ public sealed class ShelfStateSnapshot
     }
 
     public ShelfStateSnapshot(IReadOnlyList<ColumnStateSnapshot> columns, bool isOpen, bool isConveyor)
+        : this(columns, isOpen, isConveyor, NoAcceptedTypes)
+    {
+    }
+
+    public ShelfStateSnapshot(IReadOnlyList<ColumnStateSnapshot> columns, bool isOpen, bool isConveyor, IReadOnlyList<ItemType> acceptedTypes)
     {
         if (columns == null)
             throw new ArgumentNullException(nameof(columns));
+
+        if (acceptedTypes == null)
+            throw new ArgumentNullException(nameof(acceptedTypes));
 
         if (isConveyor && !isOpen)
             throw new ArgumentException("A closed shelf cannot be a conveyor.", nameof(isConveyor));
@@ -39,11 +53,17 @@ public sealed class ShelfStateSnapshot
         Columns = Array.AsReadOnly(copy);
         IsOpen = isOpen;
         IsConveyor = isConveyor;
+        AcceptedTypes = NormalizeAcceptedTypes(acceptedTypes);
+
+        if (IsFiltered && (!isOpen || isConveyor))
+            throw new ArgumentException("Only an open regular shelf can be filtered.", nameof(acceptedTypes));
     }
+
+    public bool Accepts(ItemType type) => !IsFiltered || AcceptedTypes.Contains(type);
 
     public ShelfStateSnapshot WithColumns(IReadOnlyList<ColumnStateSnapshot> columns)
     {
-        return new ShelfStateSnapshot(columns, IsOpen, IsConveyor);
+        return new ShelfStateSnapshot(columns, IsOpen, IsConveyor, AcceptedTypes);
     }
 
     public ShelfStateSnapshot ShiftConveyor()
@@ -70,5 +90,18 @@ public sealed class ShelfStateSnapshot
         }
 
         return true;
+    }
+
+    private static IReadOnlyList<ItemType> NormalizeAcceptedTypes(IReadOnlyList<ItemType> acceptedTypes)
+    {
+        if (acceptedTypes.Count == 0)
+            return NoAcceptedTypes;
+
+        ItemType[] normalizedTypes = acceptedTypes.Distinct().OrderBy(type => type).ToArray();
+
+        if (normalizedTypes.Length > MaximumAcceptedTypeCount)
+            throw new ArgumentException($"A shelf can accept at most {MaximumAcceptedTypeCount} item types.", nameof(acceptedTypes));
+
+        return Array.AsReadOnly(normalizedTypes);
     }
 }

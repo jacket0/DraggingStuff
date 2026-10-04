@@ -109,6 +109,9 @@ public static class TimedLevelValidator
         if (definition.HasConveyors && definition.HasClosedShelves)
             throw new InvalidOperationException($"{definition.name}: conveyors and closed shelves cannot share a level.");
 
+        if (definition.HasShelfFilters && definition.HasClosedShelves)
+            throw new InvalidOperationException($"{definition.name}: shelf filters and closed shelves cannot share a level.");
+
         if (definition.HasConveyors && definition.ShuffleSwapCount > 0)
             throw new InvalidOperationException($"{definition.name}: shuffle swaps are not supported on conveyor levels.");
 
@@ -146,6 +149,53 @@ public static class TimedLevelValidator
                         throw new InvalidOperationException($"{definition.name}: shelf {closedShelf.ShelfIndex} requires a positive count.");
                     break;
             }
+        }
+
+        ValidateShelfFilterDefinition(definition, types);
+    }
+
+    private static void ValidateShelfFilterDefinition(TimedLevelDefinition definition, HashSet<ItemType> levelTypes)
+    {
+        if (!definition.HasShelfFilters)
+        {
+            if (definition.FilteredEmptyColumnCount != 0 || definition.MinimumFilteredMoveCount != 0)
+                throw new InvalidOperationException($"{definition.name}: filter usage counts require shelf filters.");
+
+            return;
+        }
+
+        if (definition.FilteredEmptyColumnCount > definition.EmptyColumnCount)
+            throw new InvalidOperationException($"{definition.name}: filtered empty columns exceed the empty column reserve.");
+
+        HashSet<int> filteredShelfIndices = new HashSet<int>();
+
+        foreach (ShelfFilterDefinition shelfFilter in definition.ShelfFilters)
+        {
+            if (shelfFilter == null)
+                throw new InvalidOperationException($"{definition.name}: a shelf filter is missing.");
+
+            if (shelfFilter.ShelfIndex < 0)
+                throw new InvalidOperationException($"{definition.name}: shelf filter indices must be non-negative.");
+
+            if (!filteredShelfIndices.Add(shelfFilter.ShelfIndex))
+                throw new InvalidOperationException($"{definition.name}: shelf {shelfFilter.ShelfIndex} is filtered twice.");
+
+            IReadOnlyList<ItemType> acceptedTypes = shelfFilter.AcceptedTypes;
+
+            if (acceptedTypes.Count == 0 || acceptedTypes.Count > TimedLevelLayoutRules.MaximumAcceptedTypeCount)
+                throw new InvalidOperationException($"{definition.name}: shelf filter {shelfFilter.ShelfIndex} must accept one to {TimedLevelLayoutRules.MaximumAcceptedTypeCount} item types.");
+
+            if (acceptedTypes.Distinct().Count() != acceptedTypes.Count)
+                throw new InvalidOperationException($"{definition.name}: shelf filter {shelfFilter.ShelfIndex} accepts an item type twice.");
+
+            foreach (ItemType type in acceptedTypes)
+            {
+                if (!levelTypes.Contains(type))
+                    throw new InvalidOperationException($"{definition.name}: shelf filter {shelfFilter.ShelfIndex} accepts {type}, which is not one of the level's item types.");
+            }
+
+            if (acceptedTypes.Count >= levelTypes.Count)
+                throw new InvalidOperationException($"{definition.name}: shelf filter {shelfFilter.ShelfIndex} accepts every item type of the level.");
         }
     }
 
@@ -220,6 +270,26 @@ public static class TimedLevelValidator
 
         if (definition.HasConveyors)
             ValidateConveyorBoard(definition, board, columnCount, itemCount);
+
+        if (definition.HasShelfFilters)
+            ValidateShelfFilterBoard(definition, board);
+    }
+
+    private static void ValidateShelfFilterBoard(TimedLevelDefinition definition, BoardStateSnapshot board)
+    {
+        foreach (ShelfFilterDefinition shelfFilter in definition.ShelfFilters)
+        {
+            if (shelfFilter.ShelfIndex >= board.Shelves.Count)
+                throw new InvalidOperationException($"{definition.name}: shelf filter index {shelfFilter.ShelfIndex} is out of range.");
+
+            if (definition.ConveyorShelfIndices.Contains(shelfFilter.ShelfIndex))
+                throw new InvalidOperationException($"{definition.name}: conveyor shelf {shelfFilter.ShelfIndex} cannot be filtered.");
+        }
+
+        int filteredColumnCount = definition.ShelfFilters.Sum(shelfFilter => board.Shelves[shelfFilter.ShelfIndex].Capacity);
+
+        if (definition.FilteredEmptyColumnCount > filteredColumnCount)
+            throw new InvalidOperationException($"{definition.name}: {definition.FilteredEmptyColumnCount} filtered empty columns exceed the {filteredColumnCount} columns of filtered shelves.");
     }
 
     private static void ValidateConveyorBoard(TimedLevelDefinition definition, BoardStateSnapshot board, int columnCount, int itemCount)
@@ -301,6 +371,35 @@ public static class TimedLevelValidator
         {
             throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} item counts differ from the definition.");
         }
+
+        ValidateShelfFilterVariant(definition, variant, layout, variantIndex);
+    }
+
+    private static void ValidateShelfFilterVariant(TimedLevelDefinition definition, TimedLevelVariant variant, BoardStateSnapshot layout, int variantIndex)
+    {
+        Dictionary<int, ItemType[]> expectedFilters = definition.ShelfFilters.ToDictionary(
+            shelfFilter => shelfFilter.ShelfIndex,
+            shelfFilter => shelfFilter.AcceptedTypes.OrderBy(type => type).ToArray());
+
+        for (int shelfIndex = 0; shelfIndex < layout.Shelves.Count; shelfIndex++)
+        {
+            ItemType[] expectedTypes = expectedFilters.TryGetValue(shelfIndex, out ItemType[] types) ? types : Array.Empty<ItemType>();
+
+            if (!layout.Shelves[shelfIndex].AcceptedTypes.SequenceEqual(expectedTypes))
+                throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has an incorrect filter for shelf {shelfIndex}.");
+        }
+
+        int filteredEmptyColumnCount = layout.Shelves
+            .Where(shelf => shelf.IsFiltered)
+            .Sum(shelf => shelf.Columns.Count(column => column.IsEmpty));
+
+        if (filteredEmptyColumnCount < definition.FilteredEmptyColumnCount)
+            throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} starts with {filteredEmptyColumnCount} filtered empty columns instead of at least {definition.FilteredEmptyColumnCount}.");
+
+        int filteredMoveCount = variant.CreateSolution().Count(move => layout.Contains(move.Target) && layout.Shelves[move.Target.ShelfIndex].IsFiltered);
+
+        if (filteredMoveCount < definition.MinimumFilteredMoveCount)
+            throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} solution has {filteredMoveCount} filtered moves instead of at least {definition.MinimumFilteredMoveCount}.");
     }
 
     private static void ValidateConveyorShelfLayout(TimedLevelDefinition definition, ShelfStateSnapshot shelf, int shelfIndex, int variantIndex)
