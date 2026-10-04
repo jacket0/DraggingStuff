@@ -14,6 +14,7 @@ public static class TimedCampaignValidation
     private const int FirstClosedShelfLevelNumber = 13;
     private const int FirstConveyorLevelNumber = 17;
     private const string ConveyorSceneName = "FifthLevel";
+    private const string LevelResultWindowPath = "Assets/Prefabs/UI/Level/LevelResultWindow.prefab";
 
     [MenuItem("Tools/Timed Levels/Validate Campaign")]
     public static void Run()
@@ -639,6 +640,7 @@ public static class TimedCampaignValidation
             RequireReference(result, "_lightRays");
             RequireReference(result, "_defeatClock");
             ValidateCampaignHud(sceneName, timerView);
+            ValidateResultWindowPrefab(sceneName, result);
             ValidateResultLayout(sceneName, result);
         }
     }
@@ -732,6 +734,31 @@ public static class TimedCampaignValidation
 
         if (!IsStackedInside(background, content, reviewButton) || !IsStackedInside(background, reviewButton, actionsRow))
             throw new InvalidOperationException($"{sceneName}: result layout elements overlap or leave the background.");
+
+        RectTransform statistics = content.Find("Statistics") as RectTransform;
+        RectTransform remainingItems = statistics != null ? statistics.Find("RemainingItems") as RectTransform : null;
+        RectTransform score = statistics != null ? statistics.Find("Score") as RectTransform : null;
+        RectTransform bestScore = statistics != null ? statistics.Find("BestScore") as RectTransform : null;
+
+        if (remainingItems == null || score == null || bestScore == null)
+            throw new InvalidOperationException($"{sceneName}: result statistics layout.");
+
+        Rect remainingItemsRect = GetRectInParent(remainingItems);
+
+        if (remainingItemsRect.Overlaps(GetRectInParent(score)) || remainingItemsRect.Overlaps(GetRectInParent(bestScore)))
+            throw new InvalidOperationException($"{sceneName}: remaining items overlap score.");
+    }
+
+    private static void ValidateResultWindowPrefab(string sceneName, LevelResultView result)
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(LevelResultWindowPath);
+
+        if (prefab == null
+            || PrefabUtility.GetNearestPrefabInstanceRoot(result.gameObject) != result.gameObject
+            || PrefabUtility.GetCorrespondingObjectFromSource(result.gameObject) != prefab)
+        {
+            throw new InvalidOperationException($"{sceneName}: result window is not a {LevelResultWindowPath} instance.");
+        }
     }
 
     private static bool IsStackedInside(RectTransform background, RectTransform upper, RectTransform lower)
