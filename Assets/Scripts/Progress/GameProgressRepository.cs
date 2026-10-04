@@ -11,6 +11,17 @@ public static class GameProgressRepository
 
     public static event Action ProgressChanged;
 
+    public static bool IsSynchronized => _isSynchronized;
+
+    public static bool IsTutorialCompleted
+    {
+        get
+        {
+            EnsureInitialized();
+            return _current.TutorialCompleted || _current.Levels.Exists(level => level.IsCompleted);
+        }
+    }
+
     public static long EndlessBestScore
     {
         get
@@ -77,6 +88,17 @@ public static class GameProgressRepository
         record.BestScore = Math.Max(record.BestScore, result.Score);
         record.BestCompletionTimeMilliseconds = bestTime;
         record.Stars = Math.Max(record.Stars, result.Stars);
+        Commit();
+    }
+
+    public static void MarkTutorialCompleted()
+    {
+        EnsureInitialized();
+
+        if (_current.TutorialCompleted)
+            return;
+
+        _current.TutorialCompleted = true;
         Commit();
     }
 
@@ -151,7 +173,7 @@ public static class GameProgressRepository
         bool accountJustAuthorized = YG2.player.auth && !_wasAuthorized;
 
         if (!_isSynchronized && remote.LegacyDataImported)
-            merged = remote;
+            merged = GameProgressMerger.Merge(remote, _current);
         else
             merged = GameProgressMerger.Merge(_current, remote);
 

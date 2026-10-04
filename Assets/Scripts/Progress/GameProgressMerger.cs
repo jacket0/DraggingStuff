@@ -3,20 +3,21 @@ using System.Collections.Generic;
 
 public static class GameProgressMerger
 {
-    public static GameProgressData Merge(GameProgressData first, GameProgressData second)
+    public static GameProgressData Merge(GameProgressData newer, GameProgressData older)
     {
-        GameProgressData result = Clone(first);
-        GameProgressData other = Clone(second);
+        GameProgressData result = Clone(newer);
+        GameProgressData other = Clone(older);
 
         result.Version = Math.Max(result.Version, other.Version);
         result.LegacyDataImported |= other.LegacyDataImported;
+        result.TutorialCompleted |= other.TutorialCompleted;
         result.EndlessBestScore = Math.Max(result.EndlessBestScore, other.EndlessBestScore);
 
         foreach (LevelProgressData level in other.Levels)
             MergeLevel(result.Levels, level);
 
         foreach (BonusAmountData bonus in other.Bonuses)
-            MergeBonus(result.Bonuses, bonus);
+            AddMissingBonus(result.Bonuses, bonus);
 
         return Normalize(result);
     }
@@ -28,10 +29,11 @@ public static class GameProgressMerger
         {
             Version = GameProgressData.CurrentVersion,
             LegacyDataImported = normalizedSource.LegacyDataImported,
+            TutorialCompleted = normalizedSource.TutorialCompleted,
             EndlessBestScore = Math.Max(0, normalizedSource.EndlessBestScore)
         };
 
-        if (normalizedSource.Version >= GameProgressData.CurrentVersion && normalizedSource.Levels != null)
+        if (normalizedSource.Version >= GameProgressData.FirstTimedCampaignVersion && normalizedSource.Levels != null)
         {
             foreach (LevelProgressData level in normalizedSource.Levels)
             {
@@ -74,6 +76,7 @@ public static class GameProgressMerger
 
         if (normalizedFirst.Version != normalizedSecond.Version ||
             normalizedFirst.LegacyDataImported != normalizedSecond.LegacyDataImported ||
+            normalizedFirst.TutorialCompleted != normalizedSecond.TutorialCompleted ||
             normalizedFirst.EndlessBestScore != normalizedSecond.EndlessBestScore ||
             normalizedFirst.Levels.Count != normalizedSecond.Levels.Count ||
             normalizedFirst.Bonuses.Count != normalizedSecond.Bonuses.Count)
@@ -151,7 +154,7 @@ public static class GameProgressMerger
                 if (bonus == null || string.IsNullOrWhiteSpace(bonus.Id))
                     continue;
 
-                MergeBonus(result, bonus);
+                AddMissingBonus(result, bonus);
             }
         }
 
@@ -195,20 +198,15 @@ public static class GameProgressMerger
         return Math.Min(first, second);
     }
 
-    private static void MergeBonus(List<BonusAmountData> bonuses, BonusAmountData incoming)
+    private static void AddMissingBonus(List<BonusAmountData> bonuses, BonusAmountData incoming)
     {
-        BonusAmountData existing = bonuses.Find(bonus => string.Equals(bonus.Id, incoming.Id, StringComparison.Ordinal));
-
-        if (existing == null)
-        {
-            bonuses.Add(new BonusAmountData
-            {
-                Id = incoming.Id,
-                Amount = Math.Max(0, incoming.Amount)
-            });
+        if (bonuses.Exists(bonus => string.Equals(bonus.Id, incoming.Id, StringComparison.Ordinal)))
             return;
-        }
 
-        existing.Amount = Math.Max(existing.Amount, incoming.Amount);
+        bonuses.Add(new BonusAmountData
+        {
+            Id = incoming.Id,
+            Amount = Math.Max(0, incoming.Amount)
+        });
     }
 }

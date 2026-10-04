@@ -11,9 +11,9 @@ public static class GameProgressSaveConflictResolver
         if (localSave == null)
             throw new ArgumentNullException(nameof(localSave));
 
-        SavesYG resolvedSave = cloudSave.idSave >= localSave.idSave ? cloudSave : localSave;
-        resolvedSave.idSave = Math.Max(cloudSave.idSave, localSave.idSave);
-        resolvedSave.GameProgress = GameProgressMerger.Merge(cloudSave.GameProgress, localSave.GameProgress);
-        return resolvedSave;
+        SavesYG newerSave = cloudSave.idSave >= localSave.idSave ? cloudSave : localSave;
+        SavesYG olderSave = newerSave == cloudSave ? localSave : cloudSave;
+        newerSave.GameProgress = GameProgressMerger.Merge(newerSave.GameProgress, olderSave.GameProgress);
+        return newerSave;
     }
 }

@@ -818,12 +818,45 @@ public static class TimedCampaignValidation
         if (migrated.Levels.Count != 0 || migrated.EndlessBestScore != 1250 || migrated.Bonuses.Count != 1 || !migrated.LegacyDataImported)
             throw new InvalidOperationException("Legacy migration");
 
+        GameProgressData campaignProgress = CreateProgress(900, 80000, 2);
+        campaignProgress.Version = GameProgressData.FirstTimedCampaignVersion;
+
+        if (GameProgressMerger.Clone(campaignProgress).Levels.Count != 1)
+            throw new InvalidOperationException("Campaign progress migration");
+
+        campaignProgress.Version = GameProgressData.CurrentVersion + 1;
+
+        if (GameProgressMerger.Clone(campaignProgress).Levels.Count != 1)
+            throw new InvalidOperationException("Newer progress version");
+
         GameProgressData first = CreateProgress(1000, 80000, 2);
         GameProgressData second = CreateProgress(1200, 90000, 3);
         LevelProgressData merged = GameProgressMerger.Merge(first, second).Levels.Single();
 
         if (merged.BestScore != 1200 || merged.BestCompletionTimeMilliseconds != 80000 || merged.Stars != 3 || !merged.IsCompleted)
             throw new InvalidOperationException("Progress merge");
+
+        GameProgressData newerBonuses = new GameProgressData
+        {
+            Bonuses = new List<BonusAmountData> { new BonusAmountData { Id = "hint", Amount = 1 } }
+        };
+        GameProgressData olderBonuses = new GameProgressData
+        {
+            TutorialCompleted = true,
+            Bonuses = new List<BonusAmountData>
+            {
+                new BonusAmountData { Id = "hint", Amount = 4 },
+                new BonusAmountData { Id = "freeze", Amount = 2 }
+            }
+        };
+        GameProgressData mergedProgress = GameProgressMerger.Merge(newerBonuses, olderBonuses);
+        List<BonusAmountData> mergedBonuses = mergedProgress.Bonuses;
+
+        if (mergedBonuses.Single(bonus => bonus.Id == "hint").Amount != 1 || mergedBonuses.Single(bonus => bonus.Id == "freeze").Amount != 2)
+            throw new InvalidOperationException("Bonus merge");
+
+        if (!mergedProgress.TutorialCompleted)
+            throw new InvalidOperationException("Tutorial merge");
     }
 
     private static GameProgressData CreateProgress(long score, long time, int stars)
