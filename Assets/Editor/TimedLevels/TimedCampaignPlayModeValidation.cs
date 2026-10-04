@@ -42,6 +42,7 @@ public static class TimedCampaignPlayModeValidation
     private static int _shiftStartItemCount;
     private static string _shiftFailure;
     private static bool _isFramingValidated;
+    private static string _unexpectedError;
     private static readonly BoardMoveSimulator Simulator = new BoardMoveSimulator();
     private static readonly System.Random Random = new System.Random(20260926);
     private static readonly float[] FramingAspects = { 21f / 9f, 16f / 9f, 16f / 10f, 3f / 2f, 4f / 3f, 1f, 3f / 4f, 9f / 16f };
@@ -52,6 +53,8 @@ public static class TimedCampaignPlayModeValidation
         EditorApplication.update += Update;
         SceneManager.sceneLoaded -= OnSceneLoaded;
         SceneManager.sceneLoaded += OnSceneLoaded;
+        Application.logMessageReceived -= HandleLogMessage;
+        Application.logMessageReceived += HandleLogMessage;
     }
 
     [MenuItem("Tools/Timed Levels/Validate Play Mode Route")]
@@ -67,6 +70,7 @@ public static class TimedCampaignPlayModeValidation
         SessionState.SetBool(RunInBackgroundKey, Application.runInBackground);
         SessionState.SetInt(LevelIndexKey, 0);
         SessionState.SetBool(ClosedShelfLossCheckedKey, false);
+        _unexpectedError = null;
         Application.runInBackground = true;
         EditorSceneManager.OpenScene(FindScenePath(catalog.Levels[0].SceneName), OpenSceneMode.Single);
         DisablePersistenceComponents();
@@ -116,8 +120,17 @@ public static class TimedCampaignPlayModeValidation
         }
     }
 
+    private static void HandleLogMessage(string condition, string stackTrace, LogType type)
+    {
+        if (SessionState.GetBool(ActiveKey, false) && EditorApplication.isPlaying && (type == LogType.Exception || type == LogType.Error) && _unexpectedError == null)
+            _unexpectedError = condition;
+    }
+
     private static void RunPlayModeStep()
     {
+        if (_unexpectedError != null)
+            throw new InvalidOperationException($"Unexpected error during the route: {_unexpectedError}");
+
         if (_session == null)
         {
             TryInitializeLevel();
@@ -675,6 +688,7 @@ public static class TimedCampaignPlayModeValidation
         SessionState.EraseBool(ClosedShelfLossCheckedKey);
         Application.runInBackground = SessionState.GetBool(RunInBackgroundKey, false);
         SessionState.EraseBool(RunInBackgroundKey);
+        _unexpectedError = null;
 
         if (failed)
         {

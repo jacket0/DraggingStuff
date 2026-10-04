@@ -71,9 +71,6 @@ public sealed class EndlessLayoutGenerator
             }
         }
 
-        if (empty.Count == 0)
-            throw new InvalidOperationException("Refill requires at least one empty column.");
-
         int reserveCount = Math.Max(_config.MinimumEmptyColumns, (int)Math.Ceiling(positions.Count * _config.EmptyColumnRatio));
 
         if (reserveCount >= positions.Count)
