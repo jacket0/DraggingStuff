@@ -23,7 +23,7 @@ MonoBehaviour:
     _en: Meet the goals to open closed shelves
     _tr: "Kapal\u0131 raflar\u0131 a\xE7mak i\xE7in hedefleri tamamla"
   _mechanic: 2
-  _mechanicIcon: {fileID: 0}
+  _mechanicIcon: {fileID: 21300000, guid: 2b72fcfc1e484b14e9ad62875e5825e0, type: 3}
   _levels:
   - {fileID: 11400000, guid: 4145e41991ff40fc8f01d659d9d9ef87, type: 2}
   - {fileID: 11400000, guid: e1c0ceadc4660374791027582c91c8fc, type: 2}

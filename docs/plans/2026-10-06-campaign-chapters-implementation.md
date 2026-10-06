@@ -32,6 +32,7 @@
 - Миграция — `CampaignProgressMigration.TryGetChapterLevelNumber`, вызов в `GameProgressMerger.Clone` для сохранений версии ниже `FirstChapterCampaignVersion` (3). Проверки — в `ValidateProgressMigration` (`Validate Campaign`): перенос записей, бонусы, рекорд и обучение, повторный `Clone`, слияние v2 и v3 в обе стороны.
 - `IsUnlocked` автоматически не проверяется: `GameProgressRepository` статический и связан с YG2. Проверка открытия на перенесённом сохранении v2 и WebGL с мок-сохранением перенесены в этап 8, вместе с проверкой меню.
 - `_endlessUnlockLevelNumber` = 5 в шести сценах (`MainMenu`, `SimpleLevel`, `SecondLevel`, `ThirdLevel`, `FourthLevel`, `FifthLevel`).
+| 5 | Иконки механик | Готово, стоп-точка: иконки смотрит пользователь. SVG в `Art/Icons/Mechanics` (белый контур, линия 16 из 256), PNG 256 × 256 в `Assets/Sprites/UI/Mechanics`, назначены главам. Полка с коробками нарисована как пирамида из трёх коробок на планке: вариант с коробками на полке на ножках на 17–32 px читался как диван |
 
 ---
 

@@ -22,7 +22,7 @@ MonoBehaviour:
     _en: Match three identical items
     _tr: "\xDC\xE7 ayn\u0131 e\u015Fyay\u0131 bir araya getir"
   _mechanic: 0
-  _mechanicIcon: {fileID: 0}
+  _mechanicIcon: {fileID: 21300000, guid: f845d5a44a2f17b4083edc85dc723d1b, type: 3}
   _levels:
   - {fileID: 11400000, guid: c65e0d21b11da1e4883cbe6816a56e4c, type: 2}
   - {fileID: 11400000, guid: dfd32673729cf6844a8739c5c7be952b, type: 2}
