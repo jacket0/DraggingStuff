@@ -117,6 +117,40 @@ public static class TimedLevelVariantGenerator
         }
     }
 
+    [MenuItem("Tools/Timed Levels/Generate Filter Chapter")]
+    public static void GenerateFilterChapter()
+    {
+        (string DefinitionPath, int LevelNumber)[] levels =
+        {
+            ("Assets/Levels/Timed/TimedLevel_C2_01.asset", 6),
+            ("Assets/Levels/Timed/TimedLevel_C2_02.asset", 7),
+            ("Assets/Levels/Timed/TimedLevel_C2_03.asset", 8),
+            ("Assets/Levels/Timed/TimedLevel_C2_04.asset", 9),
+            ("Assets/Levels/Timed/TimedLevel_C2_05.asset", 10)
+        };
+        SceneSetup[] sceneSetup = EditorSceneManager.GetSceneManagerSetup();
+
+        try
+        {
+            foreach ((string definitionPath, int levelNumber) in levels)
+            {
+                TimedLevelDefinition definition = AssetDatabase.LoadAssetAtPath<TimedLevelDefinition>(definitionPath);
+
+                if (definition == null)
+                    throw new InvalidOperationException($"{definitionPath} was not found.");
+
+                GenerateForDefinition(definition, "ThirdLevel", levelNumber);
+                AssetDatabase.SaveAssets();
+            }
+
+            Debug.Log($"FILTER_CHAPTER_GENERATION_PASS: {levels.Length} levels, {RequiredVariantCount} verified variants each.");
+        }
+        finally
+        {
+            EditorSceneManager.RestoreSceneManagerSetup(sceneSetup);
+        }
+    }
+
     private static void Generate(LevelEntry level)
     {
         if (level == null || level.Definition == null)
