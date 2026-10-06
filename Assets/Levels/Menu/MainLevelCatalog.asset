@@ -12,24 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3709b5614a2965f49bc47be7bdfd7afe, type: 3}
   m_Name: MainLevelCatalog
   m_EditorClassIdentifier: 
-  _levels:
-  - {fileID: 11400000, guid: c65e0d21b11da1e4883cbe6816a56e4c, type: 2}
-  - {fileID: 11400000, guid: dfd32673729cf6844a8739c5c7be952b, type: 2}
-  - {fileID: 11400000, guid: cc74bc9aaef528d4d8ec003e397f639d, type: 2}
-  - {fileID: 11400000, guid: b6bbe27b1f1e06f418fef3e32b6b6409, type: 2}
-  - {fileID: 11400000, guid: 6e3d46c9bd6b8894791b8fa1b792ee57, type: 2}
-  - {fileID: 11400000, guid: 53a20196048e61a4c917ca4980da604d, type: 2}
-  - {fileID: 11400000, guid: ddc46cde8fcd428eb048f8d4b0cc4f5b, type: 2}
-  - {fileID: 11400000, guid: 5b6cee5dad924ea7ae964705ed179c12, type: 2}
-  - {fileID: 11400000, guid: 8b69c00b4e032a648bcd1ca70f42a8a2, type: 2}
-  - {fileID: 11400000, guid: d5505ff2f424df641bb4d727625ef0dc, type: 2}
-  - {fileID: 11400000, guid: 36396fed96f2e664e87cdcfeb2210c6d, type: 2}
-  - {fileID: 11400000, guid: ad82323ba52d1d54694c7f5c562612e7, type: 2}
-  - {fileID: 11400000, guid: 4145e41991ff40fc8f01d659d9d9ef87, type: 2}
-  - {fileID: 11400000, guid: e1c0ceadc4660374791027582c91c8fc, type: 2}
-  - {fileID: 11400000, guid: b7a6f59cc4cb585438c49aea7ae35085, type: 2}
-  - {fileID: 11400000, guid: 7ab42945171bebe4989f55e545a0c38f, type: 2}
-  - {fileID: 11400000, guid: a03f04954941f2c4baca5a02033d1509, type: 2}
-  - {fileID: 11400000, guid: c7afcc5668fc48341891b14299f2ed86, type: 2}
-  - {fileID: 11400000, guid: 670ed22accd1d44489580d9efaf90d27, type: 2}
-  - {fileID: 11400000, guid: 7c559b748de1b324c9c5256387600db1, type: 2}
+  _chapters:
+  - {fileID: 11400000, guid: b8920ca50c03bab48a83833993571719, type: 2}
+  - {fileID: 11400000, guid: bca16fcc4456b754eab065440b82a602, type: 2}
+  - {fileID: 11400000, guid: ab16a8450f01d2641900bbf1555440a6, type: 2}
+  - {fileID: 11400000, guid: 9d59afea822786b4497ed89603d9a75d, type: 2}

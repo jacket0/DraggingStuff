@@ -14,7 +14,7 @@ public static class ConveyorPlayModeValidation
     private const string CompletedKey = "ConveyorPlayModeValidation.Completed";
     private const string FailedKey = "ConveyorPlayModeValidation.Failed";
     private const string RunInBackgroundKey = "ConveyorPlayModeValidation.RunInBackground";
-    private const string LevelEntryPath = "Assets/Levels/Menu/LevelEntry_20.asset";
+    private const string LevelEntryPath = "Assets/Levels/Menu/LevelEntry_C4_05.asset";
     private const string SelectionPath = "Assets/Levels/Menu/CurrentLevelSelection.asset";
     private const string ScenePath = "Assets/Scenes/FifthLevel.unity";
     private const string SceneName = "FifthLevel";

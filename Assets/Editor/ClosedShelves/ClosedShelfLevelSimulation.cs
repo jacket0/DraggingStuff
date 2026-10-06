@@ -12,7 +12,7 @@ public static class ClosedShelfLevelSimulation
         WatchesConditions
     }
 
-    // Draft parameter: no recorded LevelRunResult playtests exist yet for TimedLevel_13-16
+    // Draft parameter: no recorded LevelRunResult playtests exist yet for chapter 3 levels
     // (they are brand new). Replace with time / group count from real playtests once available.
     private const double DraftSecondsPerMove = 2.5;
     private const int BaseSeed = 20260921;

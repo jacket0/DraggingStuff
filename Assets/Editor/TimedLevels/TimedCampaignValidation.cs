@@ -11,10 +11,18 @@ public static class TimedCampaignValidation
 {
     private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
     private const int ExpectedLevelCount = 20;
-    private const int FirstClosedShelfLevelNumber = 13;
-    private const int FirstConveyorLevelNumber = 17;
-    private const string ConveyorSceneName = "FifthLevel";
+    private const int ChapterCount = 4;
+    private const int LevelsPerChapter = 5;
+    private const string FirstClosedShelfDefinitionPath = "Assets/Levels/Timed/TimedLevel_C3_01.asset";
     private const string LevelResultWindowPath = "Assets/Prefabs/UI/Level/LevelResultWindow.prefab";
+
+    private static readonly Dictionary<LevelMechanic, string> MechanicSceneNames = new Dictionary<LevelMechanic, string>
+    {
+        { LevelMechanic.Basics, "SimpleLevel" },
+        { LevelMechanic.ShelfFilter, "ThirdLevel" },
+        { LevelMechanic.ClosedShelves, "FourthLevel" },
+        { LevelMechanic.Conveyor, "FifthLevel" }
+    };
 
     [MenuItem("Tools/Timed Levels/Validate Campaign")]
     public static void Run()
@@ -28,8 +36,7 @@ public static class TimedCampaignValidation
         ValidateMoveSimulation();
         ValidateClosedShelfModel();
         ValidateClosedShelfBoardInvariant(catalog);
-        ValidateClosedShelfLevelData(catalog);
-        ValidateConveyorLevelScenes(catalog);
+        ValidateChapters(catalog);
         ConveyorModelValidation.Run(catalog);
         ShelfFilterModelValidation.Run(catalog);
         ValidateTripleRefillGenerator();
@@ -58,8 +65,7 @@ public static class TimedCampaignValidation
         ValidateMoveSimulation();
         ValidateClosedShelfModel();
         ValidateClosedShelfBoardInvariant(catalog);
-        ValidateClosedShelfLevelData(catalog);
-        ValidateConveyorLevelScenes(catalog);
+        ValidateChapters(catalog);
         ConveyorModelValidation.Run(catalog);
         ShelfFilterModelValidation.Run(catalog);
         ValidateTripleRefillGenerator();
@@ -85,9 +91,6 @@ public static class TimedCampaignValidation
             foreach (TimedLevelVariant variant in level.Definition.Variants)
             {
                 ValidateSolution(level.Number, variant);
-
-                if (level.Number == 5)
-                    ValidateInitialMatchHint(variant);
             }
 
             int median = level.Definition.Variants.Select(variant => variant.MoveCount).OrderBy(value => value).ElementAt(level.Definition.Variants.Count / 2);
@@ -271,43 +274,54 @@ public static class TimedCampaignValidation
             throw new InvalidOperationException("Closed shelf invariant: shelf did not reopen");
     }
 
-    private static void ValidateClosedShelfLevelData(LevelCatalog catalog)
+    private static void ValidateChapters(LevelCatalog catalog)
     {
-        foreach (LevelEntry level in catalog.Levels)
+        if (catalog.Chapters.Count != ChapterCount)
+            throw new InvalidOperationException($"Catalog: {catalog.Chapters.Count} chapters, {ChapterCount} expected.");
+
+        int expectedNumber = 1;
+
+        foreach (LevelChapter chapter in catalog.Chapters)
         {
-            bool isClosedShelfLevel = level.Number >= FirstClosedShelfLevelNumber && level.Number < FirstConveyorLevelNumber;
+            if (chapter.Levels.Count != LevelsPerChapter)
+                throw new InvalidOperationException($"{chapter.name}: {chapter.Levels.Count} levels, {LevelsPerChapter} expected.");
 
-            if (level.Definition.HasClosedShelves != isClosedShelfLevel)
-                throw new InvalidOperationException($"Level {level.Number}: unexpected closed shelf configuration.");
+            string sceneName = MechanicSceneNames[chapter.Mechanic];
 
-            if (isClosedShelfLevel && level.SceneName != "FourthLevel")
-                throw new InvalidOperationException($"Level {level.Number}: closed shelf levels belong to FourthLevel.");
-        }
-    }
+            foreach (LevelEntry level in chapter.Levels)
+            {
+                if (level.Number != expectedNumber)
+                    throw new InvalidOperationException($"{chapter.name}: {level.name} has number {level.Number}, {expectedNumber} expected.");
 
-    private static void ValidateConveyorLevelScenes(LevelCatalog catalog)
-    {
-        foreach (LevelEntry level in catalog.Levels)
-        {
-            bool isConveyorLevel = level.Number >= FirstConveyorLevelNumber;
+                if (level.SceneName != sceneName)
+                    throw new InvalidOperationException($"Level {level.Number}: {chapter.Mechanic} levels belong to {sceneName}.");
 
-            if ((level.SceneName == ConveyorSceneName) != isConveyorLevel)
-                throw new InvalidOperationException($"Level {level.Number}: only conveyor levels belong to {ConveyorSceneName}.");
+                foreach (LevelMechanic mechanic in MechanicSceneNames.Keys)
+                {
+                    int count = level.Definition.GetMechanicElementCount(mechanic);
+                    bool isExpected = mechanic == chapter.Mechanic && mechanic != LevelMechanic.Basics;
+
+                    if ((count > 0) != isExpected)
+                        throw new InvalidOperationException($"Level {level.Number}: {count} {mechanic} elements in a {chapter.Mechanic} chapter.");
+                }
+
+                expectedNumber++;
+            }
         }
     }
 
     private static void ValidateTripleRefillGenerator()
     {
-        TimedLevelDefinition definition = AssetDatabase.LoadAssetAtPath<TimedLevelDefinition>("Assets/Levels/Timed/TimedLevel_13.asset");
+        TimedLevelDefinition definition = AssetDatabase.LoadAssetAtPath<TimedLevelDefinition>(FirstClosedShelfDefinitionPath);
 
         if (definition == null || definition.RefillSettings == null)
-            throw new InvalidOperationException("TimedLevel_13: missing refill settings for the triple generator check.");
+            throw new InvalidOperationException($"{FirstClosedShelfDefinitionPath}: missing refill settings for the triple generator check.");
 
         ShelfRefillSettings settings = definition.RefillSettings;
         ItemType[] levelTypes = definition.ItemGroups.Select(group => group.Type).Distinct().ToArray();
 
         if (levelTypes.Length == 0)
-            throw new InvalidOperationException("TimedLevel_13: no item types configured.");
+            throw new InvalidOperationException($"{FirstClosedShelfDefinitionPath}: no item types configured.");
 
         System.Random random = new System.Random(20260921);
 
@@ -501,10 +515,10 @@ public static class TimedCampaignValidation
 
     private static void ValidateRevealedShelfLatinSquare()
     {
-        TimedLevelDefinition definition = AssetDatabase.LoadAssetAtPath<TimedLevelDefinition>("Assets/Levels/Timed/TimedLevel_13.asset");
+        TimedLevelDefinition definition = AssetDatabase.LoadAssetAtPath<TimedLevelDefinition>(FirstClosedShelfDefinitionPath);
 
         if (definition == null || definition.RefillSettings == null)
-            throw new InvalidOperationException("TimedLevel_13: missing refill settings for the Latin square check.");
+            throw new InvalidOperationException($"{FirstClosedShelfDefinitionPath}: missing refill settings for the Latin square check.");
 
         ShelfRefillSettings settings = definition.RefillSettings;
         ItemType[] levelTypes = definition.ItemGroups.Select(group => group.Type).Distinct().ToArray();
@@ -539,74 +553,6 @@ public static class TimedCampaignValidation
                 }
             }
         }
-    }
-
-    private static void ValidateInitialMatchHint(TimedLevelVariant variant)
-    {
-        BoardStateSnapshot layout = variant.CreateLayout();
-        BoardMoveSimulator simulator = new BoardMoveSimulator();
-
-        for (int targetShelfIndex = 0; targetShelfIndex < layout.Shelves.Count; targetShelfIndex++)
-        {
-            ShelfStateSnapshot targetShelf = layout.Shelves[targetShelfIndex];
-
-            if (targetShelf.Capacity != 4)
-                continue;
-
-            for (int targetColumnIndex = 0; targetColumnIndex < targetShelf.Capacity; targetColumnIndex++)
-            {
-                if (!targetShelf.Columns[targetColumnIndex].IsEmpty)
-                    continue;
-
-                ItemType? type = null;
-                bool hasThreeMatchingItems = true;
-
-                for (int columnIndex = 0; columnIndex < targetShelf.Capacity; columnIndex++)
-                {
-                    if (columnIndex == targetColumnIndex)
-                        continue;
-
-                    ItemType? frontItem = targetShelf.Columns[columnIndex].FrontItem;
-
-                    if (!frontItem.HasValue || type.HasValue && frontItem.Value != type.Value)
-                    {
-                        hasThreeMatchingItems = false;
-                        break;
-                    }
-
-                    type = frontItem;
-                }
-
-                if (!hasThreeMatchingItems || !type.HasValue)
-                    continue;
-
-                ColumnPosition target = new ColumnPosition(targetShelfIndex, targetColumnIndex);
-
-                for (int sourceShelfIndex = 0; sourceShelfIndex < layout.Shelves.Count; sourceShelfIndex++)
-                {
-                    ShelfStateSnapshot sourceShelf = layout.Shelves[sourceShelfIndex];
-
-                    for (int sourceColumnIndex = 0; sourceColumnIndex < sourceShelf.Capacity; sourceColumnIndex++)
-                    {
-                        ColumnStateSnapshot sourceColumn = sourceShelf.Columns[sourceColumnIndex];
-
-                        if (sourceColumn.IsEmpty || sourceColumn.FrontItem.Value != type.Value)
-                            continue;
-
-                        ColumnPosition source = new ColumnPosition(sourceShelfIndex, sourceColumnIndex);
-
-                        if (simulator.TrySimulate(layout, source, target, out BoardMoveSimulation simulation)
-                            && simulation.IsAllowed
-                            && simulation.MatchCount > 0)
-                        {
-                            return;
-                        }
-                    }
-                }
-            }
-        }
-
-        throw new InvalidOperationException($"Level 5, seed {variant.Seed}: initial match hint is unavailable.");
     }
 
     private static void ValidateCampaignScenes(LevelCatalog catalog)

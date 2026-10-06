@@ -27,7 +27,7 @@ public static class ShelfFilterModelValidation
         ValidateMatchOnFilteredShelf();
         ValidateAcceptedTypesNormalization();
         ValidateFingerprintMarker();
-        ValidateLevelsWithoutFilters(catalog);
+        ValidateCatalogLevelFilters(catalog);
         ValidateShelfBoardFilters();
         ValidateDefinitionErrors(catalog);
         ValidateVariantErrors(catalog);
@@ -197,7 +197,7 @@ public static class ShelfFilterModelValidation
             throw new InvalidOperationException("Filter M11: the key of a shelf without a filter changed.");
     }
 
-    private static void ValidateLevelsWithoutFilters(LevelCatalog catalog)
+    private static void ValidateCatalogLevelFilters(LevelCatalog catalog)
     {
         foreach (LevelEntry level in catalog.Levels)
         {
@@ -207,7 +207,7 @@ public static class ShelfFilterModelValidation
             {
                 BoardStateSnapshot layout = variant.CreateLayout();
 
-                if (layout.Shelves.Any(shelf => shelf.IsFiltered) || BoardStateFingerprint.CreateHash(layout) != variant.LayoutHash)
+                if (layout.Shelves.Any(shelf => shelf.IsFiltered) != definition.HasShelfFilters || BoardStateFingerprint.CreateHash(layout) != variant.LayoutHash)
                     throw new InvalidOperationException($"Filter M11: level {level.Number}, seed {variant.Seed} changed its filter state or hash.");
             }
 

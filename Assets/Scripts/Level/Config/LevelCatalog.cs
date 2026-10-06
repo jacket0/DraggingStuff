@@ -6,12 +6,11 @@ using UnityEngine;
 public class LevelCatalog : ScriptableObject
 {
     [SerializeField] private List<LevelChapter> _chapters = new List<LevelChapter>();
-    [SerializeField] private List<LevelEntry> _levels;
 
     [NonSerialized] private List<LevelEntry> _chapterLevels;
 
     public IReadOnlyList<LevelChapter> Chapters => _chapters;
-    public IReadOnlyList<LevelEntry> Levels => _chapters.Count > 0 ? GetChapterLevels() : _levels;
+    public IReadOnlyList<LevelEntry> Levels => GetLevels();
 
     private void OnEnable()
     {
@@ -41,7 +40,7 @@ public class LevelCatalog : ScriptableObject
         return nextLevel != null;
     }
 
-    private List<LevelEntry> GetChapterLevels()
+    private List<LevelEntry> GetLevels()
     {
         if (_chapterLevels != null)
             return _chapterLevels;

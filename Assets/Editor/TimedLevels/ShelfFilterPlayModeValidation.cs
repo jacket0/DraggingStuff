@@ -15,7 +15,7 @@ public static class ShelfFilterPlayModeValidation
     private const string FailedKey = "ShelfFilterPlayModeValidation.Failed";
     private const string RunInBackgroundKey = "ShelfFilterPlayModeValidation.RunInBackground";
     private const string SelectionPath = "Assets/Levels/Menu/CurrentLevelSelection.asset";
-    private const string LevelWithoutFiltersPath = "Assets/Levels/Menu/LevelEntry_09.asset";
+    private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
     private const string ScenePath = "Assets/Scenes/ThirdLevel.unity";
     private const string SceneName = "ThirdLevel";
     private const int ScenarioSeed = 600001;
@@ -28,6 +28,7 @@ public static class ShelfFilterPlayModeValidation
     private static int _lastFrame = -1;
     private static string _unexpectedError;
     private static LevelEntry _filterLevel;
+    private static LevelEntry _levelWithoutFilters;
     private static LevelSession _session;
     private static ShelfBoard _board;
     private static ShelfItemDragController _drag;
@@ -103,6 +104,7 @@ public static class ShelfFilterPlayModeValidation
         Func<IEnumerable>[] scenarios =
         {
             ValidateSolutionReplay,
+            ValidateIntroHint,
             ValidateForbiddenMove,
             ValidateSignDimming,
             ValidateRestart,
@@ -127,7 +129,7 @@ public static class ShelfFilterPlayModeValidation
         TimedLevelVariant variant = _filterLevel.Definition.Variants[0];
         BoardStateSnapshot expected = _board.CreateSnapshot();
         Expect(BoardStateFingerprint.CreateHash(expected) == variant.LayoutHash, "P1: the runtime board must start from the variant layout");
-        Expect(_introHint.IsVisible, "the intro hint must be shown on the first level with filters");
+        Expect(!_introHint.IsVisible, "P1: a level outside the catalog must not show the intro hint");
 
         foreach (TimedLevelMove move in variant.CreateSolution())
         {
@@ -140,6 +142,21 @@ public static class ShelfFilterPlayModeValidation
         }
 
         Expect(_board.IsCleared, "P1: the solution must clear the board");
+    }
+
+    private static IEnumerable ValidateIntroHint()
+    {
+        LevelCatalog catalog = AssetDatabase.LoadAssetAtPath<LevelCatalog>(CatalogPath);
+
+        foreach (object step in LoadLevel(catalog.Levels.First(level => level.Definition.HasShelfFilters))) yield return step;
+
+        Expect(_introHint.IsVisible, "the intro hint must be shown on the first catalog level with filters");
+        Expect(_suggestions.TryGetSuggestion(out MoveSuggestion suggestion), "the first filter level must offer a move");
+        BoardStateSnapshot expected = Move(_board.CreateSnapshot(), ToPosition(suggestion.SourceColumn), ToPosition(suggestion.TargetColumn));
+
+        foreach (object step in WaitUntilSettled("intro hint move")) yield return step;
+
+        ExpectBoard(expected, "intro hint move");
         Expect(!_introHint.IsVisible, "the intro hint must hide after the first move");
     }
 
@@ -206,7 +223,7 @@ public static class ShelfFilterPlayModeValidation
 
     private static IEnumerable ValidateLevelWithoutFilters()
     {
-        foreach (object step in LoadLevel(AssetDatabase.LoadAssetAtPath<LevelEntry>(LevelWithoutFiltersPath))) yield return step;
+        foreach (object step in LoadLevel(GetLevelWithoutFilters())) yield return step;
 
         Expect(!_board.HasFilters, "P6: a level without filters must not filter shelves");
         Expect(_signs.All(sign => !sign.IsShown), "P6: all signs must stay hidden");
@@ -221,10 +238,29 @@ public static class ShelfFilterPlayModeValidation
 
     private static LevelEntry GetFilterLevel()
     {
-        if (_filterLevel != null)
-            return _filterLevel;
+        if (_filterLevel == null)
+            _filterLevel = CreateScenarioLevel(ShelfFilterGenerationPreview.CreatePreviewDefinition(), "ShelfFilterScenarioLevel");
+
+        return _filterLevel;
+    }
+
+    private static LevelEntry GetLevelWithoutFilters()
+    {
+        if (_levelWithoutFilters != null)
+            return _levelWithoutFilters;
 
         TimedLevelDefinition definition = ShelfFilterGenerationPreview.CreatePreviewDefinition();
+        SerializedObject serializedDefinition = new SerializedObject(definition);
+        serializedDefinition.FindProperty("_shelfFilters").arraySize = 0;
+        serializedDefinition.FindProperty("_filteredEmptyColumnCount").intValue = 0;
+        serializedDefinition.FindProperty("_minimumFilteredMoveCount").intValue = 0;
+        serializedDefinition.ApplyModifiedPropertiesWithoutUndo();
+        _levelWithoutFilters = CreateScenarioLevel(definition, "ShelfFilterScenarioLevelWithoutFilters");
+        return _levelWithoutFilters;
+    }
+
+    private static LevelEntry CreateScenarioLevel(TimedLevelDefinition definition, string levelName)
+    {
         TimedLevelGenerationResult generation = new TimedLevelLayoutGenerator().GenerateWithSolution(definition, ShelfFilterGenerationPreview.CreateBoardShape(), ScenarioSeed);
         TimedLevelVariantGenerator.WriteVariants(definition, new[]
         {
@@ -236,16 +272,16 @@ public static class ShelfFilterPlayModeValidation
                 generation.State,
                 generation.SolutionMoves)
         });
-        _filterLevel = ScriptableObject.CreateInstance<LevelEntry>();
-        _filterLevel.name = "ShelfFilterScenarioLevel";
-        _filterLevel.hideFlags = HideFlags.HideAndDontSave;
-        SerializedObject serializedLevel = new SerializedObject(_filterLevel);
+        LevelEntry level = ScriptableObject.CreateInstance<LevelEntry>();
+        level.name = levelName;
+        level.hideFlags = HideFlags.HideAndDontSave;
+        SerializedObject serializedLevel = new SerializedObject(level);
         serializedLevel.FindProperty("_number").intValue = ScenarioLevelNumber;
         serializedLevel.FindProperty("_sceneName").stringValue = SceneName;
         serializedLevel.FindProperty("_definition").objectReferenceValue = definition;
         serializedLevel.FindProperty("_available").boolValue = true;
         serializedLevel.ApplyModifiedPropertiesWithoutUndo();
-        return _filterLevel;
+        return level;
     }
 
     private static IEnumerable LoadLevel(LevelEntry level)
@@ -389,6 +425,7 @@ public static class ShelfFilterPlayModeValidation
     {
         _scenarios = null;
         _filterLevel = null;
+        _levelWithoutFilters = null;
         Time.timeScale = 1f;
         EditorApplication.isPlaying = false;
     }
