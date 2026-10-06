@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -36,4 +37,13 @@ public sealed class TimedLevelDefinition : ScriptableObject
     public bool HasShelfFilters => _shelfFilters.Count > 0;
     public int FilteredEmptyColumnCount => _filteredEmptyColumnCount;
     public int MinimumFilteredMoveCount => _minimumFilteredMoveCount;
+
+    public int GetMechanicElementCount(LevelMechanic mechanic) => mechanic switch
+    {
+        LevelMechanic.Basics => 0,
+        LevelMechanic.ShelfFilter => _shelfFilters.Count,
+        LevelMechanic.ClosedShelves => _closedShelves.Count,
+        LevelMechanic.Conveyor => _conveyorShelfIndices.Count,
+        _ => throw new ArgumentOutOfRangeException(nameof(mechanic))
+    };
 }
