@@ -17,11 +17,11 @@ MonoBehaviour:
     _en: Dusty Shelves
     _tr: Tozlu Raflar
   _description:
-    _ru: "\u0412\u044B\u043F\u043E\u043B\u043D\u044F\u0439 \u0443\u0441\u043B\u043E\u0432\u0438\u044F,
-      \u0447\u0442\u043E\u0431\u044B \u043E\u0442\u043A\u0440\u044B\u0442\u044C \u0437\u0430\u043A\u0440\u044B\u0442\u044B\u0435
-      \u043F\u043E\u043B\u043A\u0438"
-    _en: Meet the goals to open closed shelves
-    _tr: "Kapal\u0131 raflar\u0131 a\xE7mak i\xE7in hedefleri tamamla"
+    _ru: "\u0412\u044B\u043F\u043E\u043B\u043D\u0438 \u0443\u0441\u043B\u043E\u0432\u0438\u0435
+      \u043D\u0430 \u0431\u0438\u0440\u043A\u0435, \u0447\u0442\u043E\u0431\u044B
+      \u043E\u0442\u043A\u0440\u044B\u0442\u044C \u043F\u043E\u043B\u043A\u0443"
+    _en: Meet the goal on the tag to open the shelf
+    _tr: "Raf\u0131 a\xE7mak i\xE7in etiketteki hedefi tamamla"
   _mechanic: 2
   _mechanicIcon: {fileID: 21300000, guid: 2b72fcfc1e484b14e9ad62875e5825e0, type: 3}
   _levels:
