@@ -389,14 +389,12 @@ public static class TimedLevelValidator
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has an incorrect filter for shelf {shelfIndex}.");
         }
 
-        int filteredEmptyColumnCount = layout.Shelves
-            .Where(shelf => shelf.IsFiltered)
-            .Sum(shelf => shelf.Columns.Count(column => column.IsEmpty));
+        int filteredEmptyColumnCount = TimedLevelLayoutRules.CountFilteredEmptyColumns(layout);
 
         if (filteredEmptyColumnCount < definition.FilteredEmptyColumnCount)
             throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} starts with {filteredEmptyColumnCount} filtered empty columns instead of at least {definition.FilteredEmptyColumnCount}.");
 
-        int filteredMoveCount = variant.CreateSolution().Count(move => layout.Contains(move.Target) && layout.Shelves[move.Target.ShelfIndex].IsFiltered);
+        int filteredMoveCount = TimedLevelLayoutRules.CountFilteredMoves(layout, variant.CreateSolution());
 
         if (filteredMoveCount < definition.MinimumFilteredMoveCount)
             throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} solution has {filteredMoveCount} filtered moves instead of at least {definition.MinimumFilteredMoveCount}.");
