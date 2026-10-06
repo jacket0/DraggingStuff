@@ -150,13 +150,13 @@ public static class TimedLevelVariantGenerator
         TimedLevelValidator.ValidateForGeneration(definition, shape);
         Dictionary<CandidateRejection, int> rejections = new Dictionary<CandidateRejection, int>();
         List<TimedLevelVariant> candidates = GenerateCandidates(definition, levelNumber, shape, rejections);
-        int medianMoveCount = GetMedianMoveCount(candidates);
+        int medianMoveCount = GetMedian(candidates.Select(variant => variant.MoveCount));
         List<TimedLevelVariant> accepted = candidates
             .Where(variant => IsWithinDifficultyRange(variant.MoveCount, medianMoveCount))
             .Take(RequiredVariantCount)
             .ToList();
         rejections[CandidateRejection.DifficultySpread] = candidates.Count(variant => !IsWithinDifficultyRange(variant.MoveCount, medianMoveCount));
-        Debug.Log($"Level {levelNumber}: {accepted.Count} variants accepted, median {medianMoveCount} moves, rejected candidates: {FormatRejections(rejections)}.");
+        Debug.Log($"Level {levelNumber}: {accepted.Count} variants accepted, median {medianMoveCount} moves{FormatFilteredMoveMedian(accepted)}, rejected candidates: {FormatRejections(rejections)}.");
 
         if (accepted.Count < RequiredVariantCount)
         {
@@ -167,7 +167,7 @@ public static class TimedLevelVariantGenerator
         WriteVariants(definition, accepted);
     }
 
-    private static List<TimedLevelVariant> GenerateCandidates(
+    public static List<TimedLevelVariant> GenerateCandidates(
         TimedLevelDefinition definition,
         int levelNumber,
         BoardStateSnapshot shape,
@@ -196,6 +196,18 @@ public static class TimedLevelVariantGenerator
             if (!generation.State.Shelves.Where(shelf => shelf.IsConveyor).All(TimedLevelLayoutRules.IsConveyorStartFilled))
             {
                 CountRejection(rejections, CandidateRejection.ConveyorStart);
+                continue;
+            }
+
+            if (TimedLevelLayoutRules.CountFilteredEmptyColumns(generation.State) < definition.FilteredEmptyColumnCount)
+            {
+                CountRejection(rejections, CandidateRejection.FilteredEmptyColumns);
+                continue;
+            }
+
+            if (TimedLevelLayoutRules.CountFilteredMoves(generation.State, generation.SolutionMoves) < definition.MinimumFilteredMoveCount)
+            {
+                CountRejection(rejections, CandidateRejection.FilterUsage);
                 continue;
             }
 
@@ -232,7 +244,7 @@ public static class TimedLevelVariantGenerator
         rejections[rejection] = count + 1;
     }
 
-    private static string FormatRejections(Dictionary<CandidateRejection, int> rejections)
+    public static string FormatRejections(Dictionary<CandidateRejection, int> rejections)
     {
         return string.Join(", ", ((CandidateRejection[])Enum.GetValues(typeof(CandidateRejection)))
             .Select(rejection => $"{rejection} {(rejections.TryGetValue(rejection, out int count) ? count : 0)}"));
@@ -255,13 +267,26 @@ public static class TimedLevelVariantGenerator
         return new BoardStateSnapshot(shelves);
     }
 
-    private static int GetMedianMoveCount(IReadOnlyList<TimedLevelVariant> variants)
+    public static int GetMedian(IEnumerable<int> values)
     {
-        int[] moveCounts = variants.Select(variant => variant.MoveCount).OrderBy(value => value).ToArray();
-        int middle = moveCounts.Length / 2;
-        return moveCounts.Length % 2 == 0
-            ? (moveCounts[middle - 1] + moveCounts[middle]) / 2
-            : moveCounts[middle];
+        int[] sortedValues = values.OrderBy(value => value).ToArray();
+        int middle = sortedValues.Length / 2;
+        return sortedValues.Length % 2 == 0
+            ? (sortedValues[middle - 1] + sortedValues[middle]) / 2
+            : sortedValues[middle];
+    }
+
+    public static int CountFilteredMoves(TimedLevelVariant variant)
+    {
+        return TimedLevelLayoutRules.CountFilteredMoves(variant.CreateLayout(), variant.CreateSolution());
+    }
+
+    private static string FormatFilteredMoveMedian(IReadOnlyList<TimedLevelVariant> variants)
+    {
+        if (variants.Count == 0 || !variants[0].CreateLayout().Shelves.Any(shelf => shelf.IsFiltered))
+            return string.Empty;
+
+        return $", median {GetMedian(variants.Select(CountFilteredMoves))} filtered moves";
     }
 
     private static bool IsWithinDifficultyRange(int moveCount, int medianMoveCount)
@@ -350,10 +375,12 @@ public static class TimedLevelVariantGenerator
         throw new InvalidOperationException($"{scene.path}: {typeof(T).Name} was not found.");
     }
 
-    private enum CandidateRejection
+    public enum CandidateRejection
     {
         GenerationFailed,
         ConveyorStart,
+        FilteredEmptyColumns,
+        FilterUsage,
         NotSolved,
         DifficultySpread
     }

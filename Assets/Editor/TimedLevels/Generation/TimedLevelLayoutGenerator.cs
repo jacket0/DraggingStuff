@@ -21,7 +21,9 @@ public sealed class TimedLevelLayoutGenerator
             definition.ItemGroups.Select(group => new TimedLevelGroupCount(group.Type, group.GroupCount)).ToArray(),
             definition.ClosedShelves.Select(closedShelf => closedShelf.ShelfIndex).ToArray(),
             definition.ConveyorShelfIndices.ToArray(),
-            definition.ShuffleSwapCount);
+            definition.ShuffleSwapCount,
+            definition.ShelfFilters.ToDictionary(shelfFilter => shelfFilter.ShelfIndex, shelfFilter => shelfFilter.AcceptedTypes),
+            definition.FilteredEmptyColumnCount);
         return GenerateWithSolution(input, boardShape, seed);
     }
 
@@ -155,7 +157,11 @@ public sealed class TimedLevelLayoutGenerator
         ref int visitedNodeCount)
     {
         if (groupIndex >= groups.Count)
-            return CountEmptyColumns(columns, constraints) == constraints.RequiredEmptyColumnCount && AreConveyorsStartFilled(columns, constraints);
+        {
+            return CountEmptyColumns(columns, constraints) == constraints.RequiredEmptyColumnCount
+                && CountFilteredEmptyColumns(columns, constraints) >= constraints.RequiredFilteredEmptyColumnCount
+                && AreConveyorsStartFilled(columns, constraints);
+        }
 
         if (visitedNodeCount >= constraints.MaximumConstructionNodeCount)
             return false;
@@ -201,6 +207,7 @@ public sealed class TimedLevelLayoutGenerator
         List<ReverseMove> moves = FindReverseMoves(columns, constraints);
         moves.RemoveAll(move => WouldCreateAutomaticMatch(columns, move, type));
         moves.RemoveAll(move => WouldCreateAdjacentDuplicate(columns, move, type, constraints));
+        moves.RemoveAll(move => !constraints.Accepts(move.TargetShelfIndex, type));
         Shuffle(moves, random);
         moves.Sort((first, second) => CompareReverseMoves(first, second, columns, constraints));
 
@@ -258,7 +265,7 @@ public sealed class TimedLevelLayoutGenerator
                     {
                         ReverseMove candidate = ReverseMove.Swap(firstShelfIndex, firstColumnIndex, secondShelfIndex, secondColumnIndex);
 
-                        if (CanSwap(columns, candidate) && CountReadyShelves(columns, candidate) > 0)
+                        if (CanSwap(columns, candidate) && AcceptsCurrentFronts(columns, candidate, constraints) && CountReadyShelves(columns, candidate) > 0)
                             candidates.Add(candidate);
                     }
                 }
@@ -305,6 +312,12 @@ public sealed class TimedLevelLayoutGenerator
             && first[0] != second[0]
             && (first.Count < 2 || first[1] != second[0])
             && (second.Count < 2 || second[1] != first[0]);
+    }
+
+    private static bool AcceptsCurrentFronts(List<ItemType>[][] columns, ReverseMove swap, LayoutConstraints constraints)
+    {
+        return constraints.Accepts(swap.TargetShelfIndex, columns[swap.TargetShelfIndex][swap.TargetColumnIndex][0])
+            && constraints.Accepts(swap.SourceShelfIndex, columns[swap.SourceShelfIndex][swap.SourceColumnIndex][0]);
     }
 
     private static void SwapFronts(List<ItemType>[][] columns, ReverseMove swap)
@@ -381,6 +394,7 @@ public sealed class TimedLevelLayoutGenerator
     {
         List<ReverseMove> moves = new List<ReverseMove>();
         int emptyColumnCount = CountEmptyColumns(columns, constraints);
+        int filteredEmptyColumnCount = CountFilteredEmptyColumns(columns, constraints);
 
         for (int targetShelfIndex = 0; targetShelfIndex < columns.Length; targetShelfIndex++)
         {
@@ -409,7 +423,12 @@ public sealed class TimedLevelLayoutGenerator
                         if (emptyColumnCount - filledEmptyColumnCount < constraints.RequiredEmptyColumnCount)
                             continue;
 
-                        moves.Add(new ReverseMove(targetShelfIndex, targetColumnIndex, sourceShelfIndex, sourceColumnIndex, filledEmptyColumnCount));
+                        int filledFilteredEmptyColumnCount = CountFilledFilteredEmptyColumns(columns, targetShelfIndex, targetColumnIndex, sourceShelfIndex, sourceColumnIndex, constraints);
+
+                        if (filteredEmptyColumnCount - filledFilteredEmptyColumnCount < constraints.RequiredFilteredEmptyColumnCount)
+                            continue;
+
+                        moves.Add(new ReverseMove(targetShelfIndex, targetColumnIndex, sourceShelfIndex, sourceColumnIndex, filledEmptyColumnCount, filledFilteredEmptyColumnCount));
                     }
                 }
             }
@@ -495,8 +514,48 @@ public sealed class TimedLevelLayoutGenerator
         return count;
     }
 
+    private static int CountFilledFilteredEmptyColumns(
+        List<ItemType>[][] columns,
+        int targetShelfIndex,
+        int targetColumnIndex,
+        int sourceShelfIndex,
+        int sourceColumnIndex,
+        LayoutConstraints constraints)
+    {
+        int count = constraints.IsFiltered(sourceShelfIndex) && columns[sourceShelfIndex][sourceColumnIndex].Count == 0 ? 1 : 0;
+
+        if (!constraints.IsFiltered(targetShelfIndex))
+            return count;
+
+        for (int columnIndex = 0; columnIndex < columns[targetShelfIndex].Length; columnIndex++)
+        {
+            if (columnIndex != targetColumnIndex && columns[targetShelfIndex][columnIndex].Count == 0)
+                count++;
+        }
+
+        return count;
+    }
+
     private static int CompareReverseMoves(ReverseMove first, ReverseMove second, List<ItemType>[][] columns, LayoutConstraints constraints)
     {
+        if (constraints.HasFilters)
+        {
+            int filterTargetComparison = constraints.IsFiltered(second.TargetShelfIndex).CompareTo(constraints.IsFiltered(first.TargetShelfIndex));
+
+            if (filterTargetComparison != 0)
+                return filterTargetComparison;
+
+            int acceptedFrontComparison = CoversAcceptedFilterFront(second, columns, constraints).CompareTo(CoversAcceptedFilterFront(first, columns, constraints));
+
+            if (acceptedFrontComparison != 0)
+                return acceptedFrontComparison;
+
+            int filteredEmptyComparison = first.FilledFilteredEmptyColumnCount.CompareTo(second.FilledFilteredEmptyColumnCount);
+
+            if (filteredEmptyComparison != 0)
+                return filteredEmptyComparison;
+        }
+
         if (constraints.HasConveyors)
         {
             int conveyorComparison = CountItemsAddedToConveyors(second, columns, constraints).CompareTo(CountItemsAddedToConveyors(first, columns, constraints));
@@ -511,6 +570,12 @@ public sealed class TimedLevelLayoutGenerator
             return emptyComparison;
 
         return GetResultingDepth(first, columns).CompareTo(GetResultingDepth(second, columns));
+    }
+
+    private static bool CoversAcceptedFilterFront(ReverseMove move, List<ItemType>[][] columns, LayoutConstraints constraints)
+    {
+        List<ItemType> sourceColumn = columns[move.SourceShelfIndex][move.SourceColumnIndex];
+        return constraints.IsFiltered(move.SourceShelfIndex) && sourceColumn.Count > 0 && constraints.Accepts(move.SourceShelfIndex, sourceColumn[0]);
     }
 
     private static int CountItemsAddedToConveyors(ReverseMove move, List<ItemType>[][] columns, LayoutConstraints constraints)
@@ -610,6 +675,16 @@ public sealed class TimedLevelLayoutGenerator
         return count;
     }
 
+    private static int CountFilteredEmptyColumns(List<ItemType>[][] columns, LayoutConstraints constraints)
+    {
+        int count = 0;
+
+        foreach (int shelfIndex in constraints.FilteredShelfIndices)
+            count += columns[shelfIndex].Count(column => column.Count == 0);
+
+        return count;
+    }
+
     private static BoardStateSnapshot CreateSnapshot(IReadOnlyList<List<ItemType>[]> columns, LayoutConstraints constraints)
     {
         ShelfStateSnapshot[] shelves = new ShelfStateSnapshot[columns.Count];
@@ -625,7 +700,8 @@ public sealed class TimedLevelLayoutGenerator
         return new ShelfStateSnapshot(
             columns[shelfIndex].Select(column => new ColumnStateSnapshot(column.ToArray())).ToArray(),
             isOpen: !constraints.IsClosed(shelfIndex),
-            isConveyor: constraints.IsConveyor(shelfIndex));
+            isConveyor: constraints.IsConveyor(shelfIndex),
+            acceptedTypes: constraints.GetAcceptedTypes(shelfIndex));
     }
 
     private static void Shuffle<T>(IList<T> values, System.Random random)
@@ -643,18 +719,24 @@ public sealed class TimedLevelLayoutGenerator
     {
         private readonly HashSet<int> _closedShelfIndices;
         private readonly HashSet<int> _conveyorShelfIndices;
+        private readonly Dictionary<int, IReadOnlyList<ItemType>> _shelfFilters;
 
         public int RequiredEmptyColumnCount { get; }
+        public int RequiredFilteredEmptyColumnCount { get; }
         public int MaximumConstructionNodeCount { get; }
         public int ShuffleSwapCount { get; }
         public IReadOnlyCollection<int> ConveyorShelfIndices => _conveyorShelfIndices;
         public bool HasConveyors => _conveyorShelfIndices.Count > 0;
+        public IReadOnlyCollection<int> FilteredShelfIndices => _shelfFilters.Keys;
+        public bool HasFilters => _shelfFilters.Count > 0;
 
         public LayoutConstraints(TimedLevelGenerationInput input, int maximumConstructionNodeCount)
         {
             _closedShelfIndices = new HashSet<int>(input.ClosedShelfIndices);
             _conveyorShelfIndices = new HashSet<int>(input.ConveyorShelfIndices);
+            _shelfFilters = input.ShelfFilters.ToDictionary(pair => pair.Key, pair => pair.Value);
             RequiredEmptyColumnCount = input.EmptyColumnCount;
+            RequiredFilteredEmptyColumnCount = input.FilteredEmptyColumnCount;
             MaximumConstructionNodeCount = maximumConstructionNodeCount;
             ShuffleSwapCount = input.ShuffleSwapCount;
         }
@@ -662,6 +744,15 @@ public sealed class TimedLevelLayoutGenerator
         public bool IsClosed(int shelfIndex) => _closedShelfIndices.Contains(shelfIndex);
 
         public bool IsConveyor(int shelfIndex) => _conveyorShelfIndices.Contains(shelfIndex);
+
+        public bool IsFiltered(int shelfIndex) => _shelfFilters.ContainsKey(shelfIndex);
+
+        public bool Accepts(int shelfIndex, ItemType type) => !_shelfFilters.TryGetValue(shelfIndex, out IReadOnlyList<ItemType> acceptedTypes) || acceptedTypes.Contains(type);
+
+        public IReadOnlyList<ItemType> GetAcceptedTypes(int shelfIndex)
+        {
+            return _shelfFilters.TryGetValue(shelfIndex, out IReadOnlyList<ItemType> acceptedTypes) ? acceptedTypes : Array.Empty<ItemType>();
+        }
 
         public bool CanSwap(int shelfIndex) => !IsClosed(shelfIndex) && !IsConveyor(shelfIndex);
 
@@ -678,20 +769,28 @@ public sealed class TimedLevelLayoutGenerator
         public int SourceShelfIndex { get; }
         public int SourceColumnIndex { get; }
         public int FilledEmptyColumnCount { get; }
+        public int FilledFilteredEmptyColumnCount { get; }
 
-        public ReverseMove(int targetShelfIndex, int targetColumnIndex, int sourceShelfIndex, int sourceColumnIndex, int filledEmptyColumnCount)
+        public ReverseMove(
+            int targetShelfIndex,
+            int targetColumnIndex,
+            int sourceShelfIndex,
+            int sourceColumnIndex,
+            int filledEmptyColumnCount,
+            int filledFilteredEmptyColumnCount)
         {
             TargetShelfIndex = targetShelfIndex;
             TargetColumnIndex = targetColumnIndex;
             SourceShelfIndex = sourceShelfIndex;
             SourceColumnIndex = sourceColumnIndex;
             FilledEmptyColumnCount = filledEmptyColumnCount;
+            FilledFilteredEmptyColumnCount = filledFilteredEmptyColumnCount;
         }
 
         // A swap exchanges the front items of the two columns; replaying it forward restores them.
         public static ReverseMove Swap(int firstShelfIndex, int firstColumnIndex, int secondShelfIndex, int secondColumnIndex)
         {
-            return new ReverseMove(firstShelfIndex, firstColumnIndex, secondShelfIndex, secondColumnIndex, 0);
+            return new ReverseMove(firstShelfIndex, firstColumnIndex, secondShelfIndex, secondColumnIndex, 0, 0);
         }
     }
 }
