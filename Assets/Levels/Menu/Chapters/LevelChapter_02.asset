@@ -23,7 +23,7 @@ MonoBehaviour:
     _en: A sign lets only its own items onto the shelf
     _tr: "Tabela rafa yaln\u0131zca kendi e\u015Fyalar\u0131n\u0131 al\u0131r"
   _mechanic: 1
-  _mechanicIcon: {fileID: 0}
+  _mechanicIcon: {fileID: 21300000, guid: 45b0de757eea4ba4b87f9053c73bb3e6, type: 3}
   _levels:
   - {fileID: 11400000, guid: 9488d78f9f9c3d0408150e80d7adcb0d, type: 2}
   - {fileID: 11400000, guid: 40732b3a4565f854cacc71aeedf83d60, type: 2}
