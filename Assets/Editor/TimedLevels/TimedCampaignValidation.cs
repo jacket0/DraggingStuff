@@ -656,8 +656,14 @@ public static class TimedCampaignValidation
 
         LevelChapterSectionView[] sections = FindAllInScene<LevelChapterSectionView>(scene).ToArray();
 
-        if (sections.Length != ChapterCount || sections.Any(section => section.Cover == null || section.Cards.Count != LevelsPerChapter))
-            throw new InvalidOperationException($"Main menu: {sections.Length} chapter sections, each needs a cover and {LevelsPerChapter} cards.");
+        if (sections.Length != ChapterCount || sections.Any(section => section.Header == null || section.Cards.Count != LevelsPerChapter))
+            throw new InvalidOperationException($"Main menu: {sections.Length} chapter sections, each needs a header and {LevelsPerChapter} cards.");
+
+        foreach (LevelChapterSectionView section in sections)
+        {
+            RequireReference(section, "_openFrame");
+            RequireReference(section, "_lockedFrame");
+        }
 
         EndlessModeCardView endlessCard = FindAllInScene<EndlessModeCardView>(scene).Single();
 

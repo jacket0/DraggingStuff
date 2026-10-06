@@ -1,8 +1,8 @@
 using System;
 
-public readonly struct LevelChapterCoverState
+public readonly struct LevelChapterHeaderState
 {
-    public LevelChapterCoverState(
+    public LevelChapterHeaderState(
         LevelChapter chapter,
         int chapterNumber,
         bool isUnlocked,

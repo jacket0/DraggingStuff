@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using YG;
 
-public sealed class LevelChapterCoverView : MonoBehaviour
+public sealed class LevelChapterHeaderView : MonoBehaviour
 {
     [SerializeField] private TMP_Text _chapterLabelText;
     [SerializeField] private TMP_Text _titleText;
@@ -13,8 +13,6 @@ public sealed class LevelChapterCoverView : MonoBehaviour
     [SerializeField] private Image _icon;
     [SerializeField] private RectTransform _iconBadge;
     [SerializeField] private CanvasGroup _content;
-    [SerializeField] private GameObject _openFrame;
-    [SerializeField] private GameObject _lockedFrame;
     [SerializeField] private GameObject _progressRoot;
     [SerializeField] private Image _progressFill;
     [SerializeField] private TMP_Text _progressText;
@@ -32,7 +30,7 @@ public sealed class LevelChapterCoverView : MonoBehaviour
         "Unlocks after level {0}",
         "{0}. seviyeden sonra açılır");
 
-    private LevelChapterCoverState _state;
+    private LevelChapterHeaderState _state;
     private bool _hasState;
     private Vector2 _iconBadgeRestPosition;
     private Tween _bob;
@@ -59,7 +57,7 @@ public sealed class LevelChapterCoverView : MonoBehaviour
         _iconBadge.anchoredPosition = _iconBadgeRestPosition;
     }
 
-    public void Bind(LevelChapterCoverState state)
+    public void Bind(LevelChapterHeaderState state)
     {
         if (state.Chapter.MechanicIcon == null)
             throw new InvalidOperationException($"{state.Chapter.name}: mechanic icon is missing.");
@@ -69,8 +67,6 @@ public sealed class LevelChapterCoverView : MonoBehaviour
         _icon.sprite = state.Chapter.MechanicIcon;
         _icon.color = state.IsUnlocked ? _openIconColor : _lockedIconColor;
         _content.alpha = state.IsUnlocked ? 1f : _lockedContentAlpha;
-        _openFrame.SetActive(state.IsUnlocked);
-        _lockedFrame.SetActive(!state.IsUnlocked);
         _progressRoot.SetActive(state.IsUnlocked);
         _lockedRoot.SetActive(!state.IsUnlocked);
         _progressFill.fillAmount = (float)state.CompletedLevelCount / state.LevelCount;

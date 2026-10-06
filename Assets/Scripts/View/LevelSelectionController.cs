@@ -111,7 +111,7 @@ public class LevelSelectionController : MonoBehaviour
                     level.Definition.GetMechanicElementCount(chapter.Mechanic)));
             }
 
-            section.Cover.Bind(new LevelChapterCoverState(
+            section.Bind(new LevelChapterHeaderState(
                 chapter,
                 chapterIndex + 1,
                 _progress.IsUnlocked(chapter.Levels[0]),
@@ -209,7 +209,7 @@ public class LevelSelectionController : MonoBehaviour
         {
             LevelChapterSectionView section = _sections[i];
 
-            if (section.Cover == null || section.Cards.Count != _catalog.Chapters[i].Levels.Count)
+            if (section.Header == null || section.Cards.Count != _catalog.Chapters[i].Levels.Count)
                 throw new InvalidOperationException($"{section.name}: the section does not match chapter {i + 1}.");
         }
 
