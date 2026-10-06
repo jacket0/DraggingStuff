@@ -6,6 +6,7 @@ using UnityEngine;
 
 public static class ShelfFilterChapterValidation
 {
+    private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
     private const int ChapterLevelCount = 5;
     private const int RequiredVariantCount = 12;
 
@@ -38,15 +39,16 @@ public static class ShelfFilterChapterValidation
 
     private static IEnumerable<TimedLevelDefinition> LoadDefinitions()
     {
-        for (int chapterLevel = 1; chapterLevel <= ChapterLevelCount; chapterLevel++)
-        {
-            LevelEntry level = AssetDatabase.LoadAssetAtPath<LevelEntry>(ShelfFilterSandbox.GetLevelEntryPath(chapterLevel));
+        LevelCatalog catalog = AssetDatabase.LoadAssetAtPath<LevelCatalog>(CatalogPath);
+        TimedLevelDefinition[] definitions = catalog.Levels
+            .Select(level => level.Definition)
+            .Where(definition => definition.HasShelfFilters)
+            .ToArray();
 
-            if (level == null || level.Definition == null)
-                throw new InvalidOperationException($"{ShelfFilterSandbox.GetLevelEntryPath(chapterLevel)} is missing or has no definition.");
+        if (definitions.Length != ChapterLevelCount)
+            throw new InvalidOperationException($"{CatalogPath}: {definitions.Length} filter levels, {ChapterLevelCount} expected.");
 
-            yield return level.Definition;
-        }
+        return definitions;
     }
 
     private static void ValidateSolution(BoardMoveSimulator simulator, TimedLevelDefinition definition, int variantIndex)

@@ -42500,7 +42500,7 @@ MonoBehaviour:
   _moveResolutionPlayer: {fileID: 1130703024}
   _levelBuilder: {fileID: 1965460507}
   _levelSelection: {fileID: 11400000, guid: 62688e5fdec42004ca8c4dcf4395a4fb, type: 2}
-  _fallbackLevel: {fileID: 11400000, guid: 8b69c00b4e032a648bcd1ca70f42a8a2, type: 2}
+  _fallbackLevel: {fileID: 11400000, guid: 9488d78f9f9c3d0408150e80d7adcb0d, type: 2}
   _timer: {fileID: 1965460506}
   _scoreSystem: {fileID: 1072028348}
 --- !u!4 &1965460505

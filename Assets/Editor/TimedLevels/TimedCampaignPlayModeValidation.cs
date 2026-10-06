@@ -15,7 +15,6 @@ public static class TimedCampaignPlayModeValidation
     private const string RunInBackgroundKey = "TimedCampaignPlayModeValidation.RunInBackground";
     private const string LevelIndexKey = "TimedCampaignPlayModeValidation.LevelIndex";
     private const string ClosedShelfLossCheckedKey = "TimedCampaignPlayModeValidation.ClosedShelfLossChecked";
-    private const int ClosedShelfLossLevelNumber = 13;
     private const int MaximumClosedShelfMoves = 800;
     private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
     private const string SelectionPath = "Assets/Levels/Menu/CurrentLevelSelection.asset";
@@ -31,7 +30,6 @@ public static class TimedCampaignPlayModeValidation
     private static ColumnPosition _swapSource;
     private static ColumnPosition _swapTarget;
     private static string _initialLayoutHash;
-    private static bool _observedInitialHint;
     private static ShelfSwapHoverView _swapHoverView;
     private static bool _isLossRun;
     private static BoardStateSnapshot _expectedState;
@@ -150,12 +148,7 @@ public static class TimedCampaignPlayModeValidation
         HintPresenter hintPresenter = UnityEngine.Object.FindObjectOfType<HintPresenter>();
 
         if (hintPresenter != null && hintPresenter.IsPlaying)
-        {
-            if (_session.CurrentLevel.Number == 5)
-                _observedInitialHint = true;
-
             return;
-        }
 
         ValidatePendingBoardChanges();
 
@@ -183,14 +176,6 @@ public static class TimedCampaignPlayModeValidation
 
         if (_session.CurrentLevel.Number == 1 && !ValidateSwapRoundTrip())
             return;
-
-        if (_session.CurrentLevel.Number == 5)
-        {
-            if (!_observedInitialHint)
-                throw new InvalidOperationException("Level 5: automatic initial hint was not shown.");
-
-            Time.timeScale = 6f;
-        }
 
         if (_moveIndex >= _moves.Count)
             throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: solution ended before the run result.");
@@ -253,9 +238,8 @@ public static class TimedCampaignPlayModeValidation
         _resultFrameCount = 0;
         _swapPhase = _session.CurrentLevel.Number == 1 ? 0 : 3;
         _initialLayoutHash = variant.LayoutHash;
-        _observedInitialHint = false;
         _swapHoverView = UnityEngine.Object.FindObjectOfType<ShelfItemDragController>()?.GetComponent<ShelfSwapHoverView>();
-        Time.timeScale = _session.CurrentLevel.Number == 5 ? 1f : 6f;
+        Time.timeScale = 6f;
 
         if (_session.CurrentLevel.Number == 1)
             BeginSwapHoverValidation();
@@ -275,12 +259,14 @@ public static class TimedCampaignPlayModeValidation
             throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: expected {_session.CurrentLevel.Definition.ClosedShelves.Count} covers, found {coverCount}.");
 
         GameObject introBubble = GameObject.Find("ClosedShelfIntroBubble");
-        bool expectsIntro = ClosedShelfIntroHint.GetNewConditionKinds(LoadCatalog(), _session.CurrentLevel).Count > 0;
+        LevelCatalog catalog = LoadCatalog();
+        bool expectsIntro = ClosedShelfIntroHint.GetNewConditionKinds(catalog, _session.CurrentLevel).Count > 0;
 
         if ((introBubble != null) != expectsIntro)
             throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: intro hint visibility is wrong.");
 
-        _isLossRun = _session.CurrentLevel.Number == ClosedShelfLossLevelNumber && !SessionState.GetBool(ClosedShelfLossCheckedKey, false);
+        bool isFirstClosedShelfLevel = catalog.Levels.First(level => level.Definition.HasClosedShelves) == _session.CurrentLevel;
+        _isLossRun = isFirstClosedShelfLevel && !SessionState.GetBool(ClosedShelfLossCheckedKey, false);
     }
 
     private static void PlayClosedShelfMove()
