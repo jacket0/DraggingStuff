@@ -8,11 +8,15 @@ public sealed class ShelfFilterSignView : MonoBehaviour
     [SerializeField] private Shelf _shelf;
     [SerializeField] private GameObject _root;
     [SerializeField] private SpriteRenderer _plate;
+    [SerializeField] private SpriteRenderer _frame;
+    [SerializeField] private SpriteRenderer _leftNail;
+    [SerializeField] private SpriteRenderer _rightNail;
     [SerializeField] private List<SpriteRenderer> _icons = new List<SpriteRenderer>();
     [SerializeField] private Color _dimmedTint = new Color(0.55f, 0.55f, 0.55f, 0.7f);
     [SerializeField, Min(0.01f)] private float _iconSize = 0.085f;
     [SerializeField, Min(0.01f)] private float _iconSpacing = 0.1f;
     [SerializeField, Min(0f)] private float _platePadding = 0.02f;
+    [SerializeField, Min(0f)] private float _nailInset = 0.014f;
     [SerializeField, Min(0.01f)] private float _dimDuration = 0.12f;
     [SerializeField] private float _refusalHintAngle = 6f;
     [SerializeField, Min(0.01f)] private float _refusalHintDuration = 0.25f;
@@ -20,9 +24,8 @@ public sealed class ShelfFilterSignView : MonoBehaviour
     [SerializeField, Min(0.01f)] private float _rejectedDuration = 0.35f;
     [SerializeField, Min(0f)] private float _iconHopHeight = 0.012f;
 
+    private readonly Dictionary<SpriteRenderer, Color> _baseColors = new Dictionary<SpriteRenderer, Color>();
     private readonly List<Tween> _colorTweens = new List<Tween>();
-    private Color _plateColor;
-    private Color _iconColor;
     private Tween _swing;
     private Sequence _iconHop;
 
@@ -31,11 +34,14 @@ public sealed class ShelfFilterSignView : MonoBehaviour
 
     private void Awake()
     {
-        if (_shelf == null || _root == null || _plate == null || _icons.Count == 0 || _icons.Contains(null))
+        if (_shelf == null || _root == null || _plate == null || _frame == null || _leftNail == null || _rightNail == null || _icons.Count == 0 || _icons.Contains(null))
             throw new InvalidOperationException($"{name}: invalid shelf filter sign wiring.");
 
-        _plateColor = _plate.color;
-        _iconColor = _icons[0].color;
+        foreach (SpriteRenderer spriteRenderer in new[] { _plate, _frame, _leftNail, _rightNail })
+            _baseColors.Add(spriteRenderer, spriteRenderer.color);
+
+        foreach (SpriteRenderer icon in _icons)
+            _baseColors.Add(icon, icon.color);
     }
 
     public void Show(IReadOnlyList<Sprite> icons)
@@ -45,7 +51,10 @@ public sealed class ShelfFilterSignView : MonoBehaviour
 
         _root.SetActive(true);
         float plateWidth = icons.Count * _iconSpacing + _platePadding * 2f;
-        _plate.size = new Vector2(plateWidth / _plate.transform.localScale.x, _plate.size.y);
+        SetWidth(_plate, plateWidth);
+        SetWidth(_frame, plateWidth);
+        SetNailX(_leftNail, -plateWidth * 0.5f + _nailInset);
+        SetNailX(_rightNail, plateWidth * 0.5f - _nailInset);
         float firstIconX = -(icons.Count - 1) * _iconSpacing * 0.5f;
 
         for (int index = 0; index < _icons.Count; index++)
@@ -99,15 +108,25 @@ public sealed class ShelfFilterSignView : MonoBehaviour
         PlaySwing(_rejectedAngle, _rejectedDuration);
     }
 
+    private static void SetWidth(SpriteRenderer spriteRenderer, float width)
+    {
+        spriteRenderer.size = new Vector2(width / spriteRenderer.transform.localScale.x, spriteRenderer.size.y);
+    }
+
+    private static void SetNailX(SpriteRenderer nail, float x)
+    {
+        Vector3 position = nail.transform.localPosition;
+        nail.transform.localPosition = new Vector3(x, position.y, position.z);
+    }
+
     private void ApplyDimmed(bool isDimmed, float duration)
     {
         IsDimmed = isDimmed;
         KillColorTweens();
         Color tint = isDimmed ? _dimmedTint : Color.white;
-        TweenColor(_plate, _plateColor * tint, duration);
 
-        foreach (SpriteRenderer icon in _icons)
-            TweenColor(icon, _iconColor * tint, duration);
+        foreach (KeyValuePair<SpriteRenderer, Color> baseColor in _baseColors)
+            TweenColor(baseColor.Key, baseColor.Value * tint, duration);
     }
 
     private void TweenColor(SpriteRenderer target, Color color, float duration)
