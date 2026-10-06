@@ -15,6 +15,8 @@ public sealed class ShelfFiltersController : MonoBehaviour
     private readonly Dictionary<Shelf, ShelfFilterSignView> _filterSigns = new Dictionary<Shelf, ShelfFilterSignView>();
     private ItemType? _draggedType;
 
+    public event Action<IReadOnlyList<ShelfFilterSignView>> SignsShown;
+
     private void Awake()
     {
         if (_session == null || _shelfBoard == null || _dragController == null || _columnRaycaster == null || _audio == null || _signs.Contains(null))
@@ -57,6 +59,8 @@ public sealed class ShelfFiltersController : MonoBehaviour
             shelfSigns[0].Show(_shelfBoard.GetAcceptedTypes(shelf).Select(itemCatalog.GetIcon).ToArray());
             _filterSigns.Add(shelf, shelfSigns[0]);
         }
+
+        SignsShown?.Invoke(_filterSigns.Values.ToArray());
     }
 
     private void HandleDragStarting(ShelfItem item)

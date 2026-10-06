@@ -8,38 +8,12 @@ using YG;
 
 public sealed class ClosedShelfIntroHint : MonoBehaviour
 {
-    [Serializable]
-    private sealed class HintText
-    {
-        [SerializeField] private string _ru;
-        [SerializeField] private string _en;
-        [SerializeField] private string _tr;
-
-        public HintText()
-        {
-        }
-
-        public HintText(string ru, string en, string tr)
-        {
-            _ru = ru;
-            _en = en;
-            _tr = tr;
-        }
-
-        public string Get(string language) => language switch
-        {
-            "ru" => _ru,
-            "tr" => _tr,
-            _ => _en
-        };
-    }
-
     private readonly struct Step
     {
         public ClosedShelfCoverView Cover { get; }
-        public HintText Text { get; }
+        public LocalizedHintText Text { get; }
 
-        public Step(ClosedShelfCoverView cover, HintText text)
+        public Step(ClosedShelfCoverView cover, LocalizedHintText text)
         {
             Cover = cover;
             Text = text;
@@ -57,15 +31,15 @@ public sealed class ClosedShelfIntroHint : MonoBehaviour
     [SerializeField, Min(0f)] private float _stepDuration = 3.5f;
     [SerializeField, Min(0.01f)] private float _fadeDuration = 0.25f;
     [SerializeField] private Vector2 _bubbleOffset = new Vector2(0f, -24f);
-    [SerializeField] private HintText _collectText = new HintText(
+    [SerializeField] private LocalizedHintText _collectText = new LocalizedHintText(
         "Соберите предметы с бирки, чтобы открыть полку",
         "Collect the items shown on the tag to open the shelf",
         "Rafı açmak için etiketteki eşyaları topla");
-    [SerializeField] private HintText _refillText = new HintText(
+    [SerializeField] private LocalizedHintText _refillText = new LocalizedHintText(
         "Пока полка закрыта, новые предметы будут появляться снова и снова",
         "While a shelf is closed, new items keep appearing",
         "Raf kapalıyken yeni eşyalar gelmeye devam eder");
-    [SerializeField] private HintText _shelfMatchesText = new HintText(
+    [SerializeField] private LocalizedHintText _shelfMatchesText = new LocalizedHintText(
         "Собирайте тройки на подсвеченной полке",
         "Make matches on the highlighted shelf",
         "Vurgulanan rafta üçlü yap");
@@ -99,30 +73,7 @@ public sealed class ClosedShelfIntroHint : MonoBehaviour
         if (_target == null || !_bubble.gameObject.activeSelf)
             return;
 
-        RectTransform parent = (RectTransform)_bubble.parent;
-        Canvas canvas = _bubble.GetComponentInParent<Canvas>().rootCanvas;
-        Camera canvasCamera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
-        Vector2 screenPoint = _camera.WorldToScreenPoint(_target.TagBottom);
-
-        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPoint, canvasCamera, out Vector2 localPoint))
-            return;
-
-        _bubble.anchoredPosition = localPoint - AnchorReference(parent) + _bubbleOffset;
-        KeepBubbleInside(parent);
-    }
-
-    // In narrow windows a tag near the screen edge would push the bubble out of view.
-    private void KeepBubbleInside(RectTransform parent)
-    {
-        Vector3[] corners = new Vector3[4];
-        _bubble.GetWorldCorners(corners);
-        Vector2 min = parent.InverseTransformPoint(corners[0]);
-        Vector2 max = parent.InverseTransformPoint(corners[2]);
-        Rect bounds = parent.rect;
-        Vector2 shift = new Vector2(
-            Mathf.Max(0f, bounds.xMin - min.x) - Mathf.Max(0f, max.x - bounds.xMax),
-            Mathf.Max(0f, bounds.yMin - min.y) - Mathf.Max(0f, max.y - bounds.yMax));
-        _bubble.anchoredPosition += shift;
+        HintBubblePlacement.PlaceAt(_bubble, _camera, _target.TagBottom, _bubbleOffset);
     }
 
     public static IReadOnlyList<ShelfUnlockConditionKind> GetNewConditionKinds(LevelCatalog catalog, LevelEntry level)
@@ -194,7 +145,7 @@ public sealed class ClosedShelfIntroHint : MonoBehaviour
         _text.text = step.Text.Get(YG2.lang);
     }
 
-    private HintText GetText(ShelfUnlockConditionKind kind) => kind switch
+    private LocalizedHintText GetText(ShelfUnlockConditionKind kind) => kind switch
     {
         ShelfUnlockConditionKind.CollectItems => _collectText,
         ShelfUnlockConditionKind.MatchesOnShelf => _shelfMatchesText,
@@ -215,12 +166,5 @@ public sealed class ClosedShelfIntroHint : MonoBehaviour
         _target = null;
         _bubbleGroup.alpha = 0f;
         _bubble.gameObject.SetActive(false);
-    }
-
-    private Vector2 AnchorReference(RectTransform parent)
-    {
-        Vector2 anchor = (_bubble.anchorMin + _bubble.anchorMax) * 0.5f;
-        Rect rect = parent.rect;
-        return new Vector2(rect.xMin + rect.width * anchor.x, rect.yMin + rect.height * anchor.y);
     }
 }

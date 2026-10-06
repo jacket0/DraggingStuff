@@ -31,6 +31,8 @@ public sealed class ShelfFilterSignView : MonoBehaviour
 
     public Shelf Shelf => _shelf;
     public bool IsDimmed { get; private set; }
+    public bool IsShown => _root.activeSelf;
+    public Vector3 BottomCenter => new Vector3(_plate.bounds.center.x, _plate.bounds.min.y, _plate.bounds.center.z);
 
     private void Awake()
     {
@@ -85,7 +87,7 @@ public sealed class ShelfFilterSignView : MonoBehaviour
 
     public void SetDimmed(bool isDimmed)
     {
-        if (IsDimmed == isDimmed || !_root.activeSelf)
+        if (IsDimmed == isDimmed || !IsShown)
             return;
 
         ApplyDimmed(isDimmed, _dimDuration);
@@ -93,7 +95,7 @@ public sealed class ShelfFilterSignView : MonoBehaviour
 
     public void PlayRefusalHint()
     {
-        if (!_root.activeSelf || _swing != null && _swing.IsActive() && _swing.IsPlaying())
+        if (!IsShown || _swing != null && _swing.IsActive() && _swing.IsPlaying())
             return;
 
         PlaySwing(_refusalHintAngle, _refusalHintDuration);
@@ -101,7 +103,7 @@ public sealed class ShelfFilterSignView : MonoBehaviour
 
     public void PlayRejected()
     {
-        if (!_root.activeSelf)
+        if (!IsShown)
             return;
 
         _swing?.Complete();

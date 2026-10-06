@@ -294,7 +294,7 @@ public static class TimedLevelVariantGenerator
         return Math.Abs(moveCount - medianMoveCount) <= medianMoveCount * 0.1d;
     }
 
-    private static void WriteVariants(TimedLevelDefinition definition, IReadOnlyList<TimedLevelVariant> variants)
+    public static void WriteVariants(TimedLevelDefinition definition, IReadOnlyList<TimedLevelVariant> variants)
     {
         SerializedObject serializedDefinition = new SerializedObject(definition);
         SerializedProperty variantsProperty = serializedDefinition.FindProperty("_variants");
