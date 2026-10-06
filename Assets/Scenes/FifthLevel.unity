@@ -5891,7 +5891,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _catalog: {fileID: 11400000, guid: 457c53a40ec04ac459ae75494fe590d2, type: 2}
-  _endlessUnlockLevelNumber: 12
+  _endlessUnlockLevelNumber: 5
 --- !u!1 &139053947
 GameObject:
   m_ObjectHideFlags: 0
