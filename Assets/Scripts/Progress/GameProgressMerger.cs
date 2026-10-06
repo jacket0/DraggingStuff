@@ -40,9 +40,17 @@ public static class GameProgressMerger
                 if (level == null)
                     continue;
 
+                int levelNumber = level.LevelNumber;
+
+                if (normalizedSource.Version < GameProgressData.FirstChapterCampaignVersion
+                    && !CampaignProgressMigration.TryGetChapterLevelNumber(level.LevelNumber, out levelNumber))
+                {
+                    continue;
+                }
+
                 clone.Levels.Add(new LevelProgressData
                 {
-                    LevelNumber = level.LevelNumber,
+                    LevelNumber = levelNumber,
                     BestScore = level.BestScore,
                     BestCompletionTimeMilliseconds = level.BestCompletionTimeMilliseconds,
                     Stars = level.Stars,

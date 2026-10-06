@@ -26,6 +26,12 @@
 - `ShelfFilterPlayModeValidation`: подсказка фильтра проверяется отдельным сценарием на первом уровне каталога с фильтрами (уровень 6). Сценарный уровень из памяти вне каталога подсказку не показывает. P6 (уровень без фильтров) тоже собирается в памяти.
 - `Generate Filter Chapter` и песочница `Play Filter Level/1..5` удалены. `Validate Filter Chapter` и `Filter Chapter Bot Report` берут уровни с фильтрами из каталога.
 - Эталон генератора перезаписан. Уровни 1–4 и 20 (номер и определение не менялись) совпали с прежним эталоном один в один: генератор не менялся.
+| 4 | Сохранения и открытие | Готово (см. ниже) |
+
+**Этап 4, отклонения:**
+- Миграция — `CampaignProgressMigration.TryGetChapterLevelNumber`, вызов в `GameProgressMerger.Clone` для сохранений версии ниже `FirstChapterCampaignVersion` (3). Проверки — в `ValidateProgressMigration` (`Validate Campaign`): перенос записей, бонусы, рекорд и обучение, повторный `Clone`, слияние v2 и v3 в обе стороны.
+- `IsUnlocked` автоматически не проверяется: `GameProgressRepository` статический и связан с YG2. Проверка открытия на перенесённом сохранении v2 и WebGL с мок-сохранением перенесены в этап 8, вместе с проверкой меню.
+- `_endlessUnlockLevelNumber` = 5 в шести сценах (`MainMenu`, `SimpleLevel`, `SecondLevel`, `ThirdLevel`, `FourthLevel`, `FifthLevel`).
 
 ---
 

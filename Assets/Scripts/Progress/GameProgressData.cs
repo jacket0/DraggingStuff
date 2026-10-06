@@ -4,8 +4,9 @@ using System.Collections.Generic;
 [Serializable]
 public sealed class GameProgressData
 {
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
     public const int FirstTimedCampaignVersion = 2;
+    public const int FirstChapterCampaignVersion = 3;
 
     public int Version = CurrentVersion;
     public bool LegacyDataImported;

@@ -3,10 +3,8 @@ using UnityEngine;
 
 public class LevelProgressService : MonoBehaviour
 {
-    private const int FirstCatalogIndex = 0;
-
     [SerializeField] private LevelCatalog _catalog;
-    [SerializeField, Min(1)] private int _endlessUnlockLevelNumber = 12;
+    [SerializeField, Min(1)] private int _endlessUnlockLevelNumber = 5;
 
     public event Action ProgressChanged;
 
@@ -30,11 +28,13 @@ public class LevelProgressService : MonoBehaviour
     {
         int index = FindCatalogIndex(level);
 
-        if (index == FirstCatalogIndex)
-            return true;
+        for (int i = 0; i < index; i++)
+        {
+            if (!GameProgressRepository.IsLevelCompleted(_catalog.Levels[i].Number))
+                return false;
+        }
 
-        LevelEntry previousLevel = _catalog.Levels[index - 1];
-        return GameProgressRepository.IsLevelCompleted(previousLevel.Number);
+        return true;
     }
 
     public long GetBestScore(LevelEntry level)

@@ -777,6 +777,8 @@ public static class TimedCampaignValidation
         if (GameProgressMerger.Clone(campaignProgress).Levels.Count != 1)
             throw new InvalidOperationException("Newer progress version");
 
+        ValidateChapterCampaignMigration();
+
         GameProgressData first = CreateProgress(1000, 80000, 2);
         GameProgressData second = CreateProgress(1200, 90000, 3);
         LevelProgressData merged = GameProgressMerger.Merge(first, second).Levels.Single();
@@ -805,6 +807,70 @@ public static class TimedCampaignValidation
 
         if (!mergedProgress.TutorialCompleted)
             throw new InvalidOperationException("Tutorial merge");
+    }
+
+    private static void ValidateChapterCampaignMigration()
+    {
+        GameProgressData timedCampaign = CreateTimedCampaignProgress(1, 2, 5, 12, 13, 16, 19, 20);
+        timedCampaign.EndlessBestScore = 700;
+        timedCampaign.TutorialCompleted = true;
+        timedCampaign.Bonuses.Add(new BonusAmountData { Id = "hint", Amount = 3 });
+        GameProgressData migrated = GameProgressMerger.Clone(timedCampaign);
+        int[] expectedNumbers = { 1, 2, 11, 15, 18, 20 };
+        long[] expectedScores = { 100, 200, 1300, 1600, 1900, 2000 };
+
+        if (migrated.Version != GameProgressData.CurrentVersion
+            || !migrated.Levels.Select(level => level.LevelNumber).SequenceEqual(expectedNumbers)
+            || !migrated.Levels.Select(level => level.BestScore).SequenceEqual(expectedScores)
+            || migrated.Levels.Any(level => level.Stars != 3 || level.BestCompletionTimeMilliseconds != 60000 || !level.IsCompleted))
+        {
+            throw new InvalidOperationException("Chapter migration: level records");
+        }
+
+        if (migrated.EndlessBestScore != 700 || !migrated.TutorialCompleted || migrated.Bonuses.Single().Amount != 3)
+            throw new InvalidOperationException("Chapter migration: endless score, tutorial or bonuses");
+
+        if (!GameProgressMerger.AreEqual(GameProgressMerger.Clone(migrated), migrated))
+            throw new InvalidOperationException("Chapter migration: a migrated save changed on the second clone");
+
+        GameProgressData chapterCampaign = new GameProgressData
+        {
+            Levels = new List<LevelProgressData>
+            {
+                new LevelProgressData { LevelNumber = 11, BestScore = 500, IsCompleted = true },
+                new LevelProgressData { LevelNumber = 13, BestScore = 400, IsCompleted = true }
+            }
+        };
+
+        foreach (GameProgressData merged in new[]
+        {
+            GameProgressMerger.Merge(chapterCampaign, CreateTimedCampaignProgress(13)),
+            GameProgressMerger.Merge(CreateTimedCampaignProgress(13), chapterCampaign)
+        })
+        {
+            if (!merged.Levels.Select(level => level.LevelNumber).SequenceEqual(new[] { 11, 13 })
+                || merged.Levels[0].BestScore != 1300
+                || merged.Levels[1].BestScore != 400)
+            {
+                throw new InvalidOperationException("Chapter migration: merge of timed and chapter campaign saves");
+            }
+        }
+    }
+
+    private static GameProgressData CreateTimedCampaignProgress(params int[] levelNumbers)
+    {
+        return new GameProgressData
+        {
+            Version = GameProgressData.FirstTimedCampaignVersion,
+            Levels = levelNumbers.Select(number => new LevelProgressData
+            {
+                LevelNumber = number,
+                BestScore = number * 100,
+                BestCompletionTimeMilliseconds = 60000,
+                Stars = 3,
+                IsCompleted = true
+            }).ToList()
+        };
     }
 
     private static GameProgressData CreateProgress(long score, long time, int stars)
