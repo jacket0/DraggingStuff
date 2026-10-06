@@ -32,6 +32,17 @@ public sealed class ShelfItemCatalog : ScriptableObject
         throw new InvalidOperationException(type.ToString());
     }
 
+    public Sprite GetIcon(ItemType type)
+    {
+        foreach (Entry entry in _entries)
+        {
+            if (entry.Type == type)
+                return entry.Icon != null ? entry.Icon : throw new InvalidOperationException($"{name}: {type} has no icon.");
+        }
+
+        throw new InvalidOperationException(type.ToString());
+    }
+
     public void Validate()
     {
         if (_entries.Count == 0)

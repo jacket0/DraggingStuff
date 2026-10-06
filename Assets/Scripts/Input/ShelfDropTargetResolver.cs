@@ -37,6 +37,17 @@ public sealed class ShelfDropTargetResolver
         return TryGetNearestValidColumn(sourceColumn, nearestShelf, pointerPosition, out targetColumn);
     }
 
+    public bool TryGetShelfUnderPointer(Vector2 pointerPosition, out Shelf shelf)
+    {
+        if (TryGetDirectColumn(pointerPosition, out ShelfColumnView directColumn))
+        {
+            shelf = directColumn.Shelf;
+            return true;
+        }
+
+        return TryGetNearestShelf(pointerPosition, out shelf);
+    }
+
     private bool TryGetDirectColumn(Vector2 pointerPosition, out ShelfColumnView column)
     {
         Ray ray = _camera.ScreenPointToRay(pointerPosition);

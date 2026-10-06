@@ -9,9 +9,12 @@ public class ShelfItemDragController : MonoBehaviour
 
     private ShelfColumnView _sourceColumn;
     private ShelfSwapHoverView _swapHoverView;
+    private Shelf _hoveredShelf;
     private bool _isDragging;
 
     public event Action<ShelfItem> DragStarting;
+    public event Action DragEnded;
+    public event Action<Shelf> HoveredShelfChanged;
     public event Action InteractionOccurred;
     public event Action<Vector2> DropRejected;
 
@@ -60,10 +63,12 @@ public class ShelfItemDragController : MonoBehaviour
         if (!_dragMover.TryBeginMove(item, pressScreenPosition, snapToPointer))
         {
             _levelSession.EndDrag();
+            DragEnded?.Invoke();
             return false;
         }
 
         _sourceColumn = sourceColumn;
+        _hoveredShelf = sourceColumn.Shelf;
         _isDragging = true;
         InteractionOccurred?.Invoke();
 
@@ -76,6 +81,7 @@ public class ShelfItemDragController : MonoBehaviour
 
         _dragMover.Move(pointerPosition);
         UpdateSwapHover(pointerPosition);
+        UpdateHoveredShelf(pointerPosition);
         InteractionOccurred?.Invoke();
     }
 
@@ -132,6 +138,22 @@ public class ShelfItemDragController : MonoBehaviour
 
         _sourceColumn = null;
         _isDragging = false;
+        SetHoveredShelf(null);
+        DragEnded?.Invoke();
+    }
+
+    private void UpdateHoveredShelf(Vector2 pointerPosition)
+    {
+        SetHoveredShelf(_columnRaycaster.TryGetShelf(pointerPosition, out Shelf shelf) ? shelf : null);
+    }
+
+    private void SetHoveredShelf(Shelf shelf)
+    {
+        if (_hoveredShelf == shelf)
+            return;
+
+        _hoveredShelf = shelf;
+        HoveredShelfChanged?.Invoke(shelf);
     }
 
     private void UpdateSwapHover(Vector2 pointerPosition)

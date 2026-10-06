@@ -1,0 +1,154 @@
+using System;
+using System.Collections.Generic;
+using DG.Tweening;
+using UnityEngine;
+
+public sealed class ShelfFilterSignView : MonoBehaviour
+{
+    [SerializeField] private Shelf _shelf;
+    [SerializeField] private GameObject _root;
+    [SerializeField] private SpriteRenderer _plate;
+    [SerializeField] private List<SpriteRenderer> _icons = new List<SpriteRenderer>();
+    [SerializeField] private Color _dimmedTint = new Color(0.55f, 0.55f, 0.55f, 0.7f);
+    [SerializeField, Min(0.01f)] private float _iconSize = 0.085f;
+    [SerializeField, Min(0.01f)] private float _iconSpacing = 0.1f;
+    [SerializeField, Min(0f)] private float _platePadding = 0.02f;
+    [SerializeField, Min(0.01f)] private float _dimDuration = 0.12f;
+    [SerializeField] private float _refusalHintAngle = 6f;
+    [SerializeField, Min(0.01f)] private float _refusalHintDuration = 0.25f;
+    [SerializeField] private float _rejectedAngle = 10f;
+    [SerializeField, Min(0.01f)] private float _rejectedDuration = 0.35f;
+    [SerializeField, Min(0f)] private float _iconHopHeight = 0.012f;
+
+    private readonly List<Tween> _colorTweens = new List<Tween>();
+    private Color _plateColor;
+    private Color _iconColor;
+    private Tween _swing;
+    private Sequence _iconHop;
+
+    public Shelf Shelf => _shelf;
+    public bool IsDimmed { get; private set; }
+
+    private void Awake()
+    {
+        if (_shelf == null || _root == null || _plate == null || _icons.Count == 0 || _icons.Contains(null))
+            throw new InvalidOperationException($"{name}: invalid shelf filter sign wiring.");
+
+        _plateColor = _plate.color;
+        _iconColor = _icons[0].color;
+    }
+
+    public void Show(IReadOnlyList<Sprite> icons)
+    {
+        if (icons == null || icons.Count == 0 || icons.Count > _icons.Count)
+            throw new ArgumentException($"{name}: expected 1 to {_icons.Count} icons.", nameof(icons));
+
+        _root.SetActive(true);
+        float plateWidth = icons.Count * _iconSpacing + _platePadding * 2f;
+        _plate.size = new Vector2(plateWidth / _plate.transform.localScale.x, _plate.size.y);
+        float firstIconX = -(icons.Count - 1) * _iconSpacing * 0.5f;
+
+        for (int index = 0; index < _icons.Count; index++)
+        {
+            SpriteRenderer icon = _icons[index];
+            bool isUsed = index < icons.Count;
+            icon.gameObject.SetActive(isUsed);
+
+            if (!isUsed)
+                continue;
+
+            icon.sprite = icons[index] != null ? icons[index] : throw new ArgumentException($"{name}: icon {index} is missing.", nameof(icons));
+            Vector2 spriteSize = icon.sprite.bounds.size;
+            icon.transform.localScale = Vector3.one * (_iconSize / Mathf.Max(spriteSize.x, spriteSize.y));
+            icon.transform.localPosition = new Vector3(firstIconX + index * _iconSpacing, _plate.transform.localPosition.y, icon.transform.localPosition.z);
+        }
+
+        ApplyDimmed(false, 0f);
+    }
+
+    public void Hide()
+    {
+        KillTweens();
+        IsDimmed = false;
+        _root.transform.localRotation = Quaternion.identity;
+        _root.SetActive(false);
+    }
+
+    public void SetDimmed(bool isDimmed)
+    {
+        if (IsDimmed == isDimmed || !_root.activeSelf)
+            return;
+
+        ApplyDimmed(isDimmed, _dimDuration);
+    }
+
+    public void PlayRefusalHint()
+    {
+        if (!_root.activeSelf || _swing != null && _swing.IsActive() && _swing.IsPlaying())
+            return;
+
+        PlaySwing(_refusalHintAngle, _refusalHintDuration);
+    }
+
+    public void PlayRejected()
+    {
+        if (!_root.activeSelf)
+            return;
+
+        _swing?.Complete();
+        PlaySwing(_rejectedAngle, _rejectedDuration);
+    }
+
+    private void ApplyDimmed(bool isDimmed, float duration)
+    {
+        IsDimmed = isDimmed;
+        KillColorTweens();
+        Color tint = isDimmed ? _dimmedTint : Color.white;
+        TweenColor(_plate, _plateColor * tint, duration);
+
+        foreach (SpriteRenderer icon in _icons)
+            TweenColor(icon, _iconColor * tint, duration);
+    }
+
+    private void TweenColor(SpriteRenderer target, Color color, float duration)
+    {
+        if (duration <= 0f)
+        {
+            target.color = color;
+            return;
+        }
+
+        _colorTweens.Add(target.DOColor(color, duration).SetLink(gameObject));
+    }
+
+    private void PlaySwing(float angle, float duration)
+    {
+        _root.transform.localRotation = Quaternion.identity;
+        _swing = _root.transform.DOPunchRotation(new Vector3(0f, 0f, angle), duration, 6, 0.5f).SetLink(gameObject);
+        _iconHop?.Complete();
+        _iconHop = DOTween.Sequence().SetLink(gameObject);
+
+        foreach (SpriteRenderer icon in _icons)
+        {
+            if (icon.gameObject.activeSelf)
+                _iconHop.Join(icon.transform.DOPunchPosition(Vector3.up * _iconHopHeight, duration, 4, 0.5f));
+        }
+    }
+
+    private void KillColorTweens()
+    {
+        foreach (Tween tween in _colorTweens)
+            tween.Kill();
+
+        _colorTweens.Clear();
+    }
+
+    private void KillTweens()
+    {
+        KillColorTweens();
+        _swing?.Kill();
+        _iconHop?.Kill(true);
+        _swing = null;
+        _iconHop = null;
+    }
+}
