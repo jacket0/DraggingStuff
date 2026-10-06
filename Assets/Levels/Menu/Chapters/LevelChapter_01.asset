@@ -17,10 +17,11 @@ MonoBehaviour:
     _en: First Cleanup
     _tr: "\u0130lk Temizlik"
   _description:
-    _ru: "\u0421\u043E\u0431\u0438\u0440\u0430\u0439 \u043F\u043E \u0442\u0440\u0438
-      \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u044B\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430"
-    _en: Match three identical items
-    _tr: "\xDC\xE7 ayn\u0131 e\u015Fyay\u0131 bir araya getir"
+    _ru: "\u041F\u0435\u0440\u0435\u0442\u0430\u0441\u043A\u0438\u0432\u0430\u0439
+      \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u044B \u0438 \u0441\u043E\u0431\u0438\u0440\u0430\u0439
+      \u0442\u0440\u043E\u0439\u043A\u0438 \u043D\u0430 \u043F\u043E\u043B\u043A\u0430\u0445"
+    _en: Drag items and collect sets of three on the shelves
+    _tr: "E\u015Fyalar\u0131 s\xFCr\xFCkle, raflarda \xFC\xE7l\xFCler topla"
   _mechanic: 0
   _mechanicIcon: {fileID: 21300000, guid: f845d5a44a2f17b4083edc85dc723d1b, type: 3}
   _levels:

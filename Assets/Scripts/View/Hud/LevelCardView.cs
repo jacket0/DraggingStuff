@@ -13,6 +13,14 @@ public class LevelCardView : MonoBehaviour
     [SerializeField] private TMP_Text _bestTimeText;
     [SerializeField] private StarRatingView _starRating;
     [SerializeField] private GameObject _lockIcon;
+    [SerializeField] private GameObject _playRoot;
+    [SerializeField] private GameObject _currentHighlight;
+    [SerializeField] private GameObject _newRibbon;
+    [SerializeField] private CanvasGroup _sticker;
+    [SerializeField] private Image _stickerIcon;
+    [SerializeField] private TMP_Text _stickerCountText;
+    [SerializeField] private Image _lockedSilhouette;
+    [SerializeField, Range(0f, 1f)] private float _lockedStickerAlpha = 0.55f;
 
     private LevelEntry _level;
 
@@ -28,34 +36,48 @@ public class LevelCardView : MonoBehaviour
         _button?.onClick.RemoveListener(HandleClick);
     }
 
-    public void Bind(LevelEntry level, bool unlocked, long bestScore, long bestTimeMilliseconds, int stars)
+    public void Bind(LevelCardState state)
     {
-        _level = level ?? throw new ArgumentNullException(nameof(level));
+        _level = state.Level;
 
-        bool canBeStarted = unlocked && level.CanBeStarted;
+        bool canBeStarted = state.IsUnlocked && state.Level.CanBeStarted;
+        bool isCurrent = canBeStarted && state.IsCurrent;
+        bool hasCompletion = canBeStarted && state.BestTimeMilliseconds > 0;
+        bool hasMechanic = state.MechanicIcon != null;
 
-        _levelNumberText.SetText(level.Number.ToString());
-        _recordValueText.SetText(bestScore.ToString());
+        _levelNumberText.SetText(state.Level.Number.ToString());
+        _recordValueText.SetText(state.BestScore.ToString());
+        _timeRoot.SetActive(hasCompletion);
 
-        bool hasCompletion = canBeStarted && bestTimeMilliseconds > 0;
+        if (hasCompletion)
+            _bestTimeText.SetText(TimeTextFormatter.FormatMilliseconds(state.BestTimeMilliseconds));
 
-        if (_timeRoot != null)
-            _timeRoot.SetActive(hasCompletion);
+        _starRating.gameObject.SetActive(hasCompletion);
 
-        if (_bestTimeText != null && hasCompletion)
-            _bestTimeText.SetText(TimeTextFormatter.FormatMilliseconds(bestTimeMilliseconds));
-
-        if (_starRating != null)
-        {
-            _starRating.gameObject.SetActive(hasCompletion);
-
-            if (hasCompletion)
-                _starRating.SetRating(stars);
-        }
+        if (hasCompletion)
+            _starRating.SetRating(state.Stars);
 
         _button.interactable = canBeStarted;
-        _recordRoot.SetActive(canBeStarted);
+        _recordRoot.SetActive(canBeStarted && !isCurrent);
+        _playRoot.SetActive(isCurrent);
+        _currentHighlight.SetActive(isCurrent);
         _lockIcon.SetActive(!canBeStarted);
+        _newRibbon.SetActive(state.IsNew);
+        BindMechanic(state, hasMechanic, canBeStarted);
+    }
+
+    private void BindMechanic(LevelCardState state, bool hasMechanic, bool canBeStarted)
+    {
+        _sticker.gameObject.SetActive(hasMechanic);
+        _lockedSilhouette.gameObject.SetActive(hasMechanic && !canBeStarted);
+
+        if (!hasMechanic)
+            return;
+
+        _sticker.alpha = canBeStarted ? 1f : _lockedStickerAlpha;
+        _stickerIcon.sprite = state.MechanicIcon;
+        _stickerCountText.SetText($"×{state.MechanicElementCount}");
+        _lockedSilhouette.sprite = state.MechanicIcon;
     }
 
     private void HandleClick()

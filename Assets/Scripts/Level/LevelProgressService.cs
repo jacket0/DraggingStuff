@@ -30,11 +30,19 @@ public class LevelProgressService : MonoBehaviour
 
         for (int i = 0; i < index; i++)
         {
-            if (!GameProgressRepository.IsLevelCompleted(_catalog.Levels[i].Number))
+            if (!IsCompleted(_catalog.Levels[i]))
                 return false;
         }
 
         return true;
+    }
+
+    public bool IsCompleted(LevelEntry level)
+    {
+        if (level == null)
+            throw new ArgumentNullException(nameof(level));
+
+        return GameProgressRepository.IsLevelCompleted(level.Number);
     }
 
     public long GetBestScore(LevelEntry level)

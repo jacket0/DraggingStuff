@@ -9,6 +9,8 @@ public sealed class EndlessModeCardView : MonoBehaviour
     [SerializeField] private TMP_Text _bestScoreValueText;
     [SerializeField] private GameObject _recordRoot;
     [SerializeField] private GameObject _lockIcon;
+    [SerializeField] private GameObject _playRoot;
+    [SerializeField] private GameObject _lockedHintRoot;
 
     public event Action Clicked;
 
@@ -27,7 +29,9 @@ public sealed class EndlessModeCardView : MonoBehaviour
         _button.interactable = unlocked;
         _bestScoreValueText.SetText(bestScore.ToString());
         _recordRoot.SetActive(unlocked);
+        _playRoot.SetActive(unlocked);
         _lockIcon.SetActive(!unlocked);
+        _lockedHintRoot.SetActive(!unlocked);
     }
 
     private void HandleClicked()

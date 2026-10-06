@@ -17,11 +17,11 @@ MonoBehaviour:
     _en: A Place for Everything
     _tr: "Her \u015Eeyin Bir Yeri Var"
   _description:
-    _ru: "\u0422\u0430\u0431\u043B\u0438\u0447\u043A\u0430 \u043F\u0443\u0441\u043A\u0430\u0435\u0442
-      \u043D\u0430 \u043F\u043E\u043B\u043A\u0443 \u0442\u043E\u043B\u044C\u043A\u043E
-      \u0441\u0432\u043E\u0438 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u044B"
-    _en: A sign lets only its own items onto the shelf
-    _tr: "Tabela rafa yaln\u0131zca kendi e\u015Fyalar\u0131n\u0131 al\u0131r"
+    _ru: "\u041F\u043E\u043B\u043A\u0430 \u0441 \u0442\u0430\u0431\u043B\u0438\u0447\u043A\u043E\u0439
+      \u043F\u0440\u0438\u043C\u0435\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u0443\u043A\u0430\u0437\u0430\u043D\u043D\u044B\u0435
+      \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u044B"
+    _en: A shelf with a sign takes only the items shown on it
+    _tr: "Tabelal\u0131 raf yaln\u0131zca \xFCzerindeki e\u015Fyalar\u0131 al\u0131r"
   _mechanic: 1
   _mechanicIcon: {fileID: 21300000, guid: 45b0de757eea4ba4b87f9053c73bb3e6, type: 3}
   _levels:

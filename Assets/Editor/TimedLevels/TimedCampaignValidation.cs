@@ -648,11 +648,21 @@ public static class TimedCampaignValidation
 
         foreach (LevelCardView card in cards)
         {
-            RequireReference(card, "_timeRoot");
-            RequireReference(card, "_bestTimeText");
-            RequireReference(card, "_starRating");
+            foreach (string field in new[] { "_timeRoot", "_bestTimeText", "_starRating", "_playRoot", "_currentHighlight", "_newRibbon", "_sticker", "_stickerIcon", "_stickerCountText", "_lockedSilhouette" })
+                RequireReference(card, field);
+
             ValidateLevelCard(card);
         }
+
+        LevelChapterSectionView[] sections = FindAllInScene<LevelChapterSectionView>(scene).ToArray();
+
+        if (sections.Length != ChapterCount || sections.Any(section => section.Cover == null || section.Cards.Count != LevelsPerChapter))
+            throw new InvalidOperationException($"Main menu: {sections.Length} chapter sections, each needs a cover and {LevelsPerChapter} cards.");
+
+        EndlessModeCardView endlessCard = FindAllInScene<EndlessModeCardView>(scene).Single();
+
+        foreach (string field in new[] { "_playRoot", "_lockedHintRoot" })
+            RequireReference(endlessCard, field);
     }
 
     private static void ValidateCampaignHud(string sceneName, CampaignTimerView timerView)
