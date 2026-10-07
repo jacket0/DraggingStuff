@@ -205,12 +205,6 @@ public static class TimedLevelVariantGenerator
                 continue;
             }
 
-            if (TimedLevelLayoutRules.CountFilteredMoves(generation.State, generation.SolutionMoves) < definition.MinimumFilteredMoveCount)
-            {
-                CountRejection(rejections, CandidateRejection.FilterUsage);
-                continue;
-            }
-
             TimedLevelSolver solver = new TimedLevelSolver(
                 generation.SolutionMoves.Count,
                 generation.SolutionMoves.Count + 1,
@@ -380,7 +374,6 @@ public static class TimedLevelVariantGenerator
         GenerationFailed,
         ConveyorStart,
         FilteredEmptyColumns,
-        FilterUsage,
         NotSolved,
         DifficultySpread
     }

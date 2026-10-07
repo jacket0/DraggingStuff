@@ -11,7 +11,6 @@ public sealed class TimedLevelGenerationInput
     public int ShuffleSwapCount { get; }
     public IReadOnlyDictionary<int, IReadOnlyList<ItemType>> ShelfFilters { get; }
     public int FilteredEmptyColumnCount { get; }
-    public int MinimumFilteredMoveCount { get; }
 
     public TimedLevelGenerationInput(
         string name,
@@ -21,8 +20,7 @@ public sealed class TimedLevelGenerationInput
         IReadOnlyList<int> conveyorShelfIndices = null,
         int shuffleSwapCount = 0,
         IReadOnlyDictionary<int, IReadOnlyList<ItemType>> shelfFilters = null,
-        int filteredEmptyColumnCount = 0,
-        int minimumFilteredMoveCount = 0)
+        int filteredEmptyColumnCount = 0)
     {
         Name = !string.IsNullOrWhiteSpace(name) ? name : throw new ArgumentException(nameof(name));
         EmptyColumnCount = emptyColumnCount > 0 ? emptyColumnCount : throw new ArgumentOutOfRangeException(nameof(emptyColumnCount));
@@ -32,7 +30,6 @@ public sealed class TimedLevelGenerationInput
         ShuffleSwapCount = shuffleSwapCount >= 0 ? shuffleSwapCount : throw new ArgumentOutOfRangeException(nameof(shuffleSwapCount));
         ShelfFilters = shelfFilters ?? new Dictionary<int, IReadOnlyList<ItemType>>();
         FilteredEmptyColumnCount = filteredEmptyColumnCount >= 0 ? filteredEmptyColumnCount : throw new ArgumentOutOfRangeException(nameof(filteredEmptyColumnCount));
-        MinimumFilteredMoveCount = minimumFilteredMoveCount >= 0 ? minimumFilteredMoveCount : throw new ArgumentOutOfRangeException(nameof(minimumFilteredMoveCount));
     }
 }
 

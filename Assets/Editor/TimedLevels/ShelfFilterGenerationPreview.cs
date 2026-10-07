@@ -41,8 +41,7 @@ public static class ShelfFilterGenerationPreview
             Debug.Log(
                 $"SHELF_FILTER_GENERATION_PREVIEW: {candidates.Count} candidates in {stopwatch.Elapsed.TotalSeconds:F1} s, " +
                 $"{acceptedCount} within 10% of median {medianMoveCount} moves, " +
-                $"filtered moves median {TimedLevelVariantGenerator.GetMedian(filteredMoveCounts)} (min {filteredMoveCounts.Min()}, max {filteredMoveCounts.Max()}, " +
-                $"at minimum {filteredMoveCounts.Count(count => count == definition.MinimumFilteredMoveCount)}), " +
+                $"filtered moves median {TimedLevelVariantGenerator.GetMedian(filteredMoveCounts)} (min {filteredMoveCounts.Min()}, max {filteredMoveCounts.Max()}), " +
                 $"filtered empty columns at start {FormatDistribution(filteredEmptyColumnCounts)}, " +
                 $"junk on filters in {junkLayoutCount}/{candidates.Count} layouts, " +
                 $"rejected: {TimedLevelVariantGenerator.FormatRejections(rejections)}.");
@@ -87,7 +86,6 @@ public static class ShelfFilterGenerationPreview
         acceptedTypesProperty.arraySize = 1;
         acceptedTypesProperty.GetArrayElementAtIndex(0).enumValueIndex = (int)ItemType.Ball;
         serializedDefinition.FindProperty("_filteredEmptyColumnCount").intValue = 1;
-        serializedDefinition.FindProperty("_minimumFilteredMoveCount").intValue = 2;
         serializedDefinition.ApplyModifiedPropertiesWithoutUndo();
         return definition;
     }
