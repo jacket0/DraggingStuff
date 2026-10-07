@@ -64,7 +64,7 @@ public sealed class BoardMoveSimulator
             matches.AddRange(matchesAfterShift);
         }
 
-        simulation = CreateSimulation(shelves, matches, affectedShelves, isSwap, conveyorsShifted, matchCountAfterShift);
+        simulation = CreateSimulation(shelves, board.FilteredTypes, matches, affectedShelves, isSwap, conveyorsShifted, matchCountAfterShift);
         return true;
     }
 
@@ -88,7 +88,7 @@ public sealed class BoardMoveSimulator
 
         ShelfStateSnapshot[] shelves = CopyShelves(board);
         ShiftConveyors(shelves, new bool[shelves.Length]);
-        return new BoardStateSnapshot(shelves);
+        return new BoardStateSnapshot(shelves, board.FilteredTypes);
     }
 
     private static ShelfStateSnapshot[] CopyShelves(BoardStateSnapshot board)
@@ -153,6 +153,7 @@ public sealed class BoardMoveSimulator
 
     private static BoardMoveSimulation CreateSimulation(
         ShelfStateSnapshot[] shelves,
+        IReadOnlyCollection<ItemType> filteredTypes,
         List<MatchInfo> matches,
         bool[] affectedShelves,
         bool isSwap,
@@ -167,7 +168,7 @@ public sealed class BoardMoveSimulator
                 affectedShelfIndexes.Add(shelfIndex);
         }
 
-        return new BoardMoveSimulation(new BoardStateSnapshot(shelves), matches, affectedShelfIndexes, isSwap, conveyorsShifted, matchCountAfterShift);
+        return new BoardMoveSimulation(new BoardStateSnapshot(shelves, filteredTypes), matches, affectedShelfIndexes, isSwap, conveyorsShifted, matchCountAfterShift);
     }
 
     private static void ReplaceColumn(ShelfStateSnapshot[] shelves, ColumnPosition position, ColumnStateSnapshot column)

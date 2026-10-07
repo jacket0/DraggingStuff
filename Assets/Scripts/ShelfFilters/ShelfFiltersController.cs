@@ -142,7 +142,7 @@ public sealed class ShelfFiltersController : MonoBehaviour
     private void HandleDragStarting(ShelfItem item)
     {
         _draggedType = item.Type;
-        StopItemShake(item);
+        StopItemShakes();
 
         foreach (KeyValuePair<Shelf, ShelfFilterSignView> filterSign in _filterSigns)
         {

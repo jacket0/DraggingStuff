@@ -25,9 +25,17 @@ public sealed class ShelfItemCatalog : ScriptableObject
 
     public ShelfItem GetPrefab(ItemType type) => GetEntry(type).Prefab;
 
-    public Sprite GetIcon(ItemType type) => GetEntry(type).Icon != null ? GetEntry(type).Icon : throw new InvalidOperationException($"{name}: {type} has no icon.");
+    public Sprite GetIcon(ItemType type)
+    {
+        Sprite icon = GetEntry(type).Icon;
+        return icon != null ? icon : throw new InvalidOperationException($"{name}: {type} has no icon.");
+    }
 
-    public Sprite GetSignIcon(ItemType type) => GetEntry(type).SignIcon != null ? GetEntry(type).SignIcon : throw new InvalidOperationException($"{name}: {type} has no sign icon.");
+    public Sprite GetSignIcon(ItemType type)
+    {
+        Sprite signIcon = GetEntry(type).SignIcon;
+        return signIcon != null ? signIcon : throw new InvalidOperationException($"{name}: {type} has no sign icon.");
+    }
 
     public void Validate()
     {

@@ -11,7 +11,7 @@ public sealed class ShelfBoard : MonoBehaviour
     private readonly HashSet<Shelf> _closedShelves = new HashSet<Shelf>();
     private readonly HashSet<Shelf> _conveyorShelves = new HashSet<Shelf>();
     private readonly Dictionary<Shelf, IReadOnlyList<ItemType>> _shelfFilters = new Dictionary<Shelf, IReadOnlyList<ItemType>>();
-    private readonly HashSet<ItemType> _filteredTypes = new HashSet<ItemType>();
+    private IReadOnlyCollection<ItemType> _filteredTypes = Array.Empty<ItemType>();
     private readonly Dictionary<ShelfColumn, ColumnPosition> _positions = new Dictionary<ShelfColumn, ColumnPosition>();
     private readonly BoardMoveSimulator _simulator = new BoardMoveSimulator();
     private bool _initialized;
@@ -103,12 +103,12 @@ public sealed class ShelfBoard : MonoBehaviour
             throw new InvalidOperationException($"A shelf filter must accept one to {ShelfStateSnapshot.MaximumAcceptedTypeCount} item types.");
 
         _shelfFilters.Add(shelf, Array.AsReadOnly(normalizedTypes));
-        _filteredTypes.UnionWith(normalizedTypes);
+        _filteredTypes = BoardStateSnapshot.CollectFilteredTypes(_shelfFilters.Values);
     }
 
     public bool CanMatch(Shelf shelf) => CreateShelfSnapshot(shelf).CanMatch(_filteredTypes);
 
-    public bool CanMatchType(Shelf shelf, ItemType type) => CreateShelfSnapshot(shelf).CanMatchType(type, _filteredTypes);
+    public bool CanMatchType(Shelf shelf, ItemType type) => ShelfStateSnapshot.CanMatchType(GetAcceptedTypes(shelf), type, _filteredTypes);
 
     public bool TryResolveMatch(Shelf shelf, out MatchResolution match)
     {
@@ -137,7 +137,7 @@ public sealed class ShelfBoard : MonoBehaviour
     public BoardStateSnapshot CreateSnapshot()
     {
         Initialize();
-        return new BoardStateSnapshot(_shelves.Select(CreateShelfSnapshot).ToArray());
+        return new BoardStateSnapshot(_shelves.Select(CreateShelfSnapshot).ToArray(), _filteredTypes);
     }
 
     public bool CanMove(ShelfColumn source, ShelfColumn target) => TrySimulateMove(source, target, out _);
@@ -163,7 +163,7 @@ public sealed class ShelfBoard : MonoBehaviour
                 shelves[index] = _simulator.ResolveShelfMatches(board, index);
         }
 
-        return _simulator.TrySimulate(new BoardStateSnapshot(shelves), _positions[source], targetPosition, out simulation) && simulation.IsAllowed;
+        return _simulator.TrySimulate(new BoardStateSnapshot(shelves, board.FilteredTypes), _positions[source], targetPosition, out simulation) && simulation.IsAllowed;
     }
 
     public MoveOutcome TryMove(ShelfColumn source, ShelfColumn target)

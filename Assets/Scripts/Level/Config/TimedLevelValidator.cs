@@ -192,6 +192,8 @@ public static class TimedLevelValidator
             {
                 if (!levelTypes.Contains(type))
                     throw new InvalidOperationException($"{definition.name}: shelf filter {shelfFilter.ShelfIndex} accepts {type}, which is not one of the level's item types.");
+
+                definition.ItemCatalog.GetSignIcon(type);
             }
 
             if (acceptedTypes.Count >= levelTypes.Count)

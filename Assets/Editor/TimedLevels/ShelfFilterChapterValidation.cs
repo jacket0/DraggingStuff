@@ -56,6 +56,7 @@ public static class ShelfFilterChapterValidation
         TimedLevelVariant variant = definition.Variants[variantIndex];
         BoardStateSnapshot state = variant.CreateLayout();
         IReadOnlyCollection<ItemType> filteredTypes = state.FilteredTypes;
+        int swapCount = 0;
 
         foreach (TimedLevelMove move in variant.CreateSolution())
         {
@@ -68,8 +69,14 @@ public static class ShelfFilterChapterValidation
             if (simulation.Matches.Any(match => filteredTypes.Contains(match.Type) && !simulation.State.Shelves[match.ShelfIndex].AcceptedTypes.Contains(match.Type)))
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} matches a filtered type outside its filter.");
 
+            if (simulation.IsSwap)
+                swapCount++;
+
             state = simulation.State;
         }
+
+        if (swapCount != definition.ShuffleSwapCount)
+            throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} solution has {swapCount} shuffle swaps, {definition.ShuffleSwapCount} expected.");
 
         if (!state.IsCleared)
             throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} solution does not clear the board.");

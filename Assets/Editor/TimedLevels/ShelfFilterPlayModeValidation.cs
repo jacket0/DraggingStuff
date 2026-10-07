@@ -112,7 +112,8 @@ public static class ShelfFilterPlayModeValidation
             ValidateLevelWithoutFilters,
             ValidateStuckFilteredTriple,
             ValidateMatchInBox,
-            ValidateSuggestionIgnoresStuckTriple
+            ValidateSuggestionIgnoresStuckTriple,
+            ValidateSwapOntoShakingItem
         };
 
         foreach (Func<IEnumerable> scenario in scenarios)
@@ -320,6 +321,74 @@ public static class ShelfFilterPlayModeValidation
             suggestion.SourceColumn.FrontItem.Type != type || suggestion.TargetColumn.Shelf != shelf || suggestion.TargetMatchingItems.Count == 0,
             $"P9: the suggestion must not collect {type} on the regular shelf {shelf.name}");
         ExpectSuggestionRespectsFilters("P9");
+    }
+
+    private static IEnumerable ValidateSwapOntoShakingItem()
+    {
+        foreach (object step in LoadLevel(GetFilterLevel())) yield return step;
+
+        ItemType type = GetFilteredType();
+        Shelf shelf = _board.Shelves.First(candidate => !_board.IsFiltered(candidate) && candidate.Columns.All(column => !column.IsEmpty));
+        ShelfColumnView source = StagePair(shelf, type, 2);
+        ShelfColumnView target = shelf.ColumnViews[0];
+        ShelfColumnView dragged = null;
+        bool wasShaking = false;
+        bool isDragStarted = false;
+        bool areShakesStopped = false;
+
+        void HandleBoardSettled()
+        {
+            _session.BoardSettled -= HandleBoardSettled;
+            wasShaking = shelf.Columns.All(column => DOTween.IsTweening(column.FrontItem.transform));
+            BoardStateSnapshot board = _board.CreateSnapshot();
+            dragged = _board.Shelves
+                .Where(candidate => candidate != shelf && !_board.IsFiltered(candidate))
+                .SelectMany(candidate => candidate.ColumnViews)
+                .FirstOrDefault(column => !column.IsEmpty && column.FrontItem.Type != type && _session.CanPickUp(column)
+                    && Simulator.TrySimulate(board, ToPosition(column), ToPosition(target), out BoardMoveSimulation simulation) && simulation.IsAllowed);
+
+            if (dragged == null)
+                return;
+
+            isDragStarted = _drag.TryBeginDrag(dragged.FrontItem, GetScreenCenter(dragged.FrontItem));
+            areShakesStopped = shelf.Columns.All(column => !DOTween.IsTweening(column.FrontItem.transform));
+        }
+
+        _session.BoardSettled += HandleBoardSettled;
+
+        try
+        {
+            BoardStateSnapshot expected = Move(_board.CreateSnapshot(), ToPosition(source), ToPosition(shelf.ColumnViews[2]));
+
+            foreach (object step in WaitUntil(() => dragged != null || _session.IsBoardSettled, "P10 stuck triple")) yield return step;
+
+            ExpectBoard(expected, "P10 stuck triple");
+        }
+        finally
+        {
+            _session.BoardSettled -= HandleBoardSettled;
+        }
+
+        Expect(wasShaking, "P10: the stuck triple must shake before the swap");
+        Expect(dragged != null && isDragStarted, "P10: a swap onto the stuck triple must start");
+        Expect(areShakesStopped, "P10: picking up an item must stop the item shakes");
+        ShelfItem displaced = target.FrontItem;
+        BoardStateSnapshot afterSwap = Simulate(_board.CreateSnapshot(), ToPosition(dragged), ToPosition(target));
+        _drag.EndDrag(GetScreenCenter(displaced));
+
+        foreach (object step in WaitUntilSettled("P10 swap")) yield return step;
+
+        ExpectBoard(afterSwap, "P10 swap");
+        Expect(displaced.transform.parent == dragged.ItemAnchor && displaced.transform.localPosition.sqrMagnitude < 0.000001f,
+            "P10: the swapped item must rest in front of its new column");
+    }
+
+    private static BoardStateSnapshot Simulate(BoardStateSnapshot board, ColumnPosition source, ColumnPosition target)
+    {
+        if (!Simulator.TrySimulate(board, source, target, out BoardMoveSimulation simulation) || !simulation.IsAllowed)
+            throw new InvalidOperationException("The scenario swap is not valid in the simulator.");
+
+        return simulation.State;
     }
 
     private static ItemType GetFilteredType() => _board.GetAcceptedTypes(_board.Shelves.First(_board.IsFiltered))[0];

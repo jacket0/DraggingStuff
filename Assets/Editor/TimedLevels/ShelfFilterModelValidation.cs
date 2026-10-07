@@ -38,6 +38,7 @@ public static class ShelfFilterModelValidation
         ValidateTwoTypeFilterMatches();
         ValidateShelfBoardMatchesLikeSimulator();
         ValidateSuggestionSkipsFilteredGroups();
+        ValidateSuggestionMovesDeadPairToBox();
     }
 
     private static void ValidateAcceptedPlacement()
@@ -569,12 +570,7 @@ public static class ShelfFilterModelValidation
             Fill(pairShelf, temporaryObjects, new[] { ItemType.Ball }, new[] { ItemType.Ball }, Array.Empty<ItemType>());
             Fill(sourceShelf, temporaryObjects, new[] { ItemType.Ball }, new[] { ItemType.Plant }, new[] { ItemType.Bear });
             board.SetFilter(box, BallOnly);
-            GameObject providerObject = EditorUtility.CreateGameObjectWithHideFlags("ValidationSuggestions", HideFlags.HideAndDontSave);
-            temporaryObjects.Add(providerObject);
-            MoveSuggestionProvider provider = providerObject.AddComponent<MoveSuggestionProvider>();
-            SerializedObject serializedProvider = new SerializedObject(provider);
-            serializedProvider.FindProperty("_shelfBoard").objectReferenceValue = board;
-            serializedProvider.ApplyModifiedPropertiesWithoutUndo();
+            MoveSuggestionProvider provider = CreateSuggestionProvider(board, temporaryObjects);
 
             if (!provider.TryGetSuggestion(out MoveSuggestion suggestion) || suggestion.TargetColumn.Shelf != box || suggestion.TargetMatchingItems.Count != 1)
                 throw new InvalidOperationException("Filter M21: the suggestion must grow a filtered group in its box, not on a regular shelf.");
@@ -583,6 +579,43 @@ public static class ShelfFilterModelValidation
         {
             TemporaryShelfFactory.Destroy(temporaryObjects);
         }
+    }
+
+    private static void ValidateSuggestionMovesDeadPairToBox()
+    {
+        List<GameObject> temporaryObjects = new List<GameObject>();
+
+        try
+        {
+            Shelf pairShelf = TemporaryShelfFactory.CreateShelf("PairShelf", temporaryObjects);
+            Shelf box = TemporaryShelfFactory.CreateShelf("BoxShelf", temporaryObjects);
+            Shelf lampShelf = TemporaryShelfFactory.CreateShelf("LampShelf", temporaryObjects);
+            ShelfBoard board = TemporaryShelfFactory.CreateBoard(temporaryObjects, pairShelf, box, lampShelf);
+            board.Initialize();
+            Fill(pairShelf, temporaryObjects, new[] { ItemType.Ball }, new[] { ItemType.Ball }, new[] { ItemType.Bear });
+            Fill(box, temporaryObjects, new[] { ItemType.Ball }, Array.Empty<ItemType>(), new[] { ItemType.Lamp });
+            Fill(lampShelf, temporaryObjects, new[] { ItemType.Plant }, Array.Empty<ItemType>(), new[] { ItemType.Lamp });
+            board.SetFilter(box, BallOnly);
+            MoveSuggestionProvider provider = CreateSuggestionProvider(board, temporaryObjects);
+
+            if (!provider.TryGetSuggestion(out MoveSuggestion suggestion) || suggestion.SourceColumn.Shelf != pairShelf || suggestion.TargetColumn.Shelf != box)
+                throw new InvalidOperationException("Filter M22: a pair of filtered items on a regular shelf must not be kept as a pair, the suggestion must move it to its box.");
+        }
+        finally
+        {
+            TemporaryShelfFactory.Destroy(temporaryObjects);
+        }
+    }
+
+    private static MoveSuggestionProvider CreateSuggestionProvider(ShelfBoard board, List<GameObject> temporaryObjects)
+    {
+        GameObject providerObject = EditorUtility.CreateGameObjectWithHideFlags("ValidationSuggestions", HideFlags.HideAndDontSave);
+        temporaryObjects.Add(providerObject);
+        MoveSuggestionProvider provider = providerObject.AddComponent<MoveSuggestionProvider>();
+        SerializedObject serializedProvider = new SerializedObject(provider);
+        serializedProvider.FindProperty("_shelfBoard").objectReferenceValue = board;
+        serializedProvider.ApplyModifiedPropertiesWithoutUndo();
+        return provider;
     }
 
     private static BoardStateSnapshot CreateSmallFilterLayout(IReadOnlyList<ItemType> firstShelfTypes)
