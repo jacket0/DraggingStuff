@@ -43,6 +43,7 @@ public sealed class ShelfFilterSignView : MonoBehaviour
     public Shelf Shelf => _shelf;
     public bool IsDimmed { get; private set; }
     public bool IsHighlighted { get; private set; }
+    public bool IsPulsing => _pulse != null && _pulse.IsActive() && _pulse.IsPlaying();
     public bool IsShown => _root.activeSelf;
     public Vector3 BottomCenter => new Vector3(_plate.bounds.center.x, _plate.bounds.min.y, _plate.bounds.center.z);
 

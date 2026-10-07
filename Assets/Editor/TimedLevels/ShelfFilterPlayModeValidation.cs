@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using DG.Tweening;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -108,7 +109,10 @@ public static class ShelfFilterPlayModeValidation
             ValidateForbiddenMove,
             ValidateSignDimming,
             ValidateRestart,
-            ValidateLevelWithoutFilters
+            ValidateLevelWithoutFilters,
+            ValidateStuckFilteredTriple,
+            ValidateMatchInBox,
+            ValidateSuggestionIgnoresStuckTriple
         };
 
         foreach (Func<IEnumerable> scenario in scenarios)
@@ -236,6 +240,145 @@ public static class ShelfFilterPlayModeValidation
         ExpectBoard(expected, "P6 move");
     }
 
+    private static IEnumerable ValidateStuckFilteredTriple()
+    {
+        foreach (object step in LoadLevel(GetFilterLevel())) yield return step;
+
+        ItemType type = GetFilteredType();
+        Shelf shelf = _board.Shelves.First(candidate => !_board.IsFiltered(candidate) && candidate.Columns.All(column => !column.IsEmpty));
+        ShelfColumnView source = StagePair(shelf, type, 2);
+        ShelfFilterSignView sign = _signs.First(candidate => candidate.IsShown && _board.GetAcceptedTypes(candidate.Shelf).Contains(type));
+        bool isReminded = false;
+
+        void HandleBoardSettled() => isReminded = sign.IsPulsing && shelf.Columns.All(column => DOTween.IsTweening(column.FrontItem.transform));
+
+        _session.BoardSettled += HandleBoardSettled;
+
+        try
+        {
+            BoardStateSnapshot expected = Move(_board.CreateSnapshot(), ToPosition(source), ToPosition(shelf.ColumnViews[2]));
+
+            foreach (object step in WaitUntilSettled("P7 move")) yield return step;
+
+            ExpectBoard(expected, "P7 move");
+        }
+        finally
+        {
+            _session.BoardSettled -= HandleBoardSettled;
+        }
+
+        Expect(shelf.HasMatch() && !_board.CanMatch(shelf), $"P7: three {type} items must stay on the regular shelf {shelf.name}");
+        Expect(isReminded, "P7: the stuck triple must shake its items and pulse the sign of its box");
+    }
+
+    private static IEnumerable ValidateMatchInBox()
+    {
+        foreach (object step in LoadLevel(GetFilterLevel())) yield return step;
+
+        ItemType type = GetFilteredType();
+        Shelf box = _board.Shelves.First(candidate => _board.GetAcceptedTypes(candidate).Contains(type));
+        ShelfColumnView source = StagePair(box, type, 2);
+        ScoreSystem score = UnityEngine.Object.FindObjectOfType<ScoreSystem>();
+        ComboSystem combo = UnityEngine.Object.FindObjectOfType<ComboSystem>();
+        Expect(score != null && combo != null, "P8: the level needs the score and combo systems");
+        long scoreBefore = score.CurrentScore;
+        int itemCountBefore = CountItems(type);
+        int comboIncreaseCount = 0;
+
+        void HandleComboIncreased(ComboState state) => comboIncreaseCount++;
+
+        combo.ComboIncreased += HandleComboIncreased;
+
+        try
+        {
+            BoardStateSnapshot expected = Move(_board.CreateSnapshot(), ToPosition(source), ToPosition(box.ColumnViews[2]));
+
+            foreach (object step in WaitUntilSettled("P8 move")) yield return step;
+
+            ExpectBoard(expected, "P8 move");
+        }
+        finally
+        {
+            combo.ComboIncreased -= HandleComboIncreased;
+        }
+
+        Expect(CountItems(type) == itemCountBefore - box.Capacity, $"P8: three {type} items must match in their box");
+        Expect(score.CurrentScore > scoreBefore, "P8: a match in the box must add score");
+        Expect(comboIncreaseCount > 0, "P8: a match in the box must increase the combo");
+    }
+
+    private static IEnumerable ValidateSuggestionIgnoresStuckTriple()
+    {
+        foreach (object step in LoadLevel(GetFilterLevel())) yield return step;
+
+        ItemType type = GetFilteredType();
+        Shelf shelf = _board.Shelves.First(candidate => !_board.IsFiltered(candidate) && candidate.Columns.Count(column => column.IsEmpty) == 1);
+        int emptyColumnIndex = shelf.Columns.ToList().FindIndex(column => column.IsEmpty);
+        StagePair(shelf, type, emptyColumnIndex);
+        Expect(_suggestions.TryGetSuggestion(out MoveSuggestion suggestion), "P9: the staged board must offer a move");
+        Expect(
+            suggestion.SourceColumn.FrontItem.Type != type || suggestion.TargetColumn.Shelf != shelf || suggestion.TargetMatchingItems.Count == 0,
+            $"P9: the suggestion must not collect {type} on the regular shelf {shelf.name}");
+        ExpectSuggestionRespectsFilters("P9");
+    }
+
+    private static ItemType GetFilteredType() => _board.GetAcceptedTypes(_board.Shelves.First(_board.IsFiltered))[0];
+
+    private static int CountItems(ItemType type) => _board.Shelves.SelectMany(shelf => shelf.Columns).SelectMany(column => column.Items).Count(item => item.Type == type);
+
+    private static ShelfColumnView StagePair(Shelf shelf, ItemType type, int targetColumnIndex)
+    {
+        foreach (int columnIndex in Enumerable.Range(0, shelf.Capacity).OrderBy(index => index != targetColumnIndex))
+        {
+            ShelfColumn column = shelf.Columns[columnIndex];
+            bool needsType = columnIndex != targetColumnIndex;
+
+            if (column.IsEmpty ? !needsType : (column.FrontItem.Type == type) == needsType)
+                continue;
+
+            Expect(
+                FindColumnsOutside(shelf, front => (front == type) == needsType).Any(donor => TryExchangeFront(column, donor.Column)),
+                $"staging could not put {(needsType ? type.ToString() : "another type")} in front of column {columnIndex} on {shelf.name}");
+        }
+
+        foreach (Shelf boardShelf in _board.Shelves)
+            boardShelf.View.Refresh();
+
+        ShelfColumnView source = FindColumnsOutside(shelf, front => front == type).FirstOrDefault();
+        Expect(source != null, $"staging found no {type} in front outside {shelf.name}");
+        return source;
+    }
+
+    private static bool TryExchangeFront(ShelfColumn column, ShelfColumn donor)
+    {
+        bool isPlacement = column.IsEmpty;
+
+        if (isPlacement)
+            column.PlaceFront(donor.TakeFront());
+        else
+            column.SwapFrontWith(donor);
+
+        if (_board.Shelves.All(shelf => !shelf.HasMatch()))
+            return true;
+
+        if (isPlacement)
+            donor.PlaceFront(column.TakeFront());
+        else
+            column.SwapFrontWith(donor);
+
+        return false;
+    }
+
+    private static IEnumerable<ShelfColumnView> FindColumnsOutside(Shelf shelf, Func<ItemType, bool> isFrontWanted)
+    {
+        return _board.Shelves
+            .Where(candidate => candidate != shelf)
+            .OrderBy(candidate => _board.IsFiltered(candidate))
+            .SelectMany(candidate => candidate.ColumnViews)
+            .Where(candidate => !candidate.IsEmpty && isFrontWanted(candidate.FrontItem.Type))
+            .ToArray();
+    }
+
     private static LevelEntry GetFilterLevel()
     {
         if (_filterLevel == null)
@@ -340,6 +483,7 @@ public static class ShelfFilterPlayModeValidation
         ShelfColumnView target = suggestion.TargetColumn;
         Expect(_board.Accepts(target.Shelf, source.FrontItem.Type), $"{scenario}: the suggestion must not put {source.FrontItem.Type} on {target.Shelf.name}");
         Expect(target.IsEmpty || _board.Accepts(source.Shelf, target.FrontItem.Type), $"{scenario}: the suggested swap must not put {target.FrontItem?.Type} on {source.Shelf.name}");
+        Expect(suggestion.TargetMatchingItems.Count == 0 || _board.CanMatchType(target.Shelf, source.FrontItem.Type), $"{scenario}: the suggestion must not collect {source.FrontItem.Type} on {target.Shelf.name}");
     }
 
     private static BoardStateSnapshot Move(BoardStateSnapshot expected, ColumnPosition source, ColumnPosition target)
