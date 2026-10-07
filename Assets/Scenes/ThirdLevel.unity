@@ -41614,6 +41614,10 @@ MonoBehaviour:
   - {fileID: 174923754}
   - {fileID: 1378282989}
   _audio: {fileID: 1878838184}
+  _itemShakeLimit: 3
+  _itemShakeDistance: 0.035
+  _itemShakeDuration: 0.4
+  _itemShakeVibrato: 20
 --- !u!114 &1878838184
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -41628,6 +41632,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _rejectClip: {fileID: 8300000, guid: da966f8cbc4c27e45a99738d4cec2e30, type: 3}
   _rejectVolume: 0.25
+  _boxReminderClip: {fileID: 8300000, guid: eb135b34d1d35bd408761947606f935b, type: 3}
+  _boxReminderVolume: 0.5
 --- !u!82 &1878838185
 AudioSource:
   m_ObjectHideFlags: 0

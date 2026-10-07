@@ -34,6 +34,7 @@ public abstract class GameSession : MonoBehaviour
     public event Action<LevelState> StateChanged;
     public event Action MatchingMoveResolved;
     public event Action<Shelf> ShelfReserved;
+    public event Action BoardSettled;
 
     protected void StartSession()
     {
@@ -195,6 +196,7 @@ public abstract class GameSession : MonoBehaviour
             _isPreparing = false;
             _needsSettlement = false;
             HandleBoardSettled(_shelfBoard.IsCleared);
+            BoardSettled?.Invoke();
         });
     }
 
