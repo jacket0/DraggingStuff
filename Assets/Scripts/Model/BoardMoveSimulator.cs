@@ -114,6 +114,7 @@ public sealed class BoardMoveSimulator
     private static List<MatchInfo> ResolveCascades(ShelfStateSnapshot[] shelves, bool[] affectedShelves)
     {
         List<MatchInfo> matches = new List<MatchInfo>();
+        HashSet<ItemType> filteredTypes = CollectFilteredTypes(shelves);
         bool hasMatches;
 
         do
@@ -124,7 +125,7 @@ public sealed class BoardMoveSimulator
             {
                 ShelfStateSnapshot shelf = shelves[shelfIndex];
 
-                if (!shelf.HasMatch())
+                if (!shelf.HasMatch() || !CanMatchOn(shelf, shelf.Columns[0].Items[0], filteredTypes))
                     continue;
 
                 ColumnStateSnapshot[] columns = new ColumnStateSnapshot[shelf.Capacity];
@@ -142,6 +143,21 @@ public sealed class BoardMoveSimulator
         while (hasMatches);
 
         return matches;
+    }
+
+    private static HashSet<ItemType> CollectFilteredTypes(ShelfStateSnapshot[] shelves)
+    {
+        HashSet<ItemType> filteredTypes = new HashSet<ItemType>();
+
+        foreach (ShelfStateSnapshot shelf in shelves)
+            filteredTypes.UnionWith(shelf.AcceptedTypes);
+
+        return filteredTypes;
+    }
+
+    private static bool CanMatchOn(ShelfStateSnapshot shelf, ItemType type, HashSet<ItemType> filteredTypes)
+    {
+        return !filteredTypes.Contains(type) || shelf.IsFiltered && shelf.Accepts(type);
     }
 
     private static BoardMoveSimulation CreateSimulation(
