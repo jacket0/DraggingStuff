@@ -108,6 +108,8 @@ public sealed class ShelfBoard : MonoBehaviour
 
     public bool CanMatch(Shelf shelf) => CreateShelfSnapshot(shelf).CanMatch(_filteredTypes);
 
+    public bool CanMatchType(Shelf shelf, ItemType type) => CreateShelfSnapshot(shelf).CanMatchType(type, _filteredTypes);
+
     public bool TryResolveMatch(Shelf shelf, out MatchResolution match)
     {
         match = null;

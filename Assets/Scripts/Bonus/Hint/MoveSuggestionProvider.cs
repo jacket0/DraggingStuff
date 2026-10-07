@@ -37,9 +37,11 @@ public sealed class MoveSuggestionProvider : MonoBehaviour, IMoveSuggestionProvi
                         if (!_shelfBoard.TrySimulateMove(source.Column, target.Column, out BoardMoveSimulation simulation))
                             continue;
 
-                        List<ShelfItem> matchingItems = targetShelf.Columns
-                            .Where(column => column != source.Column && column.FrontItem != null && column.FrontItem.Type == type)
-                            .Select(column => column.FrontItem).ToList();
+                        List<ShelfItem> matchingItems = _shelfBoard.CanMatchType(targetShelf, type)
+                            ? targetShelf.Columns
+                                .Where(column => column != source.Column && column.FrontItem != null && column.FrontItem.Type == type)
+                                .Select(column => column.FrontItem).ToList()
+                            : new List<ShelfItem>();
                         int groupGain = sourceShelf == targetShelf ? 0 : matchingItems.Count;
 
                         if (simulation.MatchCount < bestMatches

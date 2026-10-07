@@ -37,6 +37,7 @@ public static class ShelfFilterModelValidation
         ValidateCascadeKeepsFilteredTypeOnRegularShelf();
         ValidateTwoTypeFilterMatches();
         ValidateShelfBoardMatchesLikeSimulator();
+        ValidateSuggestionSkipsFilteredGroups();
     }
 
     private static void ValidateAcceptedPlacement()
@@ -546,6 +547,37 @@ public static class ShelfFilterModelValidation
             {
                 throw new InvalidOperationException("Filter M20: the board and the simulator resolved locked shelves differently.");
             }
+        }
+        finally
+        {
+            TemporaryShelfFactory.Destroy(temporaryObjects);
+        }
+    }
+
+    private static void ValidateSuggestionSkipsFilteredGroups()
+    {
+        List<GameObject> temporaryObjects = new List<GameObject>();
+
+        try
+        {
+            Shelf box = TemporaryShelfFactory.CreateShelf("BoxShelf", temporaryObjects);
+            Shelf pairShelf = TemporaryShelfFactory.CreateShelf("PairShelf", temporaryObjects);
+            Shelf sourceShelf = TemporaryShelfFactory.CreateShelf("SourceShelf", temporaryObjects);
+            ShelfBoard board = TemporaryShelfFactory.CreateBoard(temporaryObjects, box, pairShelf, sourceShelf);
+            board.Initialize();
+            Fill(box, temporaryObjects, new[] { ItemType.Ball }, Array.Empty<ItemType>(), new[] { ItemType.Lamp });
+            Fill(pairShelf, temporaryObjects, new[] { ItemType.Ball }, new[] { ItemType.Ball }, Array.Empty<ItemType>());
+            Fill(sourceShelf, temporaryObjects, new[] { ItemType.Ball }, new[] { ItemType.Plant }, new[] { ItemType.Bear });
+            board.SetFilter(box, BallOnly);
+            GameObject providerObject = EditorUtility.CreateGameObjectWithHideFlags("ValidationSuggestions", HideFlags.HideAndDontSave);
+            temporaryObjects.Add(providerObject);
+            MoveSuggestionProvider provider = providerObject.AddComponent<MoveSuggestionProvider>();
+            SerializedObject serializedProvider = new SerializedObject(provider);
+            serializedProvider.FindProperty("_shelfBoard").objectReferenceValue = board;
+            serializedProvider.ApplyModifiedPropertiesWithoutUndo();
+
+            if (!provider.TryGetSuggestion(out MoveSuggestion suggestion) || suggestion.TargetColumn.Shelf != box || suggestion.TargetMatchingItems.Count != 1)
+                throw new InvalidOperationException("Filter M21: the suggestion must grow a filtered group in its box, not on a regular shelf.");
         }
         finally
         {

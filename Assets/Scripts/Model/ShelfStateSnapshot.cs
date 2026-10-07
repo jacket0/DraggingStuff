@@ -92,14 +92,9 @@ public sealed class ShelfStateSnapshot
         return true;
     }
 
-    public bool CanMatch(IReadOnlyCollection<ItemType> filteredTypes)
-    {
-        if (!HasMatch())
-            return false;
+    public bool CanMatch(IReadOnlyCollection<ItemType> filteredTypes) => HasMatch() && CanMatchType(Columns[0].Items[0], filteredTypes);
 
-        ItemType type = Columns[0].Items[0];
-        return AcceptedTypes.Contains(type) || !filteredTypes.Contains(type);
-    }
+    public bool CanMatchType(ItemType type, IReadOnlyCollection<ItemType> filteredTypes) => AcceptedTypes.Contains(type) || !filteredTypes.Contains(type);
 
     private static IReadOnlyList<ItemType> NormalizeAcceptedTypes(IReadOnlyList<ItemType> acceptedTypes)
     {
