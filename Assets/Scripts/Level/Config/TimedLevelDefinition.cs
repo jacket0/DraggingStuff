@@ -18,7 +18,6 @@ public sealed class TimedLevelDefinition : ScriptableObject
     [SerializeField, Min(0)] private int _shuffleSwapCount;
     [SerializeField] private List<ShelfFilterDefinition> _shelfFilters = new List<ShelfFilterDefinition>();
     [SerializeField, Min(0)] private int _filteredEmptyColumnCount;
-    [SerializeField, Min(0)] private int _minimumFilteredMoveCount;
 
     public int TimeLimitSeconds => _timeLimitSeconds;
     public int TwoStarTimeSeconds => _twoStarTimeSeconds;
@@ -36,7 +35,6 @@ public sealed class TimedLevelDefinition : ScriptableObject
     public IReadOnlyList<ShelfFilterDefinition> ShelfFilters => _shelfFilters;
     public bool HasShelfFilters => _shelfFilters.Count > 0;
     public int FilteredEmptyColumnCount => _filteredEmptyColumnCount;
-    public int MinimumFilteredMoveCount => _minimumFilteredMoveCount;
 
     public int GetMechanicElementCount(LevelMechanic mechanic) => mechanic switch
     {

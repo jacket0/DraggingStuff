@@ -55,6 +55,7 @@ public static class ShelfFilterChapterValidation
     {
         TimedLevelVariant variant = definition.Variants[variantIndex];
         BoardStateSnapshot state = variant.CreateLayout();
+        IReadOnlyCollection<ItemType> filteredTypes = state.FilteredTypes;
 
         foreach (TimedLevelMove move in variant.CreateSolution())
         {
@@ -64,13 +65,13 @@ public static class ShelfFilterChapterValidation
             if (simulation.MatchCount != (simulation.IsSwap ? 0 : 1))
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} solution move makes {simulation.MatchCount} matches.");
 
+            if (simulation.Matches.Any(match => filteredTypes.Contains(match.Type) && !simulation.State.Shelves[match.ShelfIndex].AcceptedTypes.Contains(match.Type)))
+                throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} matches a filtered type outside its filter.");
+
             state = simulation.State;
         }
 
         if (!state.IsCleared)
             throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} solution does not clear the board.");
-
-        if (TimedLevelLayoutRules.CountFilteredMoves(variant.CreateLayout(), variant.CreateSolution()) < definition.MinimumFilteredMoveCount)
-            throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has too few filtered moves.");
     }
 }

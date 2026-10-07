@@ -253,7 +253,6 @@ public static class ShelfFilterPlayModeValidation
         SerializedObject serializedDefinition = new SerializedObject(definition);
         serializedDefinition.FindProperty("_shelfFilters").arraySize = 0;
         serializedDefinition.FindProperty("_filteredEmptyColumnCount").intValue = 0;
-        serializedDefinition.FindProperty("_minimumFilteredMoveCount").intValue = 0;
         serializedDefinition.ApplyModifiedPropertiesWithoutUndo();
         _levelWithoutFilters = CreateScenarioLevel(definition, "ShelfFilterScenarioLevelWithoutFilters");
         return _levelWithoutFilters;

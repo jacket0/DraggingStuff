@@ -283,48 +283,48 @@ public static class ShelfFilterModelValidation
 
         try
         {
-            TimedLevelValidator.ValidateForGeneration(CreateDefinition(template, definitions, definition => SetFilters(definition, 1, 1, (5, new[] { levelType }))), board);
+            TimedLevelValidator.ValidateForGeneration(CreateDefinition(template, definitions, definition => SetFilters(definition, 1, (5, new[] { levelType }))), board);
 
-            ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 0, 0, (5, new[] { levelType }), (5, new[] { levelType })),
+            ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 0, (5, new[] { levelType }), (5, new[] { levelType })),
                 "filtered twice", "Filter M13: a duplicated filter index passed validation.");
-            ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 0, 0, (-1, new[] { levelType })),
+            ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 0, (-1, new[] { levelType })),
                 "non-negative", "Filter M13: a negative filter index passed validation.");
-            ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 0, 0, (BoardShelfCount, new[] { levelType })),
+            ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 0, (BoardShelfCount, new[] { levelType })),
                 "out of range", "Filter M13: an out-of-range filter index passed validation.");
-            ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 0, 0, (5, Array.Empty<ItemType>())),
+            ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 0, (5, Array.Empty<ItemType>())),
                 "must accept one to", "Filter M13: a filter without types passed validation.");
-            ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 0, 0, (5, new[] { ItemType.Ball, ItemType.Bear, ItemType.Plant, ItemType.Lamp })),
+            ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 0, (5, new[] { ItemType.Ball, ItemType.Bear, ItemType.Plant, ItemType.Lamp })),
                 "must accept one to", "Filter M13: a filter with four types passed validation.");
-            ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 0, 0, (5, new[] { levelType, levelType })),
+            ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 0, (5, new[] { levelType, levelType })),
                 "twice", "Filter M13: a filter with a repeated type passed validation.");
-            ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 1, 1),
-                "require shelf filters", "Filter M13: filter usage counts without filters passed validation.");
+            ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 1),
+                "require shelf filters", "Filter M13: filtered empty columns without filters passed validation.");
             ExpectDefinitionFailure(template, definitions, board, definition =>
                 {
-                    SetFilters(definition, 0, 0, (5, new[] { ItemType.Ball, ItemType.Bear }));
+                    SetFilters(definition, 0, (5, new[] { ItemType.Ball, ItemType.Bear }));
                     SetItemGroups(definition, ItemType.Ball, ItemType.Bear);
                 },
                 "every item type", "Filter M13: a filter accepting every level type passed validation.");
             ExpectDefinitionFailure(template, definitions, board, definition =>
                 {
-                    SetFilters(definition, 0, 0, (5, new[] { levelType }));
+                    SetFilters(definition, 0, (5, new[] { levelType }));
                     definition.FindProperty("_closedShelves").arraySize = 1;
                 },
                 "closed shelves", "Filter M13: filters combined with closed shelves passed validation.");
             ExpectDefinitionFailure(template, definitions, board, definition =>
                 {
-                    SetFilters(definition, definition.FindProperty("_emptyColumnCount").intValue + 1, 0, (5, new[] { levelType }), (6, new[] { levelType }));
+                    SetFilters(definition, definition.FindProperty("_emptyColumnCount").intValue + 1, (5, new[] { levelType }), (6, new[] { levelType }));
                 },
                 "exceed the empty column reserve", "Filter M13: more filtered empty columns than empty columns passed validation.");
             ExpectDefinitionFailure(template, definitions, board, definition =>
                 {
                     definition.FindProperty("_emptyColumnCount").intValue = 4;
-                    SetFilters(definition, 4, 0, (5, new[] { levelType }));
+                    SetFilters(definition, 4, (5, new[] { levelType }));
                 },
                 "exceed the 3 columns", "Filter M13: more filtered empty columns than filtered columns passed validation.");
             ExpectDefinitionFailure(template, definitions, board, definition =>
                 {
-                    SetFilters(definition, 0, 0, (9, new[] { levelType }));
+                    SetFilters(definition, 0, (9, new[] { levelType }));
                     SetIntegers(definition.FindProperty("_conveyorShelfIndices"), 9);
                     definition.FindProperty("_shuffleSwapCount").intValue = 0;
                 },
@@ -332,14 +332,14 @@ public static class ShelfFilterModelValidation
 
             if (template.ItemGroups.Count < Enum.GetValues(typeof(ItemType)).Length)
             {
-                ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 0, 0, (5, new[] { missingType })),
+                ExpectDefinitionFailure(template, definitions, board, definition => SetFilters(definition, 0, (5, new[] { missingType })),
                     "not one of the level's item types", "Filter M13: a filter with a foreign type passed validation.");
             }
             else
             {
                 ExpectDefinitionFailure(template, definitions, board, definition =>
                     {
-                        SetFilters(definition, 0, 0, (5, new[] { levelType }));
+                        SetFilters(definition, 0, (5, new[] { levelType }));
                         SetItemGroups(definition, template.ItemGroups.Skip(1).Select(group => group.Type).ToArray());
                     },
                     "not one of the level's item types", "Filter M13: a filter with a foreign type passed validation.");
@@ -366,26 +366,22 @@ public static class ShelfFilterModelValidation
 
         try
         {
-            TimedLevelDefinition valid = CreateSmallFilterDefinition(template, definitions, 1, 1, CreateSmallFilterLayout(BallOnly), solution);
+            TimedLevelDefinition valid = CreateSmallFilterDefinition(template, definitions, 1, CreateSmallFilterLayout(BallOnly), solution);
             TimedLevelValidator.ValidateForRuntime(valid, board, TimedLevelLayoutRules.GeneratorVersion);
             ReplaySolution(valid.Variants[0], "M14");
 
             ExpectFailure(
-                () => TimedLevelValidator.ValidateForRuntime(CreateSmallFilterDefinition(template, definitions, 1, 1, CreateSmallFilterLayout(new[] { ItemType.Bear }), solution), board, TimedLevelLayoutRules.GeneratorVersion),
+                () => TimedLevelValidator.ValidateForRuntime(CreateSmallFilterDefinition(template, definitions, 1, CreateSmallFilterLayout(new[] { ItemType.Bear }), solution), board, TimedLevelLayoutRules.GeneratorVersion),
                 "incorrect filter",
                 "Filter M14: a variant with a wrong filter passed validation.");
             ExpectFailure(
-                () => TimedLevelValidator.ValidateForRuntime(CreateSmallFilterDefinition(template, definitions, 1, 1, CreateSmallFilterLayout(Array.Empty<ItemType>()), solution), board, TimedLevelLayoutRules.GeneratorVersion),
+                () => TimedLevelValidator.ValidateForRuntime(CreateSmallFilterDefinition(template, definitions, 1, CreateSmallFilterLayout(Array.Empty<ItemType>()), solution), board, TimedLevelLayoutRules.GeneratorVersion),
                 "incorrect filter",
                 "Filter M14: a variant without its filter passed validation.");
             ExpectFailure(
-                () => TimedLevelValidator.ValidateForRuntime(CreateSmallFilterDefinition(template, definitions, 2, 1, CreateSmallFilterLayout(BallOnly), solution), board, TimedLevelLayoutRules.GeneratorVersion),
+                () => TimedLevelValidator.ValidateForRuntime(CreateSmallFilterDefinition(template, definitions, 2, CreateSmallFilterLayout(BallOnly), solution), board, TimedLevelLayoutRules.GeneratorVersion),
                 "filtered empty columns instead",
                 "Filter M14: a variant with too few filtered empty columns passed validation.");
-            ExpectFailure(
-                () => TimedLevelValidator.ValidateForRuntime(CreateSmallFilterDefinition(template, definitions, 1, 2, CreateSmallFilterLayout(BallOnly), solution), board, TimedLevelLayoutRules.GeneratorVersion),
-                "filtered moves instead",
-                "Filter M14: a variant with too few filtered moves passed validation.");
         }
         finally
         {
@@ -570,7 +566,6 @@ public static class ShelfFilterModelValidation
         TimedLevelDefinition template,
         List<TimedLevelDefinition> definitions,
         int filteredEmptyColumnCount,
-        int minimumFilteredMoveCount,
         BoardStateSnapshot layout,
         IReadOnlyList<TimedLevelMove> solution)
     {
@@ -578,7 +573,7 @@ public static class ShelfFilterModelValidation
         {
             serializedDefinition.FindProperty("_emptyColumnCount").intValue = 3;
             SetItemGroups(serializedDefinition, ItemType.Ball, ItemType.Bear, ItemType.Plant);
-            SetFilters(serializedDefinition, filteredEmptyColumnCount, minimumFilteredMoveCount, (0, BallOnly));
+            SetFilters(serializedDefinition, filteredEmptyColumnCount, (0, BallOnly));
         });
         TimedLevelVariant variant = new TimedLevelVariant(1, TimedLevelLayoutRules.GeneratorVersion, solution.Count, BoardStateFingerprint.CreateHash(layout), layout, solution);
         List<TimedLevelVariant> variants = (List<TimedLevelVariant>)typeof(TimedLevelDefinition)
@@ -614,7 +609,7 @@ public static class ShelfFilterModelValidation
         ExpectFailure(() => TimedLevelValidator.ValidateForGeneration(CreateDefinition(template, definitions, configure), board), expectedMessagePart, message);
     }
 
-    private static void SetFilters(SerializedObject definition, int filteredEmptyColumnCount, int minimumFilteredMoveCount, params (int ShelfIndex, ItemType[] AcceptedTypes)[] filters)
+    private static void SetFilters(SerializedObject definition, int filteredEmptyColumnCount, params (int ShelfIndex, ItemType[] AcceptedTypes)[] filters)
     {
         SerializedProperty filtersProperty = definition.FindProperty("_shelfFilters");
         filtersProperty.arraySize = filters.Length;
@@ -631,7 +626,6 @@ public static class ShelfFilterModelValidation
         }
 
         definition.FindProperty("_filteredEmptyColumnCount").intValue = filteredEmptyColumnCount;
-        definition.FindProperty("_minimumFilteredMoveCount").intValue = minimumFilteredMoveCount;
     }
 
     private static void SetItemGroups(SerializedObject definition, params ItemType[] types)

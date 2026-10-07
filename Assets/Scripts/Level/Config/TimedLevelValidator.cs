@@ -158,8 +158,8 @@ public static class TimedLevelValidator
     {
         if (!definition.HasShelfFilters)
         {
-            if (definition.FilteredEmptyColumnCount != 0 || definition.MinimumFilteredMoveCount != 0)
-                throw new InvalidOperationException($"{definition.name}: filter usage counts require shelf filters.");
+            if (definition.FilteredEmptyColumnCount != 0)
+                throw new InvalidOperationException($"{definition.name}: filtered empty columns require shelf filters.");
 
             return;
         }
@@ -393,11 +393,6 @@ public static class TimedLevelValidator
 
         if (filteredEmptyColumnCount < definition.FilteredEmptyColumnCount)
             throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} starts with {filteredEmptyColumnCount} filtered empty columns instead of at least {definition.FilteredEmptyColumnCount}.");
-
-        int filteredMoveCount = TimedLevelLayoutRules.CountFilteredMoves(layout, variant.CreateSolution());
-
-        if (filteredMoveCount < definition.MinimumFilteredMoveCount)
-            throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} solution has {filteredMoveCount} filtered moves instead of at least {definition.MinimumFilteredMoveCount}.");
     }
 
     private static void ValidateConveyorShelfLayout(TimedLevelDefinition definition, ShelfStateSnapshot shelf, int shelfIndex, int variantIndex)
