@@ -19,9 +19,9 @@ public sealed class ShelfFilterIntroHint : MonoBehaviour
     [SerializeField, Min(0.01f)] private float _fadeDuration = 0.25f;
     [SerializeField] private Vector2 _bubbleOffset = new Vector2(0f, -24f);
     [SerializeField] private LocalizedHintText _ruleText = new LocalizedHintText(
-        "Эта полка принимает только предметы с таблички",
-        "This shelf only takes items shown on its label",
-        "Bu raf yalnızca etiketteki eşyaları kabul eder");
+        "Предметы с таблички собираются только на этой полке",
+        "Items on the sign only match on this shelf",
+        "Tabeladaki eşyalar yalnızca bu rafta eşleşir");
 
     private ShelfFilterSignView _target;
     private Sequence _sequence;
