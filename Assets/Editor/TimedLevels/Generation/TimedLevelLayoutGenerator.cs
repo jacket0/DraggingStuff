@@ -209,6 +209,7 @@ public sealed class TimedLevelLayoutGenerator
         moves.RemoveAll(move => WouldCreateAutomaticMatch(columns, move, type));
         moves.RemoveAll(move => WouldCreateAdjacentDuplicate(columns, move, type, constraints));
         moves.RemoveAll(move => !constraints.Accepts(move.TargetShelfIndex, type));
+        moves.RemoveAll(move => constraints.IsFilteredType(type) && !constraints.IsFiltered(move.TargetShelfIndex));
         Shuffle(moves, random);
         bool prefersFilters = constraints.HasFilters && CountFilteredPlacements(reverseMoves, constraints) < constraints.RequiredFilteredMoveCount;
         moves.Sort((first, second) => CompareReverseMoves(first, second, columns, constraints, prefersFilters));
@@ -485,7 +486,7 @@ public sealed class TimedLevelLayoutGenerator
 
         for (int columnIndex = 0; columnIndex < targetShelf.Length; columnIndex++)
         {
-            if (columnIndex == move.TargetColumnIndex)
+            if (columnIndex == move.TargetColumnIndex || constraints.IsFiltered(move.TargetShelfIndex))
                 continue;
 
             if (WouldTouchSameType(targetShelf[columnIndex], type, isTargetConveyor))
@@ -757,6 +758,8 @@ public sealed class TimedLevelLayoutGenerator
         public bool IsFiltered(int shelfIndex) => _shelfFilters.ContainsKey(shelfIndex);
 
         public bool Accepts(int shelfIndex, ItemType type) => !_shelfFilters.TryGetValue(shelfIndex, out IReadOnlyList<ItemType> acceptedTypes) || acceptedTypes.Contains(type);
+
+        public bool IsFilteredType(ItemType type) => _shelfFilters.Values.Any(acceptedTypes => acceptedTypes.Contains(type));
 
         public IReadOnlyList<ItemType> GetAcceptedTypes(int shelfIndex)
         {

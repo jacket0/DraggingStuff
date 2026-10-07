@@ -343,7 +343,7 @@ public static class TimedLevelValidator
             if (shelf.Columns.Any(column => column.Count > TimedLevelLayoutRules.MaximumColumnDepth))
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} exceeds the supported column depth.");
 
-            if (shelf.Columns.Any(HasAdjacentDuplicate))
+            if (shelf.Columns.Any(column => HasAdjacentDuplicate(shelf, column)))
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} contains adjacent items of the same type in a column.");
 
             if (shelf.IsConveyor != conveyorShelfIndices.Contains(shelfIndex))
@@ -412,11 +412,13 @@ public static class TimedLevelValidator
             throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} places the same type at both ends of a column on conveyor shelf {shelfIndex}.");
     }
 
-    private static bool HasAdjacentDuplicate(ColumnStateSnapshot column)
+    private static bool HasAdjacentDuplicate(ShelfStateSnapshot shelf, ColumnStateSnapshot column)
     {
         for (int index = 1; index < column.Count; index++)
         {
-            if (column.Items[index] == column.Items[index - 1])
+            ItemType type = column.Items[index];
+
+            if (type == column.Items[index - 1] && !(shelf.IsFiltered && shelf.Accepts(type)))
                 return true;
         }
 
