@@ -46,7 +46,7 @@ public class LevelCardView : MonoBehaviour
         bool hasMechanic = state.MechanicIcon != null;
 
         _levelNumberText.SetText(state.Level.Number.ToString());
-        _recordValueText.SetText(state.BestScore.ToString());
+        _recordValueText.SetText(ScoreTextFormatter.FormatGrouped(state.BestScore));
         _timeRoot.SetActive(hasCompletion);
 
         if (hasCompletion)

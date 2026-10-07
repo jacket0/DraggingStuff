@@ -12,6 +12,8 @@ public static class ScoreTextFormatter
     private static readonly CompactSuffixes EnglishSuffixes = new CompactSuffixes("K", "M", "B", ".");
     private static readonly CompactSuffixes TurkishSuffixes = new CompactSuffixes("B", "Mn", "Mr", ",");
 
+    public static string FormatGrouped(long score) => score.ToString("N0", CultureInfo.InvariantCulture).Replace(',', ' ');
+
     public static string FormatCompact(long score, string languageCode)
     {
         if (score < 0)

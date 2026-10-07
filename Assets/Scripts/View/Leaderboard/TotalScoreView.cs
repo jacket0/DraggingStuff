@@ -1,4 +1,3 @@
-using System.Globalization;
 using TMPro;
 using UnityEngine;
 
@@ -16,11 +15,6 @@ public class TotalScoreView : MonoBehaviour
 
     private void Start()
     {
-        _scoreText.SetText(FormatScore(_totalScore.Value));
-    }
-
-    private static string FormatScore(long score)
-    {
-        return score.ToString("N0", CultureInfo.InvariantCulture).Replace(',', ' ');
+        _scoreText.SetText(ScoreTextFormatter.FormatGrouped(_totalScore.Value));
     }
 }
