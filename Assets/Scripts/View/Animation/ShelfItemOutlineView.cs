@@ -1,21 +1,27 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 public sealed class ShelfItemOutlineView : MonoBehaviour
 {
     private const string OutlineMaterialPath = "ShelfItemOutline";
+    private const string MarkMaterialPath = "ShelfItemFilterMark";
 
-    private readonly List<GameObject> _outlineObjects = new List<GameObject>();
+    private readonly List<Renderer> _outlineRenderers = new List<Renderer>();
 
+    private Material _outlineMaterial;
+    private Material _markMaterial;
     private int _requestCount;
+    private bool _isMarked;
     private bool _isInitialized;
 
     private void OnDisable()
     {
         _requestCount = 0;
-        SetVisible(false);
+        _isMarked = false;
+        Refresh();
     }
 
     public static ShelfItemOutlineView GetRequired(ShelfItem item)
@@ -35,15 +41,22 @@ public sealed class ShelfItemOutlineView : MonoBehaviour
     {
         EnsureInitialized();
         _requestCount++;
-        SetVisible(true);
+        Refresh();
     }
 
     public void Hide()
     {
         _requestCount = Mathf.Max(0, _requestCount - 1);
+        Refresh();
+    }
 
-        if (_requestCount == 0)
-            SetVisible(false);
+    public void SetMarked(bool isMarked)
+    {
+        if (isMarked)
+            EnsureInitialized();
+
+        _isMarked = isMarked;
+        Refresh();
     }
 
     private void EnsureInitialized()
@@ -51,10 +64,11 @@ public sealed class ShelfItemOutlineView : MonoBehaviour
         if (_isInitialized)
             return;
 
-        Material outlineMaterial = Resources.Load<Material>(OutlineMaterialPath);
+        _outlineMaterial = Resources.Load<Material>(OutlineMaterialPath);
+        _markMaterial = Resources.Load<Material>(MarkMaterialPath);
 
-        if (outlineMaterial == null)
-            throw new InvalidOperationException(OutlineMaterialPath);
+        if (_outlineMaterial == null || _markMaterial == null)
+            throw new InvalidOperationException($"{OutlineMaterialPath}, {MarkMaterialPath}");
 
         Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
 
@@ -62,16 +76,15 @@ public sealed class ShelfItemOutlineView : MonoBehaviour
         {
             if (itemRenderer is SkinnedMeshRenderer skinnedMeshRenderer)
             {
-                CreateSkinnedOutline(skinnedMeshRenderer, outlineMaterial);
+                CreateSkinnedOutline(skinnedMeshRenderer, _outlineMaterial);
                 continue;
             }
 
             if (itemRenderer is MeshRenderer meshRenderer)
-                CreateMeshOutline(meshRenderer, outlineMaterial);
+                CreateMeshOutline(meshRenderer, _outlineMaterial);
         }
 
         _isInitialized = true;
-        SetVisible(false);
     }
 
     private void CreateMeshOutline(MeshRenderer sourceRenderer, Material outlineMaterial)
@@ -90,7 +103,7 @@ public sealed class ShelfItemOutlineView : MonoBehaviour
 
         MeshRenderer outlineRenderer = outlineObject.AddComponent<MeshRenderer>();
         ApplyRendererSettings(outlineRenderer, sourceRenderer, outlineMaterial, sourceFilter.sharedMesh.subMeshCount);
-        _outlineObjects.Add(outlineObject);
+        _outlineRenderers.Add(outlineRenderer);
     }
 
     private void CreateSkinnedOutline(SkinnedMeshRenderer sourceRenderer, Material outlineMaterial)
@@ -109,7 +122,7 @@ public sealed class ShelfItemOutlineView : MonoBehaviour
         outlineRenderer.localBounds = sourceRenderer.localBounds;
         outlineRenderer.updateWhenOffscreen = sourceRenderer.updateWhenOffscreen;
         ApplyRendererSettings(outlineRenderer, sourceRenderer, outlineMaterial, sourceRenderer.sharedMesh.subMeshCount);
-        _outlineObjects.Add(outlineObject);
+        _outlineRenderers.Add(outlineRenderer);
     }
 
     private static void ApplyRendererSettings(Renderer target, Renderer source, Material outlineMaterial, int materialCount)
@@ -128,9 +141,17 @@ public sealed class ShelfItemOutlineView : MonoBehaviour
         target.sortingOrder = source.sortingOrder - 1;
     }
 
-    private void SetVisible(bool isVisible)
+    private void Refresh()
     {
-        foreach (GameObject outlineObject in _outlineObjects)
-            outlineObject.SetActive(isVisible);
+        bool isVisible = _requestCount > 0 || _isMarked;
+        Material material = _requestCount > 0 ? _outlineMaterial : _markMaterial;
+
+        foreach (Renderer outlineRenderer in _outlineRenderers)
+        {
+            outlineRenderer.gameObject.SetActive(isVisible);
+
+            if (isVisible && outlineRenderer.sharedMaterial != material)
+                outlineRenderer.sharedMaterials = Enumerable.Repeat(material, outlineRenderer.sharedMaterials.Length).ToArray();
+        }
     }
 }
