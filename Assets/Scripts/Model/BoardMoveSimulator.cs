@@ -52,14 +52,14 @@ public sealed class BoardMoveSimulator
         bool[] affectedShelves = new bool[shelves.Length];
         affectedShelves[source.ShelfIndex] = true;
         affectedShelves[target.ShelfIndex] = true;
-        List<MatchInfo> matches = ResolveCascades(shelves, affectedShelves);
+        List<MatchInfo> matches = ResolveCascades(shelves, affectedShelves, board.FilteredTypes);
         bool conveyorsShifted = matches.Count > 0 && board.HasConveyors;
         int matchCountAfterShift = 0;
 
         if (conveyorsShifted)
         {
             ShiftConveyors(shelves, affectedShelves);
-            List<MatchInfo> matchesAfterShift = ResolveCascades(shelves, affectedShelves);
+            List<MatchInfo> matchesAfterShift = ResolveCascades(shelves, affectedShelves, board.FilteredTypes);
             matchCountAfterShift = matchesAfterShift.Count;
             matches.AddRange(matchesAfterShift);
         }
@@ -68,15 +68,17 @@ public sealed class BoardMoveSimulator
         return true;
     }
 
-    public BoardMoveSimulation ResolveMatches(BoardStateSnapshot board)
+    public ShelfStateSnapshot ResolveShelfMatches(BoardStateSnapshot board, int shelfIndex)
     {
         if (board == null)
             throw new ArgumentNullException(nameof(board));
 
-        ShelfStateSnapshot[] shelves = CopyShelves(board);
-        bool[] affectedShelves = new bool[shelves.Length];
-        List<MatchInfo> matches = ResolveCascades(shelves, affectedShelves);
-        return CreateSimulation(shelves, matches, affectedShelves, false, false, 0);
+        ShelfStateSnapshot shelf = board.Shelves[shelfIndex];
+
+        while (shelf.CanMatch(board.FilteredTypes))
+            shelf = RemoveFronts(shelf);
+
+        return shelf;
     }
 
     public BoardStateSnapshot ShiftConveyors(BoardStateSnapshot board)
@@ -111,10 +113,9 @@ public sealed class BoardMoveSimulator
         }
     }
 
-    private static List<MatchInfo> ResolveCascades(ShelfStateSnapshot[] shelves, bool[] affectedShelves)
+    private static List<MatchInfo> ResolveCascades(ShelfStateSnapshot[] shelves, bool[] affectedShelves, IReadOnlyCollection<ItemType> filteredTypes)
     {
         List<MatchInfo> matches = new List<MatchInfo>();
-        HashSet<ItemType> filteredTypes = CollectFilteredTypes(shelves);
         bool hasMatches;
 
         do
@@ -125,16 +126,11 @@ public sealed class BoardMoveSimulator
             {
                 ShelfStateSnapshot shelf = shelves[shelfIndex];
 
-                if (!shelf.HasMatch() || !CanMatchOn(shelf, shelf.Columns[0].Items[0], filteredTypes))
+                if (!shelf.CanMatch(filteredTypes))
                     continue;
 
-                ColumnStateSnapshot[] columns = new ColumnStateSnapshot[shelf.Capacity];
-
-                for (int columnIndex = 0; columnIndex < columns.Length; columnIndex++)
-                    columns[columnIndex] = RemoveFront(shelf.Columns[columnIndex]);
-
                 matches.Add(new MatchInfo(shelfIndex, shelf.Columns[0].Items[0], shelf.Capacity));
-                shelves[shelfIndex] = shelf.WithColumns(columns);
+                shelves[shelfIndex] = RemoveFronts(shelf);
 
                 affectedShelves[shelfIndex] = true;
                 hasMatches = true;
@@ -145,19 +141,14 @@ public sealed class BoardMoveSimulator
         return matches;
     }
 
-    private static HashSet<ItemType> CollectFilteredTypes(ShelfStateSnapshot[] shelves)
+    private static ShelfStateSnapshot RemoveFronts(ShelfStateSnapshot shelf)
     {
-        HashSet<ItemType> filteredTypes = new HashSet<ItemType>();
+        ColumnStateSnapshot[] columns = new ColumnStateSnapshot[shelf.Capacity];
 
-        foreach (ShelfStateSnapshot shelf in shelves)
-            filteredTypes.UnionWith(shelf.AcceptedTypes);
+        for (int columnIndex = 0; columnIndex < columns.Length; columnIndex++)
+            columns[columnIndex] = RemoveFront(shelf.Columns[columnIndex]);
 
-        return filteredTypes;
-    }
-
-    private static bool CanMatchOn(ShelfStateSnapshot shelf, ItemType type, HashSet<ItemType> filteredTypes)
-    {
-        return !filteredTypes.Contains(type) || shelf.IsFiltered && shelf.Accepts(type);
+        return shelf.WithColumns(columns);
     }
 
     private static BoardMoveSimulation CreateSimulation(

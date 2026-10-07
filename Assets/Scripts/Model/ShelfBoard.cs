@@ -11,6 +11,7 @@ public sealed class ShelfBoard : MonoBehaviour
     private readonly HashSet<Shelf> _closedShelves = new HashSet<Shelf>();
     private readonly HashSet<Shelf> _conveyorShelves = new HashSet<Shelf>();
     private readonly Dictionary<Shelf, IReadOnlyList<ItemType>> _shelfFilters = new Dictionary<Shelf, IReadOnlyList<ItemType>>();
+    private readonly HashSet<ItemType> _filteredTypes = new HashSet<ItemType>();
     private readonly Dictionary<ShelfColumn, ColumnPosition> _positions = new Dictionary<ShelfColumn, ColumnPosition>();
     private readonly BoardMoveSimulator _simulator = new BoardMoveSimulator();
     private bool _initialized;
@@ -102,6 +103,15 @@ public sealed class ShelfBoard : MonoBehaviour
             throw new InvalidOperationException($"A shelf filter must accept one to {ShelfStateSnapshot.MaximumAcceptedTypeCount} item types.");
 
         _shelfFilters.Add(shelf, Array.AsReadOnly(normalizedTypes));
+        _filteredTypes.UnionWith(normalizedTypes);
+    }
+
+    public bool CanMatch(Shelf shelf) => CreateShelfSnapshot(shelf).CanMatch(_filteredTypes);
+
+    public bool TryResolveMatch(Shelf shelf, out MatchResolution match)
+    {
+        match = null;
+        return CanMatch(shelf) && shelf.TryResolveMatch(out match);
     }
 
     public bool CanPickUp(ShelfColumn column)
@@ -142,12 +152,13 @@ public sealed class ShelfBoard : MonoBehaviour
         if (!IsShelfAvailable(targetShelf) || ItemAnimations.IsAnimating(target.FrontItem))
             return false;
 
-        ShelfStateSnapshot[] shelves = _shelves.Select(CreateShelfSnapshot).ToArray();
+        BoardStateSnapshot board = CreateSnapshot();
+        ShelfStateSnapshot[] shelves = board.Shelves.ToArray();
 
         for (int index = 0; index < shelves.Length; index++)
         {
             if (IsShelfLocked(_shelves[index]))
-                shelves[index] = _simulator.ResolveMatches(new BoardStateSnapshot(new[] { shelves[index] })).State.Shelves[0];
+                shelves[index] = _simulator.ResolveShelfMatches(board, index);
         }
 
         return _simulator.TrySimulate(new BoardStateSnapshot(shelves), _positions[source], targetPosition, out simulation) && simulation.IsAllowed;

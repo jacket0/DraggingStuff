@@ -92,6 +92,15 @@ public sealed class ShelfStateSnapshot
         return true;
     }
 
+    public bool CanMatch(IReadOnlyCollection<ItemType> filteredTypes)
+    {
+        if (!HasMatch())
+            return false;
+
+        ItemType type = Columns[0].Items[0];
+        return AcceptedTypes.Contains(type) || !filteredTypes.Contains(type);
+    }
+
     private static IReadOnlyList<ItemType> NormalizeAcceptedTypes(IReadOnlyList<ItemType> acceptedTypes)
     {
         if (acceptedTypes.Count == 0)

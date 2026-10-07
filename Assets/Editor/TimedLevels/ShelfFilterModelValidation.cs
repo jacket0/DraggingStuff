@@ -32,6 +32,11 @@ public static class ShelfFilterModelValidation
         ValidateDefinitionErrors(catalog);
         ValidateVariantErrors(catalog);
         ValidateLockedFilteredShelf();
+        ValidateFilteredTypeMatchesOnlyOnItsFilter();
+        ValidateJunkMatchesAnywhere();
+        ValidateCascadeKeepsFilteredTypeOnRegularShelf();
+        ValidateTwoTypeFilterMatches();
+        ValidateShelfBoardMatchesLikeSimulator();
     }
 
     private static void ValidateAcceptedPlacement()
@@ -163,10 +168,10 @@ public static class ShelfFilterModelValidation
         }
 
         BoardStateSnapshot board = Board(
-            Regular(Column(ItemType.Ball), Column(ItemType.Ball), Column()),
+            Regular(Column(ItemType.Bear), Column(ItemType.Bear), Column()),
             Conveyor(Column(ItemType.Lamp, ItemType.Toy), Column(ItemType.Bear, ItemType.Toy), Column(ItemType.Plant)),
             shelf,
-            Regular(Column(ItemType.Ball), Column(), Column()));
+            Regular(Column(ItemType.Bear), Column(), Column()));
         BoardMoveSimulation simulation = Simulate(board, new ColumnPosition(3, 0), new ColumnPosition(0, 2), "M9");
 
         if (!simulation.ConveyorsShifted || !simulation.State.Shelves[2].AcceptedTypes.SequenceEqual(expected))
@@ -417,6 +422,134 @@ public static class ShelfFilterModelValidation
 
             if (!lockedState.AcceptedTypes.SequenceEqual(BallOnly) || lockedState.Columns.Any(column => !column.IsEmpty))
                 throw new InvalidOperationException("Filter M15: a locked filtered shelf lost its filter while resolving its match.");
+        }
+        finally
+        {
+            TemporaryShelfFactory.Destroy(temporaryObjects);
+        }
+    }
+
+    private static void ValidateFilteredTypeMatchesOnlyOnItsFilter()
+    {
+        BoardStateSnapshot regular = Board(
+            Filter(BallOnly, Column(), Column(ItemType.Bear), Column(ItemType.Lamp)),
+            Regular(Column(ItemType.Ball), Column(ItemType.Ball), Column()),
+            Regular(Column(ItemType.Ball), Column(ItemType.Plant), Column()));
+        BoardMoveSimulation regularSimulation = Simulate(regular, new ColumnPosition(2, 0), new ColumnPosition(1, 2), "M16");
+
+        if (regularSimulation.MatchCount != 0
+            || !HasColumns(regularSimulation.State.Shelves[1], new[] { ItemType.Ball }, new[] { ItemType.Ball }, new[] { ItemType.Ball })
+            || !regularSimulation.State.Shelves[1].HasMatch()
+            || regularSimulation.State.CanMatch(1))
+        {
+            throw new InvalidOperationException("Filter M16: three filtered items matched on a regular shelf.");
+        }
+
+        BoardStateSnapshot filtered = Board(
+            Filter(BallOnly, Column(ItemType.Ball), Column(ItemType.Ball), Column()),
+            Regular(Column(ItemType.Ball), Column(ItemType.Plant), Column()));
+        BoardMoveSimulation filteredSimulation = Simulate(filtered, new ColumnPosition(1, 0), new ColumnPosition(0, 2), "M16");
+
+        if (filteredSimulation.MatchCount != 1 || filteredSimulation.Matches[0].ShelfIndex != 0 || filteredSimulation.State.Shelves[0].Columns.Any(column => !column.IsEmpty))
+            throw new InvalidOperationException("Filter M16: three filtered items did not match on their filter.");
+    }
+
+    private static void ValidateJunkMatchesAnywhere()
+    {
+        BoardStateSnapshot regular = Board(
+            Filter(BallOnly, Column(), Column(ItemType.Ball), Column()),
+            Regular(Column(ItemType.Bear), Column(ItemType.Bear), Column()),
+            Regular(Column(ItemType.Bear), Column(ItemType.Plant), Column()));
+        BoardMoveSimulation regularSimulation = Simulate(regular, new ColumnPosition(2, 0), new ColumnPosition(1, 2), "M17");
+
+        if (regularSimulation.MatchCount != 1 || regularSimulation.Matches[0].ShelfIndex != 1)
+            throw new InvalidOperationException("Filter M17: an unfiltered type did not match on a regular shelf.");
+
+        BoardStateSnapshot filtered = Board(
+            Filter(BallOnly, Column(ItemType.Ball, ItemType.Bear), Column(ItemType.Ball, ItemType.Bear), Column(ItemType.Lamp, ItemType.Bear)),
+            Regular(Column(ItemType.Ball), Column(ItemType.Plant), Column()));
+        BoardMoveSimulation filteredSimulation = Simulate(filtered, new ColumnPosition(1, 0), new ColumnPosition(0, 2), "M17");
+
+        if (filteredSimulation.MatchCount != 2
+            || filteredSimulation.Matches.Any(match => match.ShelfIndex != 0)
+            || filteredSimulation.Matches[1].Type != ItemType.Bear
+            || filteredSimulation.State.Shelves[0].Columns.Any(column => !column.IsEmpty))
+        {
+            throw new InvalidOperationException("Filter M17: junk left on a filtered shelf did not match there.");
+        }
+    }
+
+    private static void ValidateCascadeKeepsFilteredTypeOnRegularShelf()
+    {
+        BoardStateSnapshot board = Board(
+            Filter(BallOnly, Column(), Column(ItemType.Bear), Column()),
+            Regular(Column(ItemType.Plant, ItemType.Ball), Column(ItemType.Plant, ItemType.Ball), Column(ItemType.Lamp, ItemType.Ball)),
+            Regular(Column(ItemType.Plant), Column(), Column()));
+        BoardMoveSimulation simulation = Simulate(board, new ColumnPosition(2, 0), new ColumnPosition(1, 2), "M18");
+
+        if (simulation.MatchCount != 1
+            || simulation.Matches[0].Type != ItemType.Plant
+            || !HasColumns(simulation.State.Shelves[1], new[] { ItemType.Ball }, new[] { ItemType.Ball }, new[] { ItemType.Ball }))
+        {
+            throw new InvalidOperationException("Filter M18: a cascade matched a filtered type on a regular shelf.");
+        }
+    }
+
+    private static void ValidateTwoTypeFilterMatches()
+    {
+        BoardStateSnapshot board = Board(
+            Filter(new[] { ItemType.Ball, ItemType.Toy }, Column(ItemType.Toy), Column(ItemType.Toy), Column()),
+            Regular(Column(ItemType.Toy), Column(ItemType.Toy), Column()),
+            Regular(Column(ItemType.Toy), Column(ItemType.Toy), Column(ItemType.Plant)));
+        BoardMoveSimulation regularSimulation = Simulate(board, new ColumnPosition(2, 0), new ColumnPosition(1, 2), "M19");
+        BoardMoveSimulation filteredSimulation = Simulate(board, new ColumnPosition(2, 0), new ColumnPosition(0, 2), "M19");
+
+        if (regularSimulation.MatchCount != 0)
+            throw new InvalidOperationException("Filter M19: the second type of a filter matched on a regular shelf.");
+
+        if (filteredSimulation.MatchCount != 1 || filteredSimulation.Matches[0].ShelfIndex != 0)
+            throw new InvalidOperationException("Filter M19: the second type of a filter did not match on its filter.");
+    }
+
+    private static void ValidateShelfBoardMatchesLikeSimulator()
+    {
+        List<GameObject> temporaryObjects = new List<GameObject>();
+
+        try
+        {
+            Shelf filteredShelf = TemporaryShelfFactory.CreateShelf("FilteredShelf", temporaryObjects);
+            Shelf regularShelf = TemporaryShelfFactory.CreateShelf("RegularShelf", temporaryObjects);
+            Shelf otherShelf = TemporaryShelfFactory.CreateShelf("OtherShelf", temporaryObjects);
+            ShelfBoard board = TemporaryShelfFactory.CreateBoard(temporaryObjects, filteredShelf, regularShelf, otherShelf);
+            board.Initialize();
+            Fill(filteredShelf, temporaryObjects, new[] { ItemType.Ball }, new[] { ItemType.Ball }, new[] { ItemType.Ball });
+            Fill(regularShelf, temporaryObjects, new[] { ItemType.Ball }, new[] { ItemType.Ball }, new[] { ItemType.Ball });
+            Fill(otherShelf, temporaryObjects, new[] { ItemType.Plant }, Array.Empty<ItemType>(), Array.Empty<ItemType>());
+            board.SetFilter(filteredShelf, BallOnly);
+
+            if (board.CanMatch(regularShelf) || !board.CanMatch(filteredShelf))
+                throw new InvalidOperationException("Filter M20: the board does not match filtered types like the simulator.");
+
+            if (board.TryResolveMatch(regularShelf, out _) || regularShelf.Columns.Any(column => column.IsEmpty))
+                throw new InvalidOperationException("Filter M20: the board resolved filtered items on a regular shelf.");
+
+            board.LockShelf(filteredShelf);
+            board.LockShelf(regularShelf);
+            ColumnPosition source = new ColumnPosition(2, 0);
+            ColumnPosition target = new ColumnPosition(2, 1);
+
+            if (!board.TrySimulateMove(otherShelf.Columns[0], otherShelf.Columns[1], out BoardMoveSimulation boardSimulation)
+                || !new BoardMoveSimulator().TrySimulate(board.CreateSnapshot(), source, target, out BoardMoveSimulation simulation))
+            {
+                throw new InvalidOperationException("Filter M20: the move was rejected.");
+            }
+
+            if (BoardStateFingerprint.CreateKey(boardSimulation.State) != BoardStateFingerprint.CreateKey(simulation.State)
+                || !HasColumns(boardSimulation.State.Shelves[1], new[] { ItemType.Ball }, new[] { ItemType.Ball }, new[] { ItemType.Ball })
+                || boardSimulation.State.Shelves[0].Columns.Any(column => !column.IsEmpty))
+            {
+                throw new InvalidOperationException("Filter M20: the board and the simulator resolved locked shelves differently.");
+            }
         }
         finally
         {
