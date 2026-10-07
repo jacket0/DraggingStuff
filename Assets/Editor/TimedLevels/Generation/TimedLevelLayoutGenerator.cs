@@ -6,6 +6,7 @@ public sealed class TimedLevelLayoutGenerator
 {
     private const int MaximumAttemptCount = 8;
     private const int MaximumConstructionNodeCount = 10000;
+    private const double StackInBoxChance = 0.25;
 
     public BoardStateSnapshot Generate(TimedLevelDefinition definition, BoardStateSnapshot boardShape, int seed)
     {
@@ -211,6 +212,11 @@ public sealed class TimedLevelLayoutGenerator
         moves.RemoveAll(move => constraints.IsFilteredType(type) && !constraints.IsFiltered(move.TargetShelfIndex));
         Shuffle(moves, random);
         moves.Sort((first, second) => CompareReverseMoves(first, second, columns, constraints));
+        List<ReverseMove> boxStacks = moves.Where(IsStackInBox).ToList();
+        moves.RemoveAll(IsStackInBox);
+
+        if (boxStacks.Count > 0 && random.NextDouble() < StackInBoxChance)
+            moves.InsertRange(0, boxStacks);
 
         foreach (ReverseMove move in moves)
         {
@@ -411,12 +417,15 @@ public sealed class TimedLevelLayoutGenerator
 
                 for (int sourceShelfIndex = 0; sourceShelfIndex < columns.Length; sourceShelfIndex++)
                 {
-                    if (sourceShelfIndex == targetShelfIndex || constraints.IsClosed(sourceShelfIndex))
+                    if (constraints.IsClosed(sourceShelfIndex) || sourceShelfIndex == targetShelfIndex && !constraints.IsFiltered(targetShelfIndex))
                         continue;
 
                     for (int sourceColumnIndex = 0; sourceColumnIndex < columns[sourceShelfIndex].Length; sourceColumnIndex++)
                     {
                         if (!CanPrepend(columns, targetShelfIndex, targetColumnIndex, sourceShelfIndex, sourceColumnIndex, constraints))
+                            continue;
+
+                        if (sourceShelfIndex == targetShelfIndex && !CanStackInBox(columns[targetShelfIndex], targetColumnIndex, sourceColumnIndex, constraints.GetMaximumColumnDepth(targetShelfIndex)))
                             continue;
 
                         int filledEmptyColumnCount = CountFilledEmptyColumns(targetShelf, targetColumnIndex, columns[sourceShelfIndex][sourceColumnIndex]);
@@ -460,6 +469,13 @@ public sealed class TimedLevelLayoutGenerator
 
         return true;
     }
+
+    private static bool CanStackInBox(List<ItemType>[] box, int targetColumnIndex, int sourceColumnIndex, int maximumDepth)
+    {
+        return sourceColumnIndex != targetColumnIndex && box[sourceColumnIndex].Count > 0 && box[sourceColumnIndex].Count + 2 <= maximumDepth;
+    }
+
+    private static bool IsStackInBox(ReverseMove move) => move.SourceShelfIndex == move.TargetShelfIndex;
 
     private static bool WouldCreateAutomaticMatch(List<ItemType>[][] columns, ReverseMove move, ItemType type)
     {
