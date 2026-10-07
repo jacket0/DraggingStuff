@@ -128,7 +128,7 @@ public abstract class GameSession : MonoBehaviour
             {
                 Shelf shelf = operation.Shelf;
 
-                if (shelf.TryResolveMatch(out MatchResolution match))
+                if (_shelfBoard.TryResolveMatch(shelf, out MatchResolution match))
                 {
                     PlayMatch(operation, match);
                 }
@@ -169,7 +169,7 @@ public abstract class GameSession : MonoBehaviour
                         return;
 
                     _isPreparing = false;
-                    Shelf[] matchedShelves = _shelfBoard.Shelves.Where(shelf => shelf.HasMatch()).ToArray();
+                    Shelf[] matchedShelves = _shelfBoard.Shelves.Where(_shelfBoard.CanMatch).ToArray();
 
                     if (matchedShelves.Length > 0)
                     {
