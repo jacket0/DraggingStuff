@@ -74,29 +74,12 @@ public sealed class ShelfFiltersController : MonoBehaviour
             _filterSigns.Add(shelf, shelfSigns[0]);
         }
 
-        MarkFilteredItems();
         SignsShown?.Invoke(_filterSigns.Values.ToArray());
-    }
-
-    private void MarkFilteredItems()
-    {
-        IReadOnlyCollection<ItemType> filteredTypes = _shelfBoard.CreateSnapshot().FilteredTypes;
-
-        foreach (ShelfColumn column in _shelfBoard.Shelves.SelectMany(shelf => shelf.Columns))
-        {
-            foreach (ShelfItem item in column.Items)
-                ShelfItemOutlineView.GetRequired(item).SetMarked(item == column.FrontItem && filteredTypes.Contains(item.Type));
-        }
     }
 
     private void HandleBoardSettled()
     {
-        if (_filterSigns.Count == 0)
-            return;
-
-        MarkFilteredItems();
-
-        if (!_session.IsPlaying)
+        if (!_session.IsPlaying || _filterSigns.Count == 0)
             return;
 
         Shelf[] stuckShelves = _shelfBoard.Shelves.Where(shelf => shelf.HasMatch() && !_shelfBoard.CanMatch(shelf)).ToArray();
