@@ -27,7 +27,7 @@ public sealed class EndlessModeCardView : MonoBehaviour
     public void Bind(bool unlocked, long bestScore)
     {
         _button.interactable = unlocked;
-        _bestScoreValueText.SetText(bestScore.ToString());
+        _bestScoreValueText.SetText(ScoreTextFormatter.FormatGrouped(bestScore));
         _recordRoot.SetActive(unlocked);
         _playRoot.SetActive(unlocked);
         _lockIcon.SetActive(!unlocked);
