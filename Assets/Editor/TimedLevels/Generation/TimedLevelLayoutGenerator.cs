@@ -118,7 +118,7 @@ public sealed class TimedLevelLayoutGenerator
     {
         List<ItemType>[][] columns = CreateEmptyColumns(boardShape);
         List<ReverseMove> reverseMoves = new List<ReverseMove>();
-        bool[] swapSteps = ChooseSwapSteps(groups.Count, constraints.ShuffleSwapCount, random);
+        bool[] swapSteps = ChooseSwapSteps(groups, constraints, random);
         int visitedNodeCount = 0;
 
         if (!TryAddGroups(columns, groups, 0, swapSteps, random, reverseMoves, constraints, ref visitedNodeCount))
@@ -236,20 +236,25 @@ public sealed class TimedLevelLayoutGenerator
         return false;
     }
 
-    private static bool[] ChooseSwapSteps(int groupCount, int swapCount, System.Random random)
+    private static bool[] ChooseSwapSteps(IReadOnlyList<ItemType> groups, LayoutConstraints constraints, System.Random random)
     {
+        int groupCount = groups.Count;
         bool[] steps = new bool[groupCount];
 
-        if (swapCount == 0 || groupCount < 3)
+        if (constraints.ShuffleSwapCount == 0 || groupCount < 3)
             return steps;
+
+        bool IsEligible(int groupIndex) => !constraints.HasFilters || constraints.IsFilteredType(groups[groupIndex - 1]);
 
         // The swap before the last group thins out ready shelves at the start; a group always follows a swap,
         // so the player's first move stays a plain match.
-        List<int> candidates = Enumerable.Range(2, groupCount - 3).ToList();
+        List<int> candidates = Enumerable.Range(2, groupCount - 3).Where(IsEligible).ToList();
         Shuffle(candidates, random);
-        candidates.Insert(0, groupCount - 1);
 
-        foreach (int groupIndex in candidates.Take(swapCount))
+        if (IsEligible(groupCount - 1))
+            candidates.Insert(0, groupCount - 1);
+
+        foreach (int groupIndex in candidates.Take(constraints.ShuffleSwapCount))
             steps[groupIndex] = true;
 
         return steps;
@@ -281,7 +286,12 @@ public sealed class TimedLevelLayoutGenerator
 
         Shuffle(candidates, random);
 
-        foreach (ReverseMove candidate in candidates.OrderByDescending(candidate => CountReadyShelves(columns, candidate)).ToList())
+        List<ReverseMove> orderedCandidates = candidates
+            .OrderByDescending(candidate => BreaksReadyBox(columns, candidate, constraints))
+            .ThenByDescending(candidate => CountReadyShelves(columns, candidate))
+            .ToList();
+
+        foreach (ReverseMove candidate in orderedCandidates)
         {
             SwapFronts(columns, candidate);
 
@@ -296,6 +306,12 @@ public sealed class TimedLevelLayoutGenerator
 
         swap = default;
         return false;
+    }
+
+    private static bool BreaksReadyBox(List<ItemType>[][] columns, ReverseMove swap, LayoutConstraints constraints)
+    {
+        return constraints.IsFiltered(swap.TargetShelfIndex) && IsReadyShelf(columns[swap.TargetShelfIndex])
+            || constraints.IsFiltered(swap.SourceShelfIndex) && IsReadyShelf(columns[swap.SourceShelfIndex]);
     }
 
     private static int CountReadyShelves(List<ItemType>[][] columns, ReverseMove swap)
