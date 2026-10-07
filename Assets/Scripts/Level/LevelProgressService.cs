@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class LevelProgressService : MonoBehaviour
@@ -27,10 +28,11 @@ public class LevelProgressService : MonoBehaviour
     public bool IsUnlocked(LevelEntry level)
     {
         int index = FindCatalogIndex(level);
+        IReadOnlyList<LevelEntry> levels = _catalog.Levels;
 
         for (int i = 0; i < index; i++)
         {
-            if (!IsCompleted(_catalog.Levels[i]))
+            if (!IsCompleted(levels[i]))
                 return false;
         }
 
@@ -81,13 +83,12 @@ public class LevelProgressService : MonoBehaviour
         if (level == null)
             throw new ArgumentNullException(nameof(level));
 
-        for (int i = 0; i < _catalog.Levels.Count; i++)
-        {
-            if (_catalog.Levels[i] == level)
-                return i;
-        }
+        int index = _catalog.IndexOf(level);
 
-        throw new InvalidOperationException();
+        if (index < 0)
+            throw new InvalidOperationException($"{level.name} is not in {_catalog.name}.");
+
+        return index;
     }
 
     private void HandleProgressChanged()

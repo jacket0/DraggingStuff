@@ -7,19 +7,20 @@ public class LevelCatalog : ScriptableObject
 {
     [SerializeField] private List<LevelChapter> _chapters = new List<LevelChapter>();
 
-    [NonSerialized] private List<LevelEntry> _chapterLevels;
-
     public IReadOnlyList<LevelChapter> Chapters => _chapters;
-    public IReadOnlyList<LevelEntry> Levels => GetLevels();
+    public IReadOnlyList<LevelEntry> Levels => CollectLevels();
 
-    private void OnEnable()
+    public int IndexOf(LevelEntry level)
     {
-        _chapterLevels = null;
-    }
+        IReadOnlyList<LevelEntry> levels = Levels;
 
-    private void OnValidate()
-    {
-        _chapterLevels = null;
+        for (int i = 0; i < levels.Count; i++)
+        {
+            if (levels[i] == level)
+                return i;
+        }
+
+        return -1;
     }
 
     public bool TryGetNext(LevelEntry currentLevel, out LevelEntry nextLevel)
@@ -28,7 +29,7 @@ public class LevelCatalog : ScriptableObject
             throw new ArgumentNullException(nameof(currentLevel));
 
         IReadOnlyList<LevelEntry> levels = Levels;
-        int nextIndex = FindIndex(levels, currentLevel) + 1;
+        int nextIndex = IndexOf(currentLevel) + 1;
 
         if (nextIndex <= 0 || nextIndex >= levels.Count)
         {
@@ -40,32 +41,18 @@ public class LevelCatalog : ScriptableObject
         return nextLevel != null;
     }
 
-    private List<LevelEntry> GetLevels()
+    private List<LevelEntry> CollectLevels()
     {
-        if (_chapterLevels != null)
-            return _chapterLevels;
-
-        _chapterLevels = new List<LevelEntry>();
+        List<LevelEntry> levels = new List<LevelEntry>();
 
         foreach (LevelChapter chapter in _chapters)
         {
             if (chapter == null)
                 throw new InvalidOperationException($"{name}: a chapter is missing.");
 
-            _chapterLevels.AddRange(chapter.Levels);
+            levels.AddRange(chapter.Levels);
         }
 
-        return _chapterLevels;
-    }
-
-    private static int FindIndex(IReadOnlyList<LevelEntry> levels, LevelEntry level)
-    {
-        for (int i = 0; i < levels.Count; i++)
-        {
-            if (levels[i] == level)
-                return i;
-        }
-
-        return -1;
+        return levels;
     }
 }

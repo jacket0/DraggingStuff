@@ -15,6 +15,8 @@ public class LevelSelectionController : MonoBehaviour
     [SerializeField] private EndlessModeCardView _endlessCard;
     [SerializeField] private ScrollRect _levelsScroll;
 
+    private int _scrolledChapterIndex = -1;
+
     private void Start()
     {
         ValidateDependencies();
@@ -27,7 +29,6 @@ public class LevelSelectionController : MonoBehaviour
 
         _endlessCard.Clicked += OpenEndlessLevel;
         RefreshCards();
-        ScrollToCurrentChapter();
     }
 
     private void OnEnable()
@@ -80,34 +81,43 @@ public class LevelSelectionController : MonoBehaviour
 
     private void RefreshCards()
     {
-        LevelEntry currentLevel = FindCurrentLevel();
+        int currentChapterIndex = -1;
         int previousChapterLastLevelNumber = 0;
 
         for (int chapterIndex = 0; chapterIndex < _catalog.Chapters.Count; chapterIndex++)
         {
             LevelChapter chapter = _catalog.Chapters[chapterIndex];
             LevelChapterSectionView section = _sections[chapterIndex];
+            bool hasMechanic = chapter.Mechanic != LevelMechanic.Basics;
             int completedLevelCount = 0;
             int stars = 0;
 
             for (int levelIndex = 0; levelIndex < chapter.Levels.Count; levelIndex++)
             {
                 LevelEntry level = chapter.Levels[levelIndex];
+                bool isUnlocked = _progress.IsUnlocked(level);
+                bool isCompleted = _progress.IsCompleted(level);
+                bool isCurrent = isUnlocked && !isCompleted && currentChapterIndex < 0;
                 int levelStars = _progress.GetStars(level);
 
-                if (_progress.IsCompleted(level))
-                    completedLevelCount++;
+                if (isCurrent)
+                    currentChapterIndex = chapterIndex;
 
-                stars += levelStars;
+                if (isUnlocked && isCompleted)
+                {
+                    completedLevelCount++;
+                    stars += levelStars;
+                }
+
                 section.Cards[levelIndex].Bind(new LevelCardState(
                     level,
-                    _progress.IsUnlocked(level),
-                    level == currentLevel,
-                    levelIndex == 0 && chapter.Mechanic != LevelMechanic.Basics,
+                    isUnlocked,
+                    isCurrent,
+                    hasMechanic && levelIndex == 0 && !isCompleted,
                     _progress.GetBestScore(level),
                     _progress.GetBestTime(level),
                     levelStars,
-                    chapter.Mechanic != LevelMechanic.Basics ? chapter.MechanicIcon : null,
+                    hasMechanic ? chapter.MechanicIcon : null,
                     level.Definition.GetMechanicElementCount(chapter.Mechanic)));
             }
 
@@ -122,31 +132,14 @@ public class LevelSelectionController : MonoBehaviour
         }
 
         RefreshEndlessCard();
+
+        if (currentChapterIndex >= 0 && currentChapterIndex != _scrolledChapterIndex)
+            ScrollToChapter(currentChapterIndex);
     }
 
-    private LevelEntry FindCurrentLevel()
+    private void ScrollToChapter(int chapterIndex)
     {
-        foreach (LevelEntry level in _catalog.Levels)
-        {
-            if (_progress.IsUnlocked(level) && !_progress.IsCompleted(level))
-                return level;
-        }
-
-        return null;
-    }
-
-    private void ScrollToCurrentChapter()
-    {
-        LevelEntry currentLevel = FindCurrentLevel();
-
-        if (currentLevel == null)
-            return;
-
-        int chapterIndex = 0;
-
-        while (!ContainsLevel(_catalog.Chapters[chapterIndex], currentLevel))
-            chapterIndex++;
-
+        _scrolledChapterIndex = chapterIndex;
         Canvas.ForceUpdateCanvases();
         RectTransform content = _levelsScroll.content;
         float scrollableHeight = content.rect.height - _levelsScroll.viewport.rect.height;
@@ -157,17 +150,6 @@ public class LevelSelectionController : MonoBehaviour
         Bounds sectionBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(content, _sections[chapterIndex].RectTransform);
         float sectionOffset = content.rect.yMax - sectionBounds.max.y;
         _levelsScroll.verticalNormalizedPosition = 1f - Mathf.Clamp01(sectionOffset / scrollableHeight);
-    }
-
-    private static bool ContainsLevel(LevelChapter chapter, LevelEntry level)
-    {
-        foreach (LevelEntry entry in chapter.Levels)
-        {
-            if (entry == level)
-                return true;
-        }
-
-        return false;
     }
 
     private void HandleEndlessBestScoreChanged(long bestScore)
