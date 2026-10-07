@@ -94,7 +94,12 @@ public sealed class ShelfStateSnapshot
 
     public bool CanMatch(IReadOnlyCollection<ItemType> filteredTypes) => HasMatch() && CanMatchType(Columns[0].Items[0], filteredTypes);
 
-    public bool CanMatchType(ItemType type, IReadOnlyCollection<ItemType> filteredTypes) => AcceptedTypes.Contains(type) || !filteredTypes.Contains(type);
+    public bool CanMatchType(ItemType type, IReadOnlyCollection<ItemType> filteredTypes) => CanMatchType(AcceptedTypes, type, filteredTypes);
+
+    public static bool CanMatchType(IReadOnlyList<ItemType> acceptedTypes, ItemType type, IReadOnlyCollection<ItemType> filteredTypes)
+    {
+        return acceptedTypes.Contains(type) || !filteredTypes.Contains(type);
+    }
 
     private static IReadOnlyList<ItemType> NormalizeAcceptedTypes(IReadOnlyList<ItemType> acceptedTypes)
     {

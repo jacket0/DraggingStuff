@@ -272,7 +272,8 @@ public static class TimedLevelVariantGenerator
 
     public static int CountFilteredMoves(TimedLevelVariant variant)
     {
-        return TimedLevelLayoutRules.CountFilteredMoves(variant.CreateLayout(), variant.CreateSolution());
+        BoardStateSnapshot layout = variant.CreateLayout();
+        return variant.CreateSolution().Count(move => layout.Contains(move.Target) && layout.Shelves[move.Target.ShelfIndex].IsFiltered);
     }
 
     private static string FormatFilteredMoveMedian(IReadOnlyList<TimedLevelVariant> variants)

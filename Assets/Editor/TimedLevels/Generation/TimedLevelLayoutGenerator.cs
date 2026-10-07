@@ -121,7 +121,8 @@ public sealed class TimedLevelLayoutGenerator
         bool[] swapSteps = ChooseSwapSteps(groups, constraints, random);
         int visitedNodeCount = 0;
 
-        if (!TryAddGroups(columns, groups, 0, swapSteps, random, reverseMoves, constraints, ref visitedNodeCount))
+        if (swapSteps.Count(isSwapStep => isSwapStep) < constraints.ShuffleSwapCount
+            || !TryAddGroups(columns, groups, 0, swapSteps, random, reverseMoves, constraints, ref visitedNodeCount))
         {
             result = null;
             return false;
@@ -170,8 +171,11 @@ public sealed class TimedLevelLayoutGenerator
         visitedNodeCount++;
 
         // A shuffle swap breaks shelves that are one placement away from a match, so not every forward move is a ready match.
-        if (!swapSteps[groupIndex] || !TryApplyShuffleSwap(columns, random, constraints, out ReverseMove swap))
+        if (!swapSteps[groupIndex])
             return TryPlaceGroup(columns, groups, groupIndex, swapSteps, random, reverseMoves, constraints, ref visitedNodeCount);
+
+        if (!TryApplyShuffleSwap(columns, random, constraints, out ReverseMove swap))
+            return false;
 
         reverseMoves.Add(swap);
 

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 
 public static class TimedLevelLayoutRules
@@ -29,10 +28,5 @@ public static class TimedLevelLayoutRules
         return board.Shelves
             .Where(shelf => shelf.IsFiltered)
             .Sum(shelf => shelf.Columns.Count(column => column.IsEmpty));
-    }
-
-    public static int CountFilteredMoves(BoardStateSnapshot layout, IReadOnlyList<TimedLevelMove> moves)
-    {
-        return moves.Count(move => layout.Contains(move.Target) && layout.Shelves[move.Target.ShelfIndex].IsFiltered);
     }
 }

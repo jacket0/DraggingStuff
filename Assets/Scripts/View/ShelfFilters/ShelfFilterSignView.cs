@@ -195,7 +195,7 @@ public sealed class ShelfFilterSignView : MonoBehaviour
         _iconHop?.Complete();
         _iconHop = DOTween.Sequence().SetLink(gameObject);
 
-        foreach (SpriteRenderer icon in _icons)
+        foreach (SpriteRenderer icon in _icons.Concat(_iconBackings))
         {
             if (icon.gameObject.activeSelf)
                 _iconHop.Join(icon.transform.DOPunchPosition(Vector3.up * _iconHopHeight, duration, 4, 0.5f));

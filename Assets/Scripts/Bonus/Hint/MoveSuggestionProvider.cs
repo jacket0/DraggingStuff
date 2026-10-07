@@ -25,7 +25,8 @@ public sealed class MoveSuggestionProvider : MonoBehaviour, IMoveSuggestionProvi
                     continue;
 
                 ItemType type = source.FrontItem.Type;
-                bool breaksPair = sourceShelf.Columns.Count(column => column.FrontItem != null && column.FrontItem.Type == type) > 1;
+                bool breaksPair = _shelfBoard.CanMatchType(sourceShelf, type)
+                    && sourceShelf.Columns.Count(column => column.FrontItem != null && column.FrontItem.Type == type) > 1;
 
                 foreach (Shelf targetShelf in _shelfBoard.Shelves)
                 {
