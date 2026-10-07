@@ -23,14 +23,23 @@ public sealed class ShelfFilterSignView : MonoBehaviour
     [SerializeField] private float _rejectedAngle = 10f;
     [SerializeField, Min(0.01f)] private float _rejectedDuration = 0.35f;
     [SerializeField, Min(0f)] private float _iconHopHeight = 0.012f;
+    [SerializeField, Min(0f)] private float _pulseStrength = 0.45f;
+    [SerializeField, Min(0.01f)] private float _pulseDuration = 0.45f;
+    [SerializeField, Min(1f)] private float _highlightScale = 1.3f;
+    [SerializeField, Min(0.01f)] private float _highlightDuration = 0.12f;
 
     private readonly Dictionary<SpriteRenderer, Color> _baseColors = new Dictionary<SpriteRenderer, Color>();
     private readonly List<Tween> _colorTweens = new List<Tween>();
+    private Vector3 _baseScale;
+    private Vector3 _rootBaseScale;
     private Tween _swing;
     private Sequence _iconHop;
+    private Tween _pulse;
+    private Tween _highlight;
 
     public Shelf Shelf => _shelf;
     public bool IsDimmed { get; private set; }
+    public bool IsHighlighted { get; private set; }
     public bool IsShown => _root.activeSelf;
     public Vector3 BottomCenter => new Vector3(_plate.bounds.center.x, _plate.bounds.min.y, _plate.bounds.center.z);
 
@@ -44,6 +53,9 @@ public sealed class ShelfFilterSignView : MonoBehaviour
 
         foreach (SpriteRenderer icon in _icons)
             _baseColors.Add(icon, icon.color);
+
+        _baseScale = transform.localScale;
+        _rootBaseScale = _root.transform.localScale;
     }
 
     public void Show(IReadOnlyList<Sprite> icons)
@@ -81,6 +93,9 @@ public sealed class ShelfFilterSignView : MonoBehaviour
     {
         KillTweens();
         IsDimmed = false;
+        IsHighlighted = false;
+        transform.localScale = _baseScale;
+        _root.transform.localScale = _rootBaseScale;
         _root.transform.localRotation = Quaternion.identity;
         _root.SetActive(false);
     }
@@ -91,6 +106,26 @@ public sealed class ShelfFilterSignView : MonoBehaviour
             return;
 
         ApplyDimmed(isDimmed, _dimDuration);
+    }
+
+    public void SetHighlighted(bool isHighlighted)
+    {
+        if (IsHighlighted == isHighlighted || !IsShown)
+            return;
+
+        IsHighlighted = isHighlighted;
+        _highlight?.Kill();
+        _highlight = transform.DOScale(isHighlighted ? _baseScale * _highlightScale : _baseScale, _highlightDuration).SetLink(gameObject);
+    }
+
+    public void PlayPulse()
+    {
+        if (!IsShown)
+            return;
+
+        _pulse?.Kill();
+        _root.transform.localScale = _rootBaseScale;
+        _pulse = _root.transform.DOPunchScale(_rootBaseScale * _pulseStrength, _pulseDuration, 4, 0.5f).SetLink(gameObject);
     }
 
     public void PlayRefusalHint()
@@ -169,7 +204,11 @@ public sealed class ShelfFilterSignView : MonoBehaviour
         KillColorTweens();
         _swing?.Kill();
         _iconHop?.Kill(true);
+        _pulse?.Kill();
+        _highlight?.Kill();
         _swing = null;
         _iconHop = null;
+        _pulse = null;
+        _highlight = null;
     }
 }
