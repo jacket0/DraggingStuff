@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using DG.Tweening;
 using UnityEngine;
 
@@ -12,9 +13,11 @@ public sealed class ShelfFilterSignView : MonoBehaviour
     [SerializeField] private SpriteRenderer _leftNail;
     [SerializeField] private SpriteRenderer _rightNail;
     [SerializeField] private List<SpriteRenderer> _icons = new List<SpriteRenderer>();
+    [SerializeField] private List<SpriteRenderer> _iconBackings = new List<SpriteRenderer>();
     [SerializeField] private Color _dimmedTint = new Color(0.55f, 0.55f, 0.55f, 0.7f);
     [SerializeField, Min(0.01f)] private float _iconSize = 0.085f;
     [SerializeField, Min(0.01f)] private float _iconSpacing = 0.1f;
+    [SerializeField, Min(0.01f)] private float _iconBackingSize = 0.095f;
     [SerializeField, Min(0f)] private float _platePadding = 0.02f;
     [SerializeField, Min(0f)] private float _nailInset = 0.014f;
     [SerializeField, Min(0.01f)] private float _dimDuration = 0.12f;
@@ -45,13 +48,16 @@ public sealed class ShelfFilterSignView : MonoBehaviour
 
     private void Awake()
     {
-        if (_shelf == null || _root == null || _plate == null || _frame == null || _leftNail == null || _rightNail == null || _icons.Count == 0 || _icons.Contains(null))
+        if (_shelf == null || _root == null || _plate == null || _frame == null || _leftNail == null || _rightNail == null || _icons.Count == 0 || _icons.Contains(null)
+            || _iconBackings.Count != _icons.Count || _iconBackings.Contains(null))
+        {
             throw new InvalidOperationException($"{name}: invalid shelf filter sign wiring.");
+        }
 
         foreach (SpriteRenderer spriteRenderer in new[] { _plate, _frame, _leftNail, _rightNail })
             _baseColors.Add(spriteRenderer, spriteRenderer.color);
 
-        foreach (SpriteRenderer icon in _icons)
+        foreach (SpriteRenderer icon in _icons.Concat(_iconBackings))
             _baseColors.Add(icon, icon.color);
 
         _baseScale = transform.localScale;
@@ -74,8 +80,10 @@ public sealed class ShelfFilterSignView : MonoBehaviour
         for (int index = 0; index < _icons.Count; index++)
         {
             SpriteRenderer icon = _icons[index];
+            SpriteRenderer iconBacking = _iconBackings[index];
             bool isUsed = index < icons.Count;
             icon.gameObject.SetActive(isUsed);
+            iconBacking.gameObject.SetActive(isUsed);
 
             if (!isUsed)
                 continue;
@@ -84,6 +92,8 @@ public sealed class ShelfFilterSignView : MonoBehaviour
             Vector2 spriteSize = icon.sprite.bounds.size;
             icon.transform.localScale = Vector3.one * (_iconSize / Mathf.Max(spriteSize.x, spriteSize.y));
             icon.transform.localPosition = new Vector3(firstIconX + index * _iconSpacing, _plate.transform.localPosition.y, icon.transform.localPosition.z);
+            iconBacking.transform.localScale = Vector3.one * (_iconBackingSize / iconBacking.sprite.bounds.size.x);
+            iconBacking.transform.localPosition = new Vector3(icon.transform.localPosition.x, icon.transform.localPosition.y, iconBacking.transform.localPosition.z);
         }
 
         ApplyDimmed(false, 0f);

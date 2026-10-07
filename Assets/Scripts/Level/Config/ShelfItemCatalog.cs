@@ -11,37 +11,23 @@ public sealed class ShelfItemCatalog : ScriptableObject
         [SerializeField] private ItemType _type;
         [SerializeField] private ShelfItem _prefab;
         [SerializeField] private Sprite _icon;
+        [SerializeField] private Sprite _signIcon;
 
         public ItemType Type => _type;
         public ShelfItem Prefab => _prefab;
         public Sprite Icon => _icon;
+        public Sprite SignIcon => _signIcon;
     }
 
     [SerializeField] private List<Entry> _entries = new List<Entry>();
 
     public IReadOnlyList<Entry> Entries => _entries;
 
-    public ShelfItem GetPrefab(ItemType type)
-    {
-        foreach (Entry entry in _entries)
-        {
-            if (entry.Type == type)
-                return entry.Prefab;
-        }
+    public ShelfItem GetPrefab(ItemType type) => GetEntry(type).Prefab;
 
-        throw new InvalidOperationException(type.ToString());
-    }
+    public Sprite GetIcon(ItemType type) => GetEntry(type).Icon != null ? GetEntry(type).Icon : throw new InvalidOperationException($"{name}: {type} has no icon.");
 
-    public Sprite GetIcon(ItemType type)
-    {
-        foreach (Entry entry in _entries)
-        {
-            if (entry.Type == type)
-                return entry.Icon != null ? entry.Icon : throw new InvalidOperationException($"{name}: {type} has no icon.");
-        }
-
-        throw new InvalidOperationException(type.ToString());
-    }
+    public Sprite GetSignIcon(ItemType type) => GetEntry(type).SignIcon != null ? GetEntry(type).SignIcon : throw new InvalidOperationException($"{name}: {type} has no sign icon.");
 
     public void Validate()
     {
@@ -58,5 +44,16 @@ public sealed class ShelfItemCatalog : ScriptableObject
             if (entry.Prefab.Type != entry.Type || !types.Add(entry.Type))
                 throw new InvalidOperationException(entry.Type.ToString());
         }
+    }
+
+    private Entry GetEntry(ItemType type)
+    {
+        foreach (Entry entry in _entries)
+        {
+            if (entry.Type == type)
+                return entry;
+        }
+
+        throw new InvalidOperationException(type.ToString());
     }
 }
