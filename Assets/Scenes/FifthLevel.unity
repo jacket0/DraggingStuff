@@ -12181,10 +12181,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f43d52984b309b4998e32c9e2104496, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _comboSystem: {fileID: 1072028347}
   _mergeClip: {fileID: 8300000, guid: b3e577a67600cd5488b6e3870599618f, type: 3}
   _explosionClip: {fileID: 8300000, guid: 528ec6aa38d96144db737c49c059dfeb, type: 3}
   _mergeVolume: 0.3
   _explosionVolume: 0.4
+  _firstComboSemitones: -2
+  _semitonesPerComboStep: 0.5
 --- !u!82 &309989756
 AudioSource:
   m_ObjectHideFlags: 0
