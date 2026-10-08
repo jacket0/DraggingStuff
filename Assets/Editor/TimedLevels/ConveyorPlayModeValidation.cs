@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using DG.Tweening;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -22,6 +23,9 @@ public static class ConveyorPlayModeValidation
     private const int PausedFrameCount = 10;
     private const float ScenarioTimeScale = 3f;
     private const float ExpiringCountdownRate = 100000f;
+    private const int LevelWithoutFiltersSeed = 2099001;
+    private const int BoxShelfIndex = 1;
+    private const int BeltShelfIndex = 8;
 
     private static readonly BoardMoveSimulator Simulator = new BoardMoveSimulator();
     private static IEnumerator _scenarios;
@@ -31,6 +35,9 @@ public static class ConveyorPlayModeValidation
     private static ShelfBoard _board;
     private static ConveyorController _conveyor;
     private static ShelfItemDragController _drag;
+    private static MoveSuggestionProvider _suggestions;
+    private static ShelfFilterSignView[] _signs;
+    private static LevelEntry _levelWithoutFilters;
 
     static ConveyorPlayModeValidation()
     {
@@ -50,7 +57,7 @@ public static class ConveyorPlayModeValidation
         SessionState.SetBool(FailedKey, false);
         SessionState.SetBool(RunInBackgroundKey, Application.runInBackground);
         Application.runInBackground = true;
-        SelectLevel();
+        SelectLevel(LoadFilterLevel());
         EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         EditorApplication.isPlaying = true;
     }
@@ -109,7 +116,11 @@ public static class ConveyorPlayModeValidation
             ValidateDragFromReservedShelf,
             ValidateTimeoutWithPendingShift,
             ValidateTimeoutVictory,
-            ValidateRestartWithPendingShift
+            ValidateRestartWithPendingShift,
+            ValidateFilterSolutionReplay,
+            ValidateRejectedDropFromConveyor,
+            ValidateStuckTripleFromShift,
+            ValidateSuggestionSkipsTripleOnConveyor
         };
 
         foreach (Func<IEnumerable> scenario in scenarios)
@@ -329,6 +340,160 @@ public static class ConveyorPlayModeValidation
         Expect(!_session.HasPendingBoardChanges && _session.State == LevelState.Playing, "a restart must drop pending shifts");
     }
 
+    private static IEnumerable ValidateFilterSolutionReplay()
+    {
+        LevelEntry level = LoadFilterLevel();
+
+        foreach (object step in LoadLevel(level)) yield return step;
+
+        ExpectFilterOnBox("C-F1");
+        BoardStateSnapshot expected = _board.CreateSnapshot();
+        string layoutHash = BoardStateFingerprint.CreateHash(expected);
+        TimedLevelVariant variant = level.Definition.Variants.FirstOrDefault(candidate => candidate.LayoutHash == layoutHash);
+        Expect(variant != null, "C-F1: the runtime board must start from a variant of level 20");
+
+        foreach (TimedLevelMove move in variant.CreateSolution())
+        {
+            ExpectSuggestionRespectsFilters("C-F1");
+            expected = Move(expected, move.Source, move.Target);
+
+            foreach (object step in WaitUntilSettled("C-F1 solution move")) yield return step;
+
+            ExpectBoard(expected, "C-F1 solution move");
+        }
+
+        Expect(_board.IsCleared, "C-F1: the solution must clear the board");
+    }
+
+    private static IEnumerable ValidateRejectedDropFromConveyor()
+    {
+        foreach (object step in LoadLevel(LoadFilterLevel())) yield return step;
+
+        BoardStateSnapshot expected = Arrange(
+            Shelf(BoxShelfIndex, Column(), Column(ItemType.Lamp), Column(ItemType.Ball)),
+            Shelf(BeltShelfIndex, Column(ItemType.Bear, ItemType.Toy), Column(ItemType.Plant, ItemType.Beauty), Column(ItemType.MapBall, ItemType.Toy)));
+        Shelf box = _board.Shelves[BoxShelfIndex];
+        ShelfFilterSignView sign = _signs.Single(candidate => candidate.Shelf == box);
+        ShelfItem item = _board.Shelves[BeltShelfIndex].Columns[0].FrontItem;
+        int rejectionCount = 0;
+
+        void HandleDropRejected(Vector2 screenPosition) => rejectionCount++;
+
+        _drag.DropRejected += HandleDropRejected;
+
+        try
+        {
+            Expect(_drag.TryBeginDrag(item, GetScreenCenter(item)), "C-F2: the drag from the conveyor must start");
+            Expect(sign.IsDimmed, "C-F2: the box sign must dim for a type it does not accept");
+            _drag.EndDrag(Camera.main.WorldToScreenPoint(box.ColumnViews[0].ItemAnchor.position));
+
+            foreach (object step in WaitUntilSettled("C-F2")) yield return step;
+        }
+        finally
+        {
+            _drag.DropRejected -= HandleDropRejected;
+        }
+
+        Expect(rejectionCount == 1, "C-F2: dropping a rejected type on the box must be refused");
+        Expect(!sign.IsDimmed, "C-F2: the box sign must stop dimming after the drag");
+        ExpectBoard(expected, "C-F2");
+        Expect(item.transform.parent == _board.Shelves[BeltShelfIndex].ColumnViews[0].ItemAnchor, "C-F2: the refused item must return to its conveyor column");
+    }
+
+    private static IEnumerable ValidateStuckTripleFromShift()
+    {
+        foreach (object step in LoadLevel(LoadFilterLevel())) yield return step;
+
+        BoardStateSnapshot expected = Arrange(
+            Shelf(0, Column(ItemType.Plant), Column(ItemType.Plant), Column()),
+            Shelf(BoxShelfIndex, Column(), Column(ItemType.Ball), Column()),
+            Shelf(2, Column(ItemType.Plant), Column(ItemType.Toy), Column()),
+            Shelf(3, Column(ItemType.Toy), Column(ItemType.Toy), Column()),
+            Shelf(BeltShelfIndex, Column(ItemType.Bear, ItemType.Lamp), Column(ItemType.Toy, ItemType.Lamp), Column(ItemType.Beauty, ItemType.Lamp)));
+        Shelf belt = _board.Shelves[BeltShelfIndex];
+        ShelfFilterSignView sign = _signs.Single(candidate => candidate.Shelf == _board.Shelves[BoxShelfIndex]);
+        int reminderCount = 0;
+
+        void HandleBoardSettled()
+        {
+            if (sign.IsPulsing && belt.Columns.All(column => DOTween.IsTweening(column.FrontItem.transform)))
+                reminderCount++;
+        }
+
+        _session.BoardSettled += HandleBoardSettled;
+
+        try
+        {
+            expected = Move(expected, new ColumnPosition(2, 0), new ColumnPosition(0, 2));
+
+            foreach (object step in WaitUntilSettled("C-F3 shift")) yield return step;
+        }
+        finally
+        {
+            _session.BoardSettled -= HandleBoardSettled;
+        }
+
+        ExpectBoard(expected, "C-F3 shift");
+        Expect(belt.HasMatch() && !_board.CanMatch(belt), "C-F3: three Lamp items brought by the shift must stay on the conveyor");
+        Expect(reminderCount > 0, "C-F3: the stuck triple on the conveyor must pulse its box sign and shake its items");
+
+        ShelfItem toy = _board.Shelves[2].Columns[1].FrontItem;
+        Expect(_drag.TryBeginDrag(toy, GetScreenCenter(toy)), "C-F3: the next drag must start");
+        Expect(belt.Columns.All(column => !DOTween.IsTweening(column.FrontItem.transform)), "C-F3: picking up an item must stop the shakes on the conveyor");
+        BoardStateSnapshot afterSecondShift = Simulate(_board.CreateSnapshot(), new ColumnPosition(2, 1), new ColumnPosition(3, 2));
+        _drag.EndDrag(Camera.main.WorldToScreenPoint(_board.Shelves[3].ColumnViews[2].ItemAnchor.position));
+
+        foreach (object step in WaitUntilSettled("C-F3 second shift")) yield return step;
+
+        ExpectBoard(afterSecondShift, "C-F3 second shift");
+        Expect(belt.Columns.All(column => column.FrontItem.transform.localPosition.sqrMagnitude < 0.000001f), "C-F3: conveyor items must rest in front of their columns after the next shift");
+    }
+
+    private static IEnumerable ValidateSuggestionSkipsTripleOnConveyor()
+    {
+        foreach (object step in LoadLevel(LoadFilterLevel())) yield return step;
+
+        Arrange(
+            Shelf(BoxShelfIndex, Column(ItemType.Lamp), Column(), Column(ItemType.Ball)),
+            Shelf(2, Column(ItemType.Lamp), Column(ItemType.Plant), Column()),
+            Shelf(BeltShelfIndex, Column(ItemType.Lamp, ItemType.Toy), Column(ItemType.Lamp, ItemType.Bear), Column()));
+
+        Expect(_suggestions.TryGetSuggestion(out MoveSuggestion suggestion), "C-F4: the arranged board must offer a move");
+        Expect(
+            suggestion.SourceColumn.FrontItem.Type != ItemType.Lamp || suggestion.TargetColumn.Shelf != _board.Shelves[BeltShelfIndex],
+            "C-F4: the suggestion must not collect Lamp on the conveyor");
+        ExpectSuggestionRespectsFilters("C-F4");
+    }
+
+    private static void ExpectFilterOnBox(string scenario)
+    {
+        Shelf box = _board.Shelves[BoxShelfIndex];
+        Expect(_board.Shelves.Count(_board.IsFiltered) == 1 && _board.GetAcceptedTypes(box).SequenceEqual(new[] { ItemType.Lamp }), $"{scenario}: level 20 must have one Lamp box on shelf {BoxShelfIndex}");
+
+        foreach (ShelfFilterSignView sign in _signs)
+            Expect(sign.IsShown == (sign.Shelf == box), $"{scenario}: the sign on {sign.Shelf.name} must be shown only on the box");
+    }
+
+    private static void ExpectSuggestionRespectsFilters(string scenario)
+    {
+        if (!_suggestions.TryGetSuggestion(out MoveSuggestion suggestion))
+            return;
+
+        ShelfColumnView source = suggestion.SourceColumn;
+        ShelfColumnView target = suggestion.TargetColumn;
+        Expect(_board.Accepts(target.Shelf, source.FrontItem.Type), $"{scenario}: the suggestion must not put {source.FrontItem.Type} on {target.Shelf.name}");
+        Expect(target.IsEmpty || _board.Accepts(source.Shelf, target.FrontItem.Type), $"{scenario}: the suggested swap must not put {target.FrontItem?.Type} on {source.Shelf.name}");
+        Expect(suggestion.TargetMatchingItems.Count == 0 || _board.CanMatchType(target.Shelf, source.FrontItem.Type), $"{scenario}: the suggestion must not collect {source.FrontItem.Type} on {target.Shelf.name}");
+    }
+
+    private static BoardStateSnapshot Simulate(BoardStateSnapshot board, ColumnPosition source, ColumnPosition target)
+    {
+        if (!Simulator.TrySimulate(board, source, target, out BoardMoveSimulation simulation) || !simulation.IsAllowed)
+            throw new InvalidOperationException("The scenario move is not valid in the simulator.");
+
+        return simulation.State;
+    }
+
     private static (int ShelfIndex, ColumnStateSnapshot[] Columns)[] ParallelMovesLayout()
     {
         return new[]
@@ -341,13 +506,15 @@ public static class ConveyorPlayModeValidation
         };
     }
 
-    private static IEnumerable LoadLevel()
+    private static IEnumerable LoadLevel() => LoadLevel(GetLevelWithoutFilters());
+
+    private static IEnumerable LoadLevel(LevelEntry level)
     {
-        SelectLevel();
+        SelectLevel(level);
         SceneManager.LoadScene(SceneName);
         yield return null;
 
-        foreach (object step in WaitUntil(() => FindSession() != null && FindSession().State == LevelState.Playing && FindSession().IsBoardSettled, "level load")) yield return step;
+        foreach (object step in WaitUntil(() => FindSession() != null && FindSession().CurrentLevel == level && FindSession().State == LevelState.Playing && FindSession().IsBoardSettled, "level load")) yield return step;
 
         CaptureScene();
         Time.timeScale = ScenarioTimeScale;
@@ -359,9 +526,14 @@ public static class ConveyorPlayModeValidation
         _board = UnityEngine.Object.FindObjectOfType<ShelfBoard>();
         _conveyor = UnityEngine.Object.FindObjectOfType<ConveyorController>();
         _drag = UnityEngine.Object.FindObjectOfType<ShelfItemDragController>();
+        _suggestions = UnityEngine.Object.FindObjectOfType<MoveSuggestionProvider>();
+        _signs = UnityEngine.Object.FindObjectsOfType<ShelfFilterSignView>(true);
 
         if (_board.ConveyorShelves.Count != 4)
             throw new InvalidOperationException("Conveyor scenarios require all four conveyor shelves.");
+
+        if (_suggestions == null || _signs.Length == 0)
+            throw new InvalidOperationException("Conveyor scenarios need move suggestions and shelf filter signs in FifthLevel.");
     }
 
     private static BoardStateSnapshot Arrange(params (int ShelfIndex, ColumnStateSnapshot[] Columns)[] shelves)
@@ -464,13 +636,63 @@ public static class ConveyorPlayModeValidation
 
     private static ColumnStateSnapshot Column(params ItemType[] items) => new ColumnStateSnapshot(items);
 
-    private static void SelectLevel()
+    private static LevelEntry LoadFilterLevel()
     {
-        LevelSelectionState selection = AssetDatabase.LoadAssetAtPath<LevelSelectionState>(SelectionPath);
         LevelEntry level = AssetDatabase.LoadAssetAtPath<LevelEntry>(LevelEntryPath);
 
-        if (selection == null || level == null)
-            throw new InvalidOperationException("Conveyor scenarios need the level selection and level 20.");
+        if (level == null || !level.Definition.HasShelfFilters)
+            throw new InvalidOperationException("Conveyor scenarios need level 20 with its box.");
+
+        return level;
+    }
+
+    private static LevelEntry GetLevelWithoutFilters()
+    {
+        if (_levelWithoutFilters != null)
+            return _levelWithoutFilters;
+
+        LevelEntry filterLevel = LoadFilterLevel();
+        BoardStateSnapshot boardShape = new BoardStateSnapshot(filterLevel.Definition.Variants[0].CreateLayout().Shelves
+            .Select(shelf => new ShelfStateSnapshot(shelf.Columns.Select(_ => new ColumnStateSnapshot(Array.Empty<ItemType>())).ToArray()))
+            .ToArray());
+        TimedLevelDefinition definition = UnityEngine.Object.Instantiate(filterLevel.Definition);
+        definition.name = "ConveyorScenarioDefinition";
+        definition.hideFlags = HideFlags.HideAndDontSave;
+        SerializedObject serializedDefinition = new SerializedObject(definition);
+        serializedDefinition.FindProperty("_shelfFilters").arraySize = 0;
+        serializedDefinition.FindProperty("_filteredEmptyColumnCount").intValue = 0;
+        serializedDefinition.FindProperty("_shuffleSwapCount").intValue = 0;
+        serializedDefinition.ApplyModifiedPropertiesWithoutUndo();
+        TimedLevelGenerationResult generation = new TimedLevelLayoutGenerator().GenerateWithSolution(definition, boardShape, LevelWithoutFiltersSeed);
+        TimedLevelVariantGenerator.WriteVariants(definition, new[]
+        {
+            new TimedLevelVariant(
+                LevelWithoutFiltersSeed,
+                TimedLevelLayoutRules.GeneratorVersion,
+                generation.SolutionMoves.Count,
+                BoardStateFingerprint.CreateHash(generation.State),
+                generation.State,
+                generation.SolutionMoves)
+        });
+        LevelEntry level = ScriptableObject.CreateInstance<LevelEntry>();
+        level.name = "ConveyorScenarioLevel";
+        level.hideFlags = HideFlags.HideAndDontSave;
+        SerializedObject serializedLevel = new SerializedObject(level);
+        serializedLevel.FindProperty("_number").intValue = filterLevel.Number;
+        serializedLevel.FindProperty("_sceneName").stringValue = SceneName;
+        serializedLevel.FindProperty("_definition").objectReferenceValue = definition;
+        serializedLevel.FindProperty("_available").boolValue = true;
+        serializedLevel.ApplyModifiedPropertiesWithoutUndo();
+        _levelWithoutFilters = level;
+        return level;
+    }
+
+    private static void SelectLevel(LevelEntry level)
+    {
+        LevelSelectionState selection = AssetDatabase.LoadAssetAtPath<LevelSelectionState>(SelectionPath);
+
+        if (selection == null)
+            throw new InvalidOperationException("Conveyor scenarios need the level selection.");
 
         selection.Select(level);
     }
