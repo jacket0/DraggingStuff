@@ -48,8 +48,9 @@ public class MoveResolutionPlayer : MonoBehaviour
             resolutionSequence.Insert(0f, sequence);
         }
 
-        resolutionSequence.InsertCallback(_preparatoryDuration, _matchAudioPlayer.PlayMerge);
-        resolutionSequence.AppendCallback(() => PlayExplosion(match, effectPosition));
+        float pitch = _matchAudioPlayer.CurrentComboPitch;
+        resolutionSequence.InsertCallback(_preparatoryDuration, () => _matchAudioPlayer.PlayMerge(pitch));
+        resolutionSequence.AppendCallback(() => PlayExplosion(match, effectPosition, pitch));
         resolutionSequence.AppendInterval(_postExplosionDelay);
 
         resolutionSequence.OnComplete(() =>
@@ -126,9 +127,9 @@ public class MoveResolutionPlayer : MonoBehaviour
         return center - _camera.transform.forward * _cameraOffset;
     }
 
-    private void PlayExplosion(MatchResolution match, Vector3 effectPosition)
+    private void PlayExplosion(MatchResolution match, Vector3 effectPosition, float pitch)
     {
-        _matchAudioPlayer.PlayExplosion();
+        _matchAudioPlayer.PlayExplosion(pitch);
         Exploded?.Invoke(match, effectPosition);
 
         foreach (var item in match.Items)
