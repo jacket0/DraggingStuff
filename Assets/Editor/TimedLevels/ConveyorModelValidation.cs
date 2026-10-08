@@ -251,15 +251,15 @@ public static class ConveyorModelValidation
                 {
                     if (!simulator.TrySimulate(state, move.Source, move.Target, out BoardMoveSimulation simulation)
                         || !simulation.IsAllowed
-                        || simulation.MatchCount != 1
-                        || !simulation.ConveyorsShifted
-                        || simulation.MatchCountAfterShift != 0)
+                        || !IsCanonicalConveyorMove(simulation))
                     {
-                        throw new InvalidOperationException($"Conveyor solutions: level {level.Number}, seed {variant.Seed} does not replay as one match and one shift per move.");
+                        throw new InvalidOperationException($"Conveyor solutions: level {level.Number}, seed {variant.Seed} does not replay as one match and one shift per placement and no match or shift per swap.");
                     }
 
                     Dictionary<ItemType, int> expectedCounts = CountItems(state);
-                    expectedCounts[simulation.Matches[0].Type] -= simulation.Matches[0].ItemCount;
+
+                    foreach (MatchInfo match in simulation.Matches)
+                        expectedCounts[match.Type] -= match.ItemCount;
 
                     if (!CountItems(simulation.State).OrderBy(pair => pair.Key).SequenceEqual(expectedCounts.Where(pair => pair.Value > 0).OrderBy(pair => pair.Key)))
                         throw new InvalidOperationException($"Conveyor R9: level {level.Number}, seed {variant.Seed} changes item counts beyond the match.");
@@ -271,6 +271,13 @@ public static class ConveyorModelValidation
                     throw new InvalidOperationException($"Conveyor solutions: level {level.Number}, seed {variant.Seed} does not clear the board.");
             }
         }
+    }
+
+    private static bool IsCanonicalConveyorMove(BoardMoveSimulation simulation)
+    {
+        return simulation.IsSwap
+            ? simulation.MatchCount == 0 && !simulation.ConveyorsShifted
+            : simulation.MatchCount == 1 && simulation.ConveyorsShifted && simulation.MatchCountAfterShift == 0;
     }
 
     private static Dictionary<ItemType, int> CountItems(BoardStateSnapshot board)
