@@ -19,6 +19,9 @@ public class LevelCardView : MonoBehaviour
     [SerializeField] private CanvasGroup _sticker;
     [SerializeField] private Image _stickerIcon;
     [SerializeField] private TMP_Text _stickerCountText;
+    [SerializeField] private CanvasGroup _secondarySticker;
+    [SerializeField] private Image _secondaryStickerIcon;
+    [SerializeField] private TMP_Text _secondaryStickerCountText;
     [SerializeField] private Image _lockedSilhouette;
     [SerializeField, Range(0f, 1f)] private float _lockedStickerAlpha = 0.55f;
 
@@ -68,16 +71,24 @@ public class LevelCardView : MonoBehaviour
 
     private void BindMechanic(LevelCardState state, bool hasMechanic, bool canBeStarted)
     {
-        _sticker.gameObject.SetActive(hasMechanic);
         _lockedSilhouette.gameObject.SetActive(hasMechanic && !canBeStarted);
+        BindSticker(_sticker, _stickerIcon, _stickerCountText, state.MechanicIcon, state.MechanicElementCount, canBeStarted);
+        BindSticker(_secondarySticker, _secondaryStickerIcon, _secondaryStickerCountText, state.SecondaryMechanicIcon, state.SecondaryMechanicElementCount, canBeStarted);
 
-        if (!hasMechanic)
+        if (hasMechanic)
+            _lockedSilhouette.sprite = state.MechanicIcon;
+    }
+
+    private void BindSticker(CanvasGroup sticker, Image icon, TMP_Text countText, Sprite mechanicIcon, int elementCount, bool canBeStarted)
+    {
+        sticker.gameObject.SetActive(mechanicIcon != null);
+
+        if (mechanicIcon == null)
             return;
 
-        _sticker.alpha = canBeStarted ? 1f : _lockedStickerAlpha;
-        _stickerIcon.sprite = state.MechanicIcon;
-        _stickerCountText.SetText($"×{state.MechanicElementCount}");
-        _lockedSilhouette.sprite = state.MechanicIcon;
+        sticker.alpha = canBeStarted ? 1f : _lockedStickerAlpha;
+        icon.sprite = mechanicIcon;
+        countText.SetText($"×{elementCount}");
     }
 
     private void HandleClick()

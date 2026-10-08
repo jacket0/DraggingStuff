@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -99,6 +100,7 @@ public class LevelSelectionController : MonoBehaviour
                 bool isCompleted = _progress.IsCompleted(level);
                 bool isCurrent = isUnlocked && !isCompleted && currentChapterIndex < 0;
                 int levelStars = _progress.GetStars(level);
+                LevelChapter secondaryMechanicChapter = FindSecondaryMechanicChapter(level, chapter);
 
                 if (isCurrent)
                     currentChapterIndex = chapterIndex;
@@ -118,7 +120,9 @@ public class LevelSelectionController : MonoBehaviour
                     _progress.GetBestTime(level),
                     levelStars,
                     hasMechanic ? chapter.MechanicIcon : null,
-                    level.Definition.GetMechanicElementCount(chapter.Mechanic)));
+                    level.Definition.GetMechanicElementCount(chapter.Mechanic),
+                    secondaryMechanicChapter != null ? secondaryMechanicChapter.MechanicIcon : null,
+                    secondaryMechanicChapter != null ? level.Definition.GetMechanicElementCount(secondaryMechanicChapter.Mechanic) : 0));
             }
 
             section.Bind(new LevelChapterHeaderState(
@@ -135,6 +139,14 @@ public class LevelSelectionController : MonoBehaviour
 
         if (currentChapterIndex >= 0 && currentChapterIndex != _scrolledChapterIndex)
             ScrollToChapter(currentChapterIndex);
+    }
+
+    private LevelChapter FindSecondaryMechanicChapter(LevelEntry level, LevelChapter chapter)
+    {
+        return _catalog.Chapters.FirstOrDefault(other =>
+            other.Mechanic != chapter.Mechanic
+            && other.Mechanic != LevelMechanic.Basics
+            && level.Definition.GetMechanicElementCount(other.Mechanic) > 0);
     }
 
     private void ScrollToChapter(int chapterIndex)
