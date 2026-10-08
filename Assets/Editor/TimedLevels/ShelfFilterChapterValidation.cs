@@ -13,12 +13,11 @@ public static class ShelfFilterChapterValidation
     [MenuItem("Tools/Timed Levels/Validate Filter Chapter")]
     public static void Validate()
     {
-        BoardStateSnapshot shape = ShelfFilterGenerationPreview.CreateBoardShape();
         BoardMoveSimulator simulator = new BoardMoveSimulator();
 
         foreach (TimedLevelDefinition definition in LoadDefinitions())
         {
-            TimedLevelValidator.ValidateForRuntime(definition, shape, TimedLevelLayoutRules.GeneratorVersion);
+            TimedLevelValidator.ValidateForRuntime(definition, CreateBoardShape(definition), TimedLevelLayoutRules.GeneratorVersion);
 
             if (definition.Variants.Count < RequiredVariantCount)
                 throw new InvalidOperationException($"{definition.name}: {definition.Variants.Count} variants, {RequiredVariantCount} required.");
@@ -40,15 +39,22 @@ public static class ShelfFilterChapterValidation
     private static IEnumerable<TimedLevelDefinition> LoadDefinitions()
     {
         LevelCatalog catalog = AssetDatabase.LoadAssetAtPath<LevelCatalog>(CatalogPath);
-        TimedLevelDefinition[] definitions = catalog.Levels
+        LevelChapter filterChapter = catalog.Chapters.Single(chapter => chapter.Mechanic == LevelMechanic.ShelfFilter);
+
+        if (filterChapter.Levels.Count != ChapterLevelCount || filterChapter.Levels.Any(level => !level.Definition.HasShelfFilters))
+            throw new InvalidOperationException($"{filterChapter.name}: {ChapterLevelCount} filter levels expected.");
+
+        return catalog.Levels
             .Select(level => level.Definition)
             .Where(definition => definition.HasShelfFilters)
             .ToArray();
+    }
 
-        if (definitions.Length != ChapterLevelCount)
-            throw new InvalidOperationException($"{CatalogPath}: {definitions.Length} filter levels, {ChapterLevelCount} expected.");
-
-        return definitions;
+    private static BoardStateSnapshot CreateBoardShape(TimedLevelDefinition definition)
+    {
+        return new BoardStateSnapshot(definition.Variants[0].CreateLayout().Shelves
+            .Select(shelf => new ShelfStateSnapshot(shelf.Columns.Select(_ => new ColumnStateSnapshot(Array.Empty<ItemType>())).ToArray()))
+            .ToArray());
     }
 
     private static void ValidateSolution(BoardMoveSimulator simulator, TimedLevelDefinition definition, int variantIndex)

@@ -300,8 +300,9 @@ public static class TimedCampaignValidation
                 {
                     int count = level.Definition.GetMechanicElementCount(mechanic);
                     bool isExpected = mechanic == chapter.Mechanic && mechanic != LevelMechanic.Basics;
+                    bool isAllowed = isExpected || IsSecondaryMechanicAllowed(chapter.Mechanic, mechanic);
 
-                    if ((count > 0) != isExpected)
+                    if (isExpected && count == 0 || !isAllowed && count > 0)
                         throw new InvalidOperationException($"Level {level.Number}: {count} {mechanic} elements in a {chapter.Mechanic} chapter.");
                 }
 
@@ -309,6 +310,9 @@ public static class TimedCampaignValidation
             }
         }
     }
+
+    private static bool IsSecondaryMechanicAllowed(LevelMechanic chapterMechanic, LevelMechanic mechanic) =>
+        chapterMechanic == LevelMechanic.Conveyor && mechanic == LevelMechanic.ShelfFilter;
 
     private static void ValidateTripleRefillGenerator()
     {
@@ -590,6 +594,35 @@ public static class TimedCampaignValidation
             ValidateCampaignHud(sceneName, timerView);
             ValidateResultWindowPrefab(sceneName, result);
             ValidateResultLayout(sceneName, result);
+            ValidateShelfFilterScene(sceneName, scene, catalog.Levels.Where(level => level.SceneName == sceneName && level.Definition.HasShelfFilters));
+        }
+    }
+
+    private static void ValidateShelfFilterScene(string sceneName, Scene scene, IEnumerable<LevelEntry> filterLevels)
+    {
+        int[] filteredShelfIndices = filterLevels
+            .SelectMany(level => level.Definition.ShelfFilters)
+            .Select(shelfFilter => shelfFilter.ShelfIndex)
+            .Distinct()
+            .ToArray();
+
+        if (filteredShelfIndices.Length == 0)
+            return;
+
+        ShelfFiltersController controller = FindAllInScene<ShelfFiltersController>(scene).Single();
+
+        foreach (string field in new[] { "_session", "_shelfBoard", "_dragController", "_columnRaycaster", "_audio" })
+            RequireReference(controller, field);
+
+        ShelfBoard board = GetReference<ShelfBoard>(controller, "_shelfBoard");
+        ShelfFilterSignView[] signs = GetReferences<ShelfFilterSignView>(controller, "_signs");
+
+        foreach (int shelfIndex in filteredShelfIndices)
+        {
+            Shelf shelf = board.Shelves[shelfIndex];
+
+            if (signs.Count(sign => GetReference<Shelf>(sign, "_shelf") == shelf) != 1)
+                throw new InvalidOperationException($"{sceneName}: filtered shelf {shelfIndex} needs exactly one sign.");
         }
     }
 
@@ -984,6 +1017,18 @@ public static class TimedCampaignValidation
     {
         SerializedProperty property = new SerializedObject(target).FindProperty(propertyName);
         return property != null ? property.objectReferenceValue as T : null;
+    }
+
+    private static T[] GetReferences<T>(UnityEngine.Object target, string propertyName) where T : UnityEngine.Object
+    {
+        SerializedProperty property = new SerializedObject(target).FindProperty(propertyName);
+
+        if (property == null || !property.isArray)
+            throw new InvalidOperationException($"{target.GetType().Name}.{propertyName}");
+
+        return Enumerable.Range(0, property.arraySize)
+            .Select(index => property.GetArrayElementAtIndex(index).objectReferenceValue as T)
+            .ToArray();
     }
 
     private static string FindScenePath(string sceneName)
