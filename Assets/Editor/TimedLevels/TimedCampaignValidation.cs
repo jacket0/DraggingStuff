@@ -681,7 +681,7 @@ public static class TimedCampaignValidation
 
         foreach (LevelCardView card in cards)
         {
-            foreach (string field in new[] { "_timeRoot", "_bestTimeText", "_starRating", "_playRoot", "_currentHighlight", "_newRibbon", "_sticker", "_stickerIcon", "_stickerCountText", "_lockedSilhouette" })
+            foreach (string field in new[] { "_timeRoot", "_bestTimeText", "_starRating", "_playRoot", "_currentHighlight", "_newRibbon", "_sticker", "_stickerIcon", "_stickerCountText", "_secondarySticker", "_secondaryStickerIcon", "_secondaryStickerCountText", "_lockedSilhouette" })
                 RequireReference(card, field);
 
             ValidateLevelCard(card);

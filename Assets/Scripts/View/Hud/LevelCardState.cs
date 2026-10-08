@@ -12,7 +12,9 @@ public readonly struct LevelCardState
         long bestTimeMilliseconds,
         int stars,
         Sprite mechanicIcon,
-        int mechanicElementCount)
+        int mechanicElementCount,
+        Sprite secondaryMechanicIcon,
+        int secondaryMechanicElementCount)
     {
         Level = level ?? throw new ArgumentNullException(nameof(level));
         IsUnlocked = isUnlocked;
@@ -23,6 +25,8 @@ public readonly struct LevelCardState
         Stars = stars;
         MechanicIcon = mechanicIcon;
         MechanicElementCount = mechanicElementCount;
+        SecondaryMechanicIcon = secondaryMechanicIcon;
+        SecondaryMechanicElementCount = secondaryMechanicElementCount;
     }
 
     public LevelEntry Level { get; }
@@ -34,4 +38,6 @@ public readonly struct LevelCardState
     public int Stars { get; }
     public Sprite MechanicIcon { get; }
     public int MechanicElementCount { get; }
+    public Sprite SecondaryMechanicIcon { get; }
+    public int SecondaryMechanicElementCount { get; }
 }
