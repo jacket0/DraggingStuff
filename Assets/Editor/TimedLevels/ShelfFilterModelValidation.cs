@@ -39,6 +39,10 @@ public static class ShelfFilterModelValidation
         ValidateShelfBoardMatchesLikeSimulator();
         ValidateSuggestionSkipsFilteredGroups();
         ValidateSuggestionMovesDeadPairToBox();
+        ValidateConveyorShiftKeepsFilter();
+        ValidateConveyorShiftMatchesOnlyUnfilteredTypes();
+        ValidateConveyorMovesIntoBox();
+        ValidateSuggestionSkipsFilteredGroupOnConveyor();
     }
 
     private static void ValidateAcceptedPlacement()
@@ -600,6 +604,108 @@ public static class ShelfFilterModelValidation
 
             if (!provider.TryGetSuggestion(out MoveSuggestion suggestion) || suggestion.SourceColumn.Shelf != pairShelf || suggestion.TargetColumn.Shelf != box)
                 throw new InvalidOperationException("Filter M22: a pair of filtered items on a regular shelf must not be kept as a pair, the suggestion must move it to its box.");
+        }
+        finally
+        {
+            TemporaryShelfFactory.Destroy(temporaryObjects);
+        }
+    }
+
+    private static void ValidateConveyorShiftKeepsFilter()
+    {
+        BoardStateSnapshot board = Board(
+            Filter(BallOnly, Column(ItemType.Lamp), Column(), Column(ItemType.Bear)),
+            Regular(Column(ItemType.Plant), Column(ItemType.Plant), Column()),
+            Regular(Column(ItemType.Plant), Column(ItemType.Toy), Column()),
+            Conveyor(Column(ItemType.Ball, ItemType.Toy), Column(ItemType.Ball, ItemType.Bear), Column(ItemType.Lamp, ItemType.Beauty)));
+        BoardMoveSimulation simulation = Simulate(board, new ColumnPosition(2, 0), new ColumnPosition(1, 2), "M23");
+        ShelfStateSnapshot filter = simulation.State.Shelves[0];
+        ShelfStateSnapshot conveyor = simulation.State.Shelves[3];
+
+        if (!simulation.ConveyorsShifted
+            || !filter.AcceptedTypes.SequenceEqual(BallOnly)
+            || !HasColumns(filter, new[] { ItemType.Lamp }, Array.Empty<ItemType>(), new[] { ItemType.Bear })
+            || !conveyor.IsConveyor
+            || conveyor.IsFiltered
+            || !HasColumns(conveyor, new[] { ItemType.Toy, ItemType.Ball }, new[] { ItemType.Bear, ItemType.Ball }, new[] { ItemType.Beauty, ItemType.Lamp }))
+        {
+            throw new InvalidOperationException("Filter M23: a conveyor shift changed the filter or put items on the filtered shelf.");
+        }
+    }
+
+    private static void ValidateConveyorShiftMatchesOnlyUnfilteredTypes()
+    {
+        BoardStateSnapshot filteredTriple = CreateConveyorShiftBoard(ItemType.Ball);
+        BoardMoveSimulation filteredSimulation = Simulate(filteredTriple, new ColumnPosition(2, 0), new ColumnPosition(1, 2), "M24");
+
+        if (!filteredSimulation.ConveyorsShifted
+            || filteredSimulation.MatchCount != 1
+            || filteredSimulation.MatchCountAfterShift != 0
+            || !filteredSimulation.State.Shelves[3].HasMatch()
+            || filteredSimulation.State.CanMatch(3))
+        {
+            throw new InvalidOperationException("Filter M24: three filtered items brought together by a conveyor shift matched on the conveyor.");
+        }
+
+        BoardStateSnapshot unfilteredTriple = CreateConveyorShiftBoard(ItemType.Bear);
+        BoardMoveSimulation unfilteredSimulation = Simulate(unfilteredTriple, new ColumnPosition(2, 0), new ColumnPosition(1, 2), "M24");
+
+        if (unfilteredSimulation.MatchCountAfterShift != 1 || unfilteredSimulation.Matches.Last().ShelfIndex != 3 || unfilteredSimulation.Matches.Last().Type != ItemType.Bear)
+            throw new InvalidOperationException("Filter M24: three unfiltered items brought together by a conveyor shift did not match.");
+    }
+
+    private static BoardStateSnapshot CreateConveyorShiftBoard(ItemType shiftedType)
+    {
+        return Board(
+            Filter(BallOnly, Column(), Column(ItemType.Lamp), Column()),
+            Regular(Column(ItemType.Plant), Column(ItemType.Plant), Column()),
+            Regular(Column(ItemType.Plant), Column(ItemType.Toy), Column()),
+            Conveyor(Column(ItemType.Lamp, shiftedType), Column(ItemType.Toy, shiftedType), Column(ItemType.Beauty, shiftedType)));
+    }
+
+    private static void ValidateConveyorMovesIntoBox()
+    {
+        BoardStateSnapshot board = Board(
+            Filter(BallOnly, Column(), Column(ItemType.Bear), Column(ItemType.Ball)),
+            Conveyor(Column(ItemType.Lamp, ItemType.Toy), Column(ItemType.Ball, ItemType.Plant), Column(ItemType.Bear, ItemType.Beauty)),
+            Regular(Column(ItemType.Toy), Column(), Column()));
+
+        ExpectRejected(board, new ColumnPosition(1, 0), new ColumnPosition(0, 0), "Filter M25: a rejected type moved from a conveyor into the box.");
+        ExpectRejected(board, new ColumnPosition(1, 0), new ColumnPosition(0, 2), "Filter M25: a swap with a conveyor brought a rejected type into the box.");
+        ExpectRejected(board, new ColumnPosition(0, 2), new ColumnPosition(1, 0), "Filter M25: a swap from the box brought a rejected type into it.");
+
+        BoardMoveSimulation placement = Simulate(board, new ColumnPosition(1, 1), new ColumnPosition(0, 0), "M25");
+        BoardMoveSimulation swap = Simulate(board, new ColumnPosition(1, 1), new ColumnPosition(0, 1), "M25");
+
+        if (!HasColumns(placement.State.Shelves[0], new[] { ItemType.Ball }, new[] { ItemType.Bear }, new[] { ItemType.Ball })
+            || !swap.IsSwap
+            || swap.State.Shelves[0].Columns[1].Items[0] != ItemType.Ball
+            || swap.State.Shelves[1].Columns[1].Items[0] != ItemType.Bear)
+        {
+            throw new InvalidOperationException("Filter M25: an accepted move between a conveyor and the box was not applied.");
+        }
+    }
+
+    private static void ValidateSuggestionSkipsFilteredGroupOnConveyor()
+    {
+        List<GameObject> temporaryObjects = new List<GameObject>();
+
+        try
+        {
+            Shelf box = TemporaryShelfFactory.CreateShelf("BoxShelf", temporaryObjects);
+            Shelf conveyor = TemporaryShelfFactory.CreateShelf("ConveyorShelf", temporaryObjects);
+            Shelf sourceShelf = TemporaryShelfFactory.CreateShelf("SourceShelf", temporaryObjects);
+            ShelfBoard board = TemporaryShelfFactory.CreateBoard(temporaryObjects, box, conveyor, sourceShelf);
+            board.Initialize();
+            Fill(box, temporaryObjects, new[] { ItemType.Ball }, Array.Empty<ItemType>(), new[] { ItemType.Lamp });
+            Fill(conveyor, temporaryObjects, new[] { ItemType.Ball }, new[] { ItemType.Ball }, Array.Empty<ItemType>());
+            Fill(sourceShelf, temporaryObjects, new[] { ItemType.Ball }, new[] { ItemType.Plant }, new[] { ItemType.Bear });
+            board.SetFilter(box, BallOnly);
+            board.MarkConveyor(conveyor);
+            MoveSuggestionProvider provider = CreateSuggestionProvider(board, temporaryObjects);
+
+            if (!provider.TryGetSuggestion(out MoveSuggestion suggestion) || suggestion.TargetColumn.Shelf != box || suggestion.TargetMatchingItems.Count != 1)
+                throw new InvalidOperationException("Filter M26: the suggestion must grow a filtered group in its box, not on a conveyor.");
         }
         finally
         {
