@@ -18,6 +18,9 @@ public sealed class TimedLevelDefinition : ScriptableObject
     [SerializeField, Min(0)] private int _shuffleSwapCount;
     [SerializeField] private List<ShelfFilterDefinition> _shelfFilters = new List<ShelfFilterDefinition>();
     [SerializeField, Min(0)] private int _filteredEmptyColumnCount;
+    [SerializeField] private List<int> _keyLockedShelfIndices = new List<int>();
+    [SerializeField, Min(1)] private int _minimumKeyDepth = 1;
+    [SerializeField, Min(0)] private int _minimumMovesToFirstKey;
 
     public int TimeLimitSeconds => _timeLimitSeconds;
     public int TwoStarTimeSeconds => _twoStarTimeSeconds;
@@ -35,6 +38,10 @@ public sealed class TimedLevelDefinition : ScriptableObject
     public IReadOnlyList<ShelfFilterDefinition> ShelfFilters => _shelfFilters;
     public bool HasShelfFilters => _shelfFilters.Count > 0;
     public int FilteredEmptyColumnCount => _filteredEmptyColumnCount;
+    public IReadOnlyList<int> KeyLockedShelfIndices => _keyLockedShelfIndices;
+    public bool HasKeyLocks => _keyLockedShelfIndices.Count > 0;
+    public int MinimumKeyDepth => _minimumKeyDepth;
+    public int MinimumMovesToFirstKey => _minimumMovesToFirstKey;
 
     public int GetMechanicElementCount(LevelMechanic mechanic) => mechanic switch
     {
@@ -42,6 +49,7 @@ public sealed class TimedLevelDefinition : ScriptableObject
         LevelMechanic.ShelfFilter => _shelfFilters.Count,
         LevelMechanic.ClosedShelves => _closedShelves.Count,
         LevelMechanic.Conveyor => _conveyorShelfIndices.Count,
+        LevelMechanic.KeyLocks => _keyLockedShelfIndices.Count,
         _ => throw new ArgumentOutOfRangeException(nameof(mechanic))
     };
 }

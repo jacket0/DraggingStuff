@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 
 public static class KeyLockModelValidation
 {
     private const int ShelfCapacity = 3;
+    private const int DefinitionShelfCount = 4;
+    private const int DefinitionEmptyColumnCount = 3;
+    private static readonly ItemType[] DefinitionTypes = { ItemType.Ball, ItemType.Bear, ItemType.Plant, ItemType.Lamp };
 
     public static void Run(LevelCatalog catalog)
     {
@@ -24,6 +28,8 @@ public static class KeyLockModelValidation
         ValidateFingerprintKeys();
         ValidateShelfBoardKeyLocks();
         ValidateRuntimeColumnKeys();
+        ValidateDefinitionErrors(catalog);
+        ValidateVariantRoundTrip();
     }
 
     private static void ValidateClosedShelfDoesNotMatch()
@@ -337,6 +343,141 @@ public static class KeyLockModelValidation
         {
             TemporaryShelfFactory.Destroy(temporaryObjects);
         }
+    }
+
+    private static void ValidateDefinitionErrors(LevelCatalog catalog)
+    {
+        TimedLevelDefinition template = catalog.Levels[0].Definition;
+        BoardStateSnapshot boardShape = Board(Enumerable.Range(0, DefinitionShelfCount).Select(_ => OpenShelf(Column(), Column(), Column())).ToArray());
+        int[] lockedShelf = { 0 };
+        List<TimedLevelDefinition> definitions = new List<TimedLevelDefinition>();
+
+        try
+        {
+            Validate(CreateDefinition(template, lockedShelf, Array.Empty<int>(), DefinitionLayout(KeyColumn(1, 0, ItemType.Lamp, ItemType.Ball)), definitions));
+
+            ExpectFailure(
+                () => Validate(CreateDefinition(template, new[] { 0, 0 }, Array.Empty<int>(), DefinitionLayout(KeyColumn(1, 0, ItemType.Lamp, ItemType.Ball)), definitions)),
+                "Key locks D1: a duplicated key-locked shelf index passed validation.");
+            ExpectFailure(
+                () => Validate(CreateDefinition(template, lockedShelf, new[] { 2 }, DefinitionLayout(KeyColumn(1, 0, ItemType.Lamp, ItemType.Ball)), definitions)),
+                "Key locks D1: a key-locked shelf combined with a conveyor passed validation.");
+            ExpectFailure(
+                () => Validate(CreateDefinition(template, lockedShelf, Array.Empty<int>(), DefinitionLayout(KeyColumn(1, 2, ItemType.Lamp, ItemType.Ball)), definitions)),
+                "Key locks D1: a key for a shelf without a lock passed validation.");
+            ExpectFailure(
+                () => Validate(CreateDefinition(template, lockedShelf, Array.Empty<int>(), DefinitionLayout(Column(ItemType.Lamp, ItemType.Ball)), definitions)),
+                "Key locks D1: a key-locked shelf without a key passed validation.");
+            ExpectFailure(
+                () => Validate(CreateDefinition(template, lockedShelf, Array.Empty<int>(), DefinitionLayout(KeyColumn(0, 0, ItemType.Lamp, ItemType.Ball)), definitions)),
+                "Key locks D1: a key in front at the start passed validation.");
+            ExpectFailure(
+                () => Validate(CreateDefinition(template, lockedShelf, Array.Empty<int>(), DefinitionLayout(KeyColumn(1, 0, ItemType.Lamp, ItemType.Ball), KeyColumn(1, 0, ItemType.Ball, ItemType.Bear)), definitions)),
+                "Key locks D1: two keys for one shelf passed validation.");
+            ExpectFailure(
+                () => Validate(CreateDefinition(template, lockedShelf, Array.Empty<int>(), DefinitionLayout(KeyColumn(1, 0, ItemType.Lamp, ItemType.Ball), Column(ItemType.Ball, ItemType.Bear), KeyColumn(1, 0, ItemType.Ball)), definitions)),
+                "Key locks D1: a key inside a key-locked shelf passed validation.");
+
+            BoardStateSnapshot emptyLockedShelfLayout = Board(
+                LockedShelf(Column(ItemType.Ball), Column(ItemType.Bear), Column()),
+                OpenShelf(KeyColumn(1, 0, ItemType.Lamp, ItemType.Ball), Column(ItemType.Bear, ItemType.Lamp), Column(ItemType.Plant)),
+                OpenShelf(Column(ItemType.Ball, ItemType.Bear), Column(ItemType.Lamp), Column(ItemType.Plant)),
+                OpenShelf(Column(ItemType.Plant), Column(), Column()));
+            ExpectFailure(
+                () => Validate(CreateDefinition(template, lockedShelf, Array.Empty<int>(), emptyLockedShelfLayout, definitions)),
+                "Key locks D1: a key-locked shelf with an empty column passed validation.");
+        }
+        finally
+        {
+            foreach (TimedLevelDefinition definition in definitions)
+                UnityEngine.Object.DestroyImmediate(definition);
+        }
+
+        void Validate(TimedLevelDefinition definition) => TimedLevelValidator.ValidateForRuntime(definition, boardShape, TimedLevelLayoutRules.GeneratorVersion);
+    }
+
+    private static void ValidateVariantRoundTrip()
+    {
+        BoardStateSnapshot layout = DefinitionLayout(KeyColumn(1, 0, ItemType.Lamp, ItemType.Ball));
+        TimedLevelVariant variant = CreateVariant(layout);
+        BoardStateSnapshot restored = variant.CreateLayout();
+
+        if (BoardStateFingerprint.CreateHash(restored) != BoardStateFingerprint.CreateHash(layout)
+            || restored.KeyCount != 1
+            || restored.Shelves[1].Columns[0].Keys[0].ItemsInFront != 1
+            || restored.Shelves[1].Columns[0].Keys[0].LockedShelfIndex != 0)
+        {
+            throw new InvalidOperationException("Key locks D2: a layout with keys does not survive the variant round trip.");
+        }
+    }
+
+    private static BoardStateSnapshot DefinitionLayout(params ColumnStateSnapshot[] keyColumns)
+    {
+        ColumnStateSnapshot[] firstShelfColumns = { Column(ItemType.Lamp, ItemType.Ball), Column(ItemType.Bear, ItemType.Lamp), Column(ItemType.Plant) };
+        ColumnStateSnapshot[] secondShelfColumns = { Column(ItemType.Ball, ItemType.Bear), Column(ItemType.Lamp), Column(ItemType.Plant) };
+        firstShelfColumns[0] = keyColumns[0];
+
+        if (keyColumns.Length > 1)
+            secondShelfColumns[0] = keyColumns[1];
+
+        ColumnStateSnapshot[] lockedShelfColumns = { Column(ItemType.Ball), Column(ItemType.Bear), Column(ItemType.Plant) };
+
+        if (keyColumns.Length > 2)
+            lockedShelfColumns[0] = keyColumns[2];
+
+        return Board(
+            LockedShelf(lockedShelfColumns),
+            OpenShelf(firstShelfColumns),
+            OpenShelf(secondShelfColumns),
+            OpenShelf(Column(), Column(), Column()));
+    }
+
+    private static TimedLevelDefinition CreateDefinition(
+        TimedLevelDefinition template,
+        IReadOnlyList<int> keyLockedShelfIndices,
+        IReadOnlyList<int> conveyorShelfIndices,
+        BoardStateSnapshot layout,
+        List<TimedLevelDefinition> definitions)
+    {
+        TimedLevelDefinition definition = UnityEngine.Object.Instantiate(template);
+        definition.hideFlags = HideFlags.HideAndDontSave;
+        definitions.Add(definition);
+        SerializedObject serializedDefinition = new SerializedObject(definition);
+        WriteIntegers(serializedDefinition.FindProperty("_keyLockedShelfIndices"), keyLockedShelfIndices);
+        WriteIntegers(serializedDefinition.FindProperty("_conveyorShelfIndices"), conveyorShelfIndices);
+        serializedDefinition.FindProperty("_closedShelves").arraySize = 0;
+        serializedDefinition.FindProperty("_refillSettings").objectReferenceValue = null;
+        serializedDefinition.FindProperty("_shelfFilters").arraySize = 0;
+        serializedDefinition.FindProperty("_filteredEmptyColumnCount").intValue = 0;
+        serializedDefinition.FindProperty("_emptyColumnCount").intValue = DefinitionEmptyColumnCount;
+        serializedDefinition.FindProperty("_minimumKeyDepth").intValue = 1;
+        serializedDefinition.FindProperty("_minimumMovesToFirstKey").intValue = 0;
+        SerializedProperty itemGroups = serializedDefinition.FindProperty("_itemGroups");
+        itemGroups.arraySize = DefinitionTypes.Length;
+
+        for (int index = 0; index < DefinitionTypes.Length; index++)
+        {
+            itemGroups.GetArrayElementAtIndex(index).FindPropertyRelative("_type").enumValueIndex = (int)DefinitionTypes[index];
+            itemGroups.GetArrayElementAtIndex(index).FindPropertyRelative("_groupCount").intValue = 1;
+        }
+
+        serializedDefinition.ApplyModifiedPropertiesWithoutUndo();
+        TimedLevelVariantGenerator.WriteVariants(definition, new[] { CreateVariant(layout) });
+        return definition;
+    }
+
+    private static TimedLevelVariant CreateVariant(BoardStateSnapshot layout)
+    {
+        TimedLevelMove[] solution = { new TimedLevelMove(new ColumnPosition(1, 2), new ColumnPosition(3, 0)) };
+        return new TimedLevelVariant(1, TimedLevelLayoutRules.GeneratorVersion, solution.Length, BoardStateFingerprint.CreateHash(layout), layout, solution);
+    }
+
+    private static void WriteIntegers(SerializedProperty property, IReadOnlyList<int> values)
+    {
+        property.arraySize = values.Count;
+
+        for (int index = 0; index < values.Count; index++)
+            property.GetArrayElementAtIndex(index).intValue = values[index];
     }
 
     private static Shelf CreateFilledShelf(string name, List<GameObject> temporaryObjects)

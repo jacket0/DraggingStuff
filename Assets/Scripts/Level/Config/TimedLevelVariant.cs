@@ -67,7 +67,7 @@ public sealed class TimedLevelVariant
 
         ShelfStateSnapshot[] shelves = _shelves
             .Select(shelf => new ShelfStateSnapshot(
-                shelf.Columns.Select(column => new ColumnStateSnapshot(column.Items.ToArray())).ToArray(),
+                shelf.Columns.Select(column => column.CreateSnapshot()).ToArray(),
                 shelf.IsOpen,
                 shelf.IsConveyor,
                 shelf.AcceptedTypes))

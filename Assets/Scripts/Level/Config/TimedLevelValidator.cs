@@ -149,6 +149,28 @@ public static class TimedLevelValidator
         }
 
         ValidateShelfFilterDefinition(definition, types);
+        ValidateKeyLockDefinition(definition);
+    }
+
+    private static void ValidateKeyLockDefinition(TimedLevelDefinition definition)
+    {
+        if (definition.KeyLockedShelfIndices.Any(index => index < 0))
+            throw new InvalidOperationException($"{definition.name}: key-locked shelf indices must be non-negative.");
+
+        if (definition.KeyLockedShelfIndices.Distinct().Count() != definition.KeyLockedShelfIndices.Count)
+            throw new InvalidOperationException($"{definition.name}: a key-locked shelf index is duplicated.");
+
+        if (definition.KeyLockedShelfIndices.Count > TimedLevelLayoutRules.MaximumKeyLockedShelfCount)
+            throw new InvalidOperationException($"{definition.name}: at most {TimedLevelLayoutRules.MaximumKeyLockedShelfCount} shelves can be locked by keys.");
+
+        if (definition.HasKeyLocks && (definition.HasClosedShelves || definition.HasConveyors || definition.HasShelfFilters))
+            throw new InvalidOperationException($"{definition.name}: key-locked shelves cannot share a level with closed shelves, conveyors or shelf filters.");
+
+        if (definition.MinimumKeyDepth < 1)
+            throw new InvalidOperationException($"{definition.name}: the minimum key depth must be at least one.");
+
+        if (definition.MinimumMovesToFirstKey > definition.MinimumKeyDepth)
+            throw new InvalidOperationException($"{definition.name}: the minimum moves to the first key cannot exceed the minimum key depth.");
     }
 
     private static void ValidateShelfFilterDefinition(TimedLevelDefinition definition, HashSet<ItemType> levelTypes)
@@ -272,6 +294,24 @@ public static class TimedLevelValidator
 
         if (definition.HasShelfFilters)
             ValidateShelfFilterBoard(definition, board);
+
+        if (definition.HasKeyLocks)
+            ValidateKeyLockBoard(definition, board);
+    }
+
+    private static void ValidateKeyLockBoard(TimedLevelDefinition definition, BoardStateSnapshot board)
+    {
+        foreach (int shelfIndex in definition.KeyLockedShelfIndices)
+        {
+            if (shelfIndex >= board.Shelves.Count)
+                throw new InvalidOperationException($"{definition.name}: key-locked shelf index {shelfIndex} is out of range.");
+
+            if (board.Shelves[shelfIndex].Capacity != TimedLevelLayoutRules.KeyLockedShelfCapacity)
+                throw new InvalidOperationException($"{definition.name}: key-locked shelf {shelfIndex} must have capacity {TimedLevelLayoutRules.KeyLockedShelfCapacity}.");
+        }
+
+        if (definition.KeyLockedShelfIndices.Count >= board.Shelves.Count)
+            throw new InvalidOperationException($"{definition.name}: key-locked shelves cannot cover the whole board.");
     }
 
     private static void ValidateShelfFilterBoard(TimedLevelDefinition definition, BoardStateSnapshot board)
@@ -319,6 +359,7 @@ public static class TimedLevelValidator
             throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has an incompatible shelf count.");
 
         HashSet<int> closedShelfIndices = new HashSet<int>(definition.ClosedShelves.Select(closedShelf => closedShelf.ShelfIndex));
+        HashSet<int> keyLockedShelfIndices = new HashSet<int>(definition.KeyLockedShelfIndices);
         HashSet<int> conveyorShelfIndices = new HashSet<int>(definition.ConveyorShelfIndices);
 
         for (int shelfIndex = 0; shelfIndex < layout.Shelves.Count; shelfIndex++)
@@ -328,13 +369,17 @@ public static class TimedLevelValidator
             if (shelf.Capacity != board.Shelves[shelfIndex].Capacity)
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has an incompatible shelf capacity.");
 
-            bool shouldBeOpen = !closedShelfIndices.Contains(shelfIndex);
+            bool isKeyLocked = keyLockedShelfIndices.Contains(shelfIndex);
+            bool shouldBeOpen = !closedShelfIndices.Contains(shelfIndex) && !isKeyLocked;
 
             if (shelf.IsOpen != shouldBeOpen)
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has an incorrect open state for shelf {shelfIndex}.");
 
-            if (!shelf.IsOpen && !shelf.Columns.All(column => column.IsEmpty))
+            if (!shelf.IsOpen && !isKeyLocked && !shelf.Columns.All(column => column.IsEmpty))
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has items on closed shelf {shelfIndex}.");
+
+            if (isKeyLocked && shelf.Columns.Any(column => column.Count == 0))
+                throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has an empty column on key-locked shelf {shelfIndex}.");
 
             if (shelf.HasMatch())
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} starts with an automatic match.");
@@ -372,6 +417,45 @@ public static class TimedLevelValidator
         }
 
         ValidateShelfFilterVariant(definition, variant, layout, variantIndex);
+        ValidateKeyLockVariant(definition, layout, variantIndex);
+    }
+
+    private static void ValidateKeyLockVariant(TimedLevelDefinition definition, BoardStateSnapshot layout, int variantIndex)
+    {
+        Dictionary<int, int> keyCounts = definition.KeyLockedShelfIndices.ToDictionary(shelfIndex => shelfIndex, _ => 0);
+
+        for (int shelfIndex = 0; shelfIndex < layout.Shelves.Count; shelfIndex++)
+        {
+            ShelfStateSnapshot shelf = layout.Shelves[shelfIndex];
+
+            foreach (ColumnStateSnapshot column in shelf.Columns.Where(column => column.HasKeys))
+            {
+                if (!shelf.IsOpen || shelf.IsConveyor || shelf.IsFiltered)
+                    throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} places a key on shelf {shelfIndex}, which is not an open regular shelf.");
+
+                if (column.Keys.Count > 1)
+                    throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} places more than one key in a column of shelf {shelfIndex}.");
+
+                if (column.Count + column.Keys.Count > TimedLevelLayoutRules.MaximumColumnDepth)
+                    throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} exceeds the supported column depth with a key on shelf {shelfIndex}.");
+
+                ColumnKeySnapshot key = column.Keys[0];
+
+                if (key.ItemsInFront < definition.MinimumKeyDepth || key.ItemsInFront > column.Count)
+                    throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has a key on shelf {shelfIndex} behind {key.ItemsInFront} items instead of {definition.MinimumKeyDepth} to {column.Count}.");
+
+                if (!keyCounts.ContainsKey(key.LockedShelfIndex))
+                    throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has a key on shelf {shelfIndex} for shelf {key.LockedShelfIndex}, which is not key-locked.");
+
+                keyCounts[key.LockedShelfIndex]++;
+            }
+        }
+
+        foreach (KeyValuePair<int, int> keyCount in keyCounts)
+        {
+            if (keyCount.Value != 1)
+                throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has {keyCount.Value} keys for key-locked shelf {keyCount.Key} instead of one.");
+        }
     }
 
     private static void ValidateShelfFilterVariant(TimedLevelDefinition definition, TimedLevelVariant variant, BoardStateSnapshot layout, int variantIndex)

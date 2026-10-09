@@ -333,11 +333,22 @@ public static class TimedLevelVariantGenerator
             for (int columnIndex = 0; columnIndex < shelf.Columns.Count; columnIndex++)
             {
                 ColumnStateSnapshot column = shelf.Columns[columnIndex];
-                SerializedProperty itemsProperty = columnsProperty.GetArrayElementAtIndex(columnIndex).FindPropertyRelative("_items");
+                SerializedProperty columnProperty = columnsProperty.GetArrayElementAtIndex(columnIndex);
+                SerializedProperty itemsProperty = columnProperty.FindPropertyRelative("_items");
                 itemsProperty.arraySize = column.Items.Count;
 
                 for (int itemIndex = 0; itemIndex < column.Items.Count; itemIndex++)
                     itemsProperty.GetArrayElementAtIndex(itemIndex).enumValueIndex = (int)column.Items[itemIndex];
+
+                SerializedProperty keysProperty = columnProperty.FindPropertyRelative("_keys");
+                keysProperty.arraySize = column.Keys.Count;
+
+                for (int keyIndex = 0; keyIndex < column.Keys.Count; keyIndex++)
+                {
+                    SerializedProperty keyProperty = keysProperty.GetArrayElementAtIndex(keyIndex);
+                    keyProperty.FindPropertyRelative("_itemsInFront").intValue = column.Keys[keyIndex].ItemsInFront;
+                    keyProperty.FindPropertyRelative("_lockedShelfIndex").intValue = column.Keys[keyIndex].LockedShelfIndex;
+                }
             }
         }
     }

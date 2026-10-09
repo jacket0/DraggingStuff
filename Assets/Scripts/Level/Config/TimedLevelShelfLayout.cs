@@ -38,7 +38,7 @@ public sealed class TimedLevelShelfLayout
             throw new ArgumentNullException(nameof(acceptedTypes));
 
         foreach (ColumnStateSnapshot column in columns)
-            _columns.Add(new TimedLevelColumnLayout(column.Items));
+            _columns.Add(new TimedLevelColumnLayout(column));
 
         _isClosed = !isOpen;
         _isConveyor = isConveyor;
