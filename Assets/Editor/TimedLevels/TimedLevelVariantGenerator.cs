@@ -117,6 +117,32 @@ public static class TimedLevelVariantGenerator
         }
     }
 
+    [MenuItem("Tools/Timed Levels/Generate Key Lock Levels")]
+    public static void GenerateKeyLockLevels()
+    {
+        LevelCatalog catalog = AssetDatabase.LoadAssetAtPath<LevelCatalog>(CatalogPath);
+
+        if (catalog == null)
+            throw new InvalidOperationException($"Level catalog was not found at {CatalogPath}.");
+
+        SceneSetup[] sceneSetup = EditorSceneManager.GetSceneManagerSetup();
+
+        try
+        {
+            LevelEntry[] levels = catalog.Levels.Where(level => level != null && level.Definition != null && level.Definition.HasKeyLocks).ToArray();
+
+            foreach (LevelEntry level in levels)
+                Generate(level);
+
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Generated {RequiredVariantCount} verified variants for {levels.Length} key lock levels.");
+        }
+        finally
+        {
+            EditorSceneManager.RestoreSceneManagerSetup(sceneSetup);
+        }
+    }
+
     private static void Generate(LevelEntry level)
     {
         if (level == null || level.Definition == null)
@@ -174,6 +200,8 @@ public static class TimedLevelVariantGenerator
         Dictionary<CandidateRejection, int> rejections)
     {
         TimedLevelLayoutGenerator generator = new TimedLevelLayoutGenerator();
+        TimedLevelKeyPlacer keyPlacer = new TimedLevelKeyPlacer();
+        TimedLevelKeyAccessProbe keyAccessProbe = new TimedLevelKeyAccessProbe();
         List<TimedLevelVariant> candidates = new List<TimedLevelVariant>();
         int seedOffset = 1;
 
@@ -205,6 +233,17 @@ public static class TimedLevelVariantGenerator
                 continue;
             }
 
+            if (definition.HasKeyLocks)
+            {
+                CandidateRejection? keyRejection = TryLockShelves(definition, seed, keyPlacer, keyAccessProbe, ref generation);
+
+                if (keyRejection.HasValue)
+                {
+                    CountRejection(rejections, keyRejection.Value);
+                    continue;
+                }
+            }
+
             TimedLevelSolver solver = new TimedLevelSolver(
                 generation.SolutionMoves.Count,
                 generation.SolutionMoves.Count + 1,
@@ -230,6 +269,39 @@ public static class TimedLevelVariantGenerator
             throw new InvalidOperationException($"Level {levelNumber}: only {candidates.Count} verified variants were generated.");
 
         return candidates;
+    }
+
+    private static CandidateRejection? TryLockShelves(
+        TimedLevelDefinition definition,
+        int seed,
+        TimedLevelKeyPlacer keyPlacer,
+        TimedLevelKeyAccessProbe keyAccessProbe,
+        ref TimedLevelGenerationResult generation)
+    {
+        TimedLevelKeyPlacer.PlacementStatus placement = keyPlacer.TryPlace(
+            generation.State,
+            generation.SolutionMoves,
+            definition.KeyLockedShelfIndices,
+            definition.MinimumKeyDepth,
+            seed,
+            out BoardStateSnapshot keyedLayout);
+
+        if (placement == TimedLevelKeyPlacer.PlacementStatus.LockedShelfNotFilled)
+            return CandidateRejection.LockedShelfNotFilled;
+
+        if (placement == TimedLevelKeyPlacer.PlacementStatus.Failed)
+            return CandidateRejection.KeyPlacementFailed;
+
+        TimedLevelKeyAccessProbe.AccessStatus access = keyAccessProbe.Check(keyedLayout, definition.MinimumMovesToFirstKey);
+
+        if (access == TimedLevelKeyAccessProbe.AccessStatus.EarlyAccess)
+            return CandidateRejection.EarlyKeyAccess;
+
+        if (access == TimedLevelKeyAccessProbe.AccessStatus.Unknown)
+            return CandidateRejection.KeyAccessUnknown;
+
+        generation = new TimedLevelGenerationResult(keyedLayout, generation.SolutionMoves);
+        return null;
     }
 
     private static void CountRejection(Dictionary<CandidateRejection, int> rejections, CandidateRejection rejection)
@@ -387,6 +459,10 @@ public static class TimedLevelVariantGenerator
         ConveyorStart,
         FilteredEmptyColumns,
         NotSolved,
-        DifficultySpread
+        DifficultySpread,
+        LockedShelfNotFilled,
+        KeyPlacementFailed,
+        EarlyKeyAccess,
+        KeyAccessUnknown
     }
 }
