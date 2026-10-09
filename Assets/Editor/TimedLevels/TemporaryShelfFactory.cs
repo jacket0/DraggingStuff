@@ -17,6 +17,13 @@ public static class TemporaryShelfFactory
         return item;
     }
 
+    public static ShelfKey CreateKey(List<GameObject> temporaryObjects)
+    {
+        GameObject keyObject = EditorUtility.CreateGameObjectWithHideFlags("ValidationKey", HideFlags.HideAndDontSave);
+        temporaryObjects.Add(keyObject);
+        return keyObject.AddComponent<ShelfKey>();
+    }
+
     public static Shelf CreateShelf(string name, List<GameObject> temporaryObjects)
     {
         GameObject shelfObject = EditorUtility.CreateGameObjectWithHideFlags(name, HideFlags.HideAndDontSave);

@@ -20,7 +20,9 @@ public static class BoardStateFingerprint
             shelves.Add($"[{marker}{string.Join("", columns)}]");
         }
 
-        shelves.Sort(StringComparer.Ordinal);
+        if (!HasPhysicalShelfReferences(board))
+            shelves.Sort(StringComparer.Ordinal);
+
         return string.Join("", shelves);
     }
 
@@ -64,6 +66,11 @@ public static class BoardStateFingerprint
         return hash.ToString("X16");
     }
 
+    private static bool HasPhysicalShelfReferences(BoardStateSnapshot board)
+    {
+        return board.HasKeys || board.Shelves.Any(shelf => !shelf.IsOpen && shelf.Columns.Any(column => column.Count > 0));
+    }
+
     private static string CreateFilterMarker(ShelfStateSnapshot shelf)
     {
         return "F" + string.Join(".", shelf.AcceptedTypes.Select(type => (int)type));
@@ -75,6 +82,9 @@ public static class BoardStateFingerprint
 
         foreach (ItemType type in column.Items)
             key.Append((int)type).Append(',');
+
+        foreach (ColumnKeySnapshot columnKey in column.Keys)
+            key.Append('k').Append(columnKey.ItemsInFront).Append('.').Append(columnKey.LockedShelfIndex).Append(';');
 
         return key.Append(')').ToString();
     }

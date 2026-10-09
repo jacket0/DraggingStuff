@@ -10,6 +10,7 @@ public sealed class ShelfBoard : MonoBehaviour
     private readonly HashSet<Shelf> _lockedShelves = new HashSet<Shelf>();
     private readonly HashSet<Shelf> _closedShelves = new HashSet<Shelf>();
     private readonly HashSet<Shelf> _conveyorShelves = new HashSet<Shelf>();
+    private readonly HashSet<Shelf> _keyLockedShelves = new HashSet<Shelf>();
     private readonly Dictionary<Shelf, IReadOnlyList<ItemType>> _shelfFilters = new Dictionary<Shelf, IReadOnlyList<ItemType>>();
     private IReadOnlyCollection<ItemType> _filteredTypes = Array.Empty<ItemType>();
     private readonly Dictionary<ShelfColumn, ColumnPosition> _positions = new Dictionary<ShelfColumn, ColumnPosition>();
@@ -23,6 +24,7 @@ public sealed class ShelfBoard : MonoBehaviour
     public bool HasConveyors => _conveyorShelves.Count > 0;
     public IReadOnlyList<Shelf> ConveyorShelves => _shelves.Where(IsConveyor).ToArray();
     public bool HasFilters => _shelfFilters.Count > 0;
+    public bool HasKeyLocks => _keyLockedShelves.Count > 0;
     public ShelfItemPlacementAnimator ItemAnimations { get; } = new ShelfItemPlacementAnimator();
 
     public void Initialize()
@@ -75,6 +77,25 @@ public sealed class ShelfBoard : MonoBehaviour
 
     public void OpenShelf(Shelf shelf) => _closedShelves.Remove(shelf);
 
+    public bool IsKeyLocked(Shelf shelf) => _keyLockedShelves.Contains(shelf);
+
+    public void CloseKeyLockedShelf(Shelf shelf)
+    {
+        if (shelf == null || !_shelves.Contains(shelf) || shelf.IsCleared || IsConveyor(shelf) || IsFiltered(shelf) || IsShelfClosed(shelf))
+            throw new InvalidOperationException("Only a filled regular open shelf on this board can be locked by a key.");
+
+        _closedShelves.Add(shelf);
+        _keyLockedShelves.Add(shelf);
+    }
+
+    public void OpenKeyLockedShelf(Shelf shelf)
+    {
+        if (!_keyLockedShelves.Remove(shelf))
+            throw new InvalidOperationException("Only a key-locked shelf on this board can be opened by a key.");
+
+        _closedShelves.Remove(shelf);
+    }
+
     public bool IsConveyor(Shelf shelf) => _conveyorShelves.Contains(shelf);
 
     public void MarkConveyor(Shelf shelf)
@@ -119,7 +140,7 @@ public sealed class ShelfBoard : MonoBehaviour
     public bool CanPickUp(ShelfColumn column)
     {
         Initialize();
-        return column != null && !column.IsEmpty && _positions.TryGetValue(column, out ColumnPosition position)
+        return column != null && column.FrontItem != null && _positions.TryGetValue(column, out ColumnPosition position)
             && IsShelfAvailable(_shelves[position.ShelfIndex])
             && !ItemAnimations.IsAnimating(column.FrontItem);
     }
@@ -188,7 +209,13 @@ public sealed class ShelfBoard : MonoBehaviour
         return MoveOutcome.SuccessfulSwap(sourceItem, targetItem, source, target, affected);
     }
 
-    private ShelfStateSnapshot CreateShelfSnapshot(Shelf shelf) => shelf.CreateSnapshot(!IsShelfClosed(shelf), IsConveyor(shelf), GetAcceptedTypes(shelf));
+    private ShelfStateSnapshot CreateShelfSnapshot(Shelf shelf) => shelf.CreateSnapshot(!IsShelfClosed(shelf), IsConveyor(shelf), GetAcceptedTypes(shelf), GetShelfIndex);
+
+    private int GetShelfIndex(Shelf shelf)
+    {
+        int shelfIndex = _shelves.IndexOf(shelf);
+        return shelfIndex >= 0 ? shelfIndex : throw new InvalidOperationException("A key refers to a shelf from another board.");
+    }
 
     private void OnDestroy() => ItemAnimations.Dispose();
 }

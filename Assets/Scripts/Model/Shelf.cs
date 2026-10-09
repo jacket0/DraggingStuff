@@ -19,6 +19,7 @@ public sealed class Shelf : MonoBehaviour
     public IReadOnlyList<ShelfColumnView> ColumnViews => _columnViews;
     public ShelfView View => _view;
     public bool IsCleared => Columns.All(column => column.IsEmpty);
+    public bool HasKeys => Columns.Any(column => column.HasKeys);
 
     public static bool IsValidCapacity(int capacity) => capacity >= MinimumCapacity && capacity <= MaximumCapacity;
 
@@ -47,10 +48,14 @@ public sealed class Shelf : MonoBehaviour
         _columns = Array.AsReadOnly(columns);
     }
 
-    public ShelfStateSnapshot CreateSnapshot(bool isOpen = true, bool isConveyor = false, IReadOnlyList<ItemType> acceptedTypes = null)
+    public ShelfStateSnapshot CreateSnapshot(
+        bool isOpen = true,
+        bool isConveyor = false,
+        IReadOnlyList<ItemType> acceptedTypes = null,
+        Func<Shelf, int> getLockedShelfIndex = null)
     {
         return new ShelfStateSnapshot(
-            Columns.Select(column => new ColumnStateSnapshot(column.Items.Select(item => item.Type).ToArray())).ToArray(),
+            Columns.Select(column => column.CreateSnapshot(getLockedShelfIndex)).ToArray(),
             isOpen,
             isConveyor,
             acceptedTypes ?? Array.Empty<ItemType>());
@@ -66,7 +71,11 @@ public sealed class Shelf : MonoBehaviour
         return isShifted;
     }
 
-    public bool HasMatch() => CreateSnapshot().HasMatch();
+    public bool HasMatch()
+    {
+        ShelfItem frontItem = Columns[0].FrontItem;
+        return Capacity >= MinimumMatchCapacity && frontItem != null && Columns.All(column => column.FrontItem != null && column.FrontItem.Type == frontItem.Type);
+    }
 
     public bool TryResolveMatch(out MatchResolution match)
     {

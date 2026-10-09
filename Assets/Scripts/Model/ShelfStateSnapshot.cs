@@ -17,6 +17,7 @@ public sealed class ShelfStateSnapshot
     public bool IsConveyor { get; }
     public IReadOnlyList<ItemType> AcceptedTypes { get; }
     public bool IsFiltered => AcceptedTypes.Count > 0;
+    public bool HasKeys => Columns.Any(column => column.HasKeys);
 
     public ShelfStateSnapshot(IReadOnlyList<ColumnStateSnapshot> columns) : this(columns, true)
     {
@@ -66,6 +67,11 @@ public sealed class ShelfStateSnapshot
         return new ShelfStateSnapshot(columns, IsOpen, IsConveyor, AcceptedTypes);
     }
 
+    public ShelfStateSnapshot WithOpenState(bool isOpen)
+    {
+        return new ShelfStateSnapshot(Columns, isOpen, IsConveyor, AcceptedTypes);
+    }
+
     public ShelfStateSnapshot ShiftConveyor()
     {
         ColumnStateSnapshot[] columns = new ColumnStateSnapshot[Capacity];
@@ -78,21 +84,21 @@ public sealed class ShelfStateSnapshot
 
     public bool HasMatch()
     {
-        if (Capacity < MinimumMatchCapacity || Columns[0].IsEmpty)
-            return false;
+        ItemType? type = Columns[0].FrontItem;
 
-        ItemType type = Columns[0].Items[0];
+        if (Capacity < MinimumMatchCapacity || type == null)
+            return false;
 
         foreach (ColumnStateSnapshot column in Columns)
         {
-            if (column.IsEmpty || column.Items[0] != type)
+            if (column.FrontItem != type)
                 return false;
         }
 
         return true;
     }
 
-    public bool CanMatch(IReadOnlyCollection<ItemType> filteredTypes) => HasMatch() && CanMatchType(Columns[0].Items[0], filteredTypes);
+    public bool CanMatch(IReadOnlyCollection<ItemType> filteredTypes) => IsOpen && HasMatch() && CanMatchType(Columns[0].FrontItem.Value, filteredTypes);
 
     public bool CanMatchType(ItemType type, IReadOnlyCollection<ItemType> filteredTypes) => CanMatchType(AcceptedTypes, type, filteredTypes);
 

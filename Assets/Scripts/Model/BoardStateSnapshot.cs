@@ -11,6 +11,8 @@ public sealed class BoardStateSnapshot
     public int EmptyColumnCount { get; }
     public int ItemCount { get; }
     public bool HasConveyors { get; }
+    public int KeyCount { get; }
+    public bool HasKeys => KeyCount > 0;
     public bool IsCleared => ItemCount == 0;
 
     public BoardStateSnapshot(IReadOnlyList<ShelfStateSnapshot> shelves) : this(shelves, CollectShelfFilteredTypes(shelves))
@@ -33,6 +35,7 @@ public sealed class BoardStateSnapshot
             foreach (ColumnStateSnapshot column in shelf.Columns)
             {
                 ItemCount += column.Count;
+                KeyCount += column.Keys.Count;
 
                 if (shelf.IsOpen && column.IsEmpty)
                     EmptyColumnCount++;
