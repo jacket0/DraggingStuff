@@ -29,11 +29,12 @@ public sealed class ShelfView : MonoBehaviour
 
         foreach (ShelfColumnView view in _columns)
         {
-            if (!view.IsEmpty)
+            Component front = GetFront(view.Column);
+
+            if (front != null)
             {
-                ShelfItem item = view.FrontItem;
-                SetPose(item, view.ItemAnchor, Vector3.zero, 1f);
-                Presentation(item).ShowFront();
+                SetPose(front, view.ItemAnchor, Vector3.zero, 1f);
+                Presentation(front).ShowFront();
             }
 
             RefreshDepth(view);
@@ -64,15 +65,15 @@ public sealed class ShelfView : MonoBehaviour
 
         foreach (ShelfColumnView view in _columns)
         {
-            ShelfItem item = view.FrontItem;
+            Component front = GetFront(view.Column);
 
-            if (item != null && item != placedItem)
+            if (front != null && front != placedItem)
             {
-                view.AttachFront(item);
-                Presentation(item).ShowFront();
-                transition.Join(item.transform.DOLocalMove(Vector3.zero, _moveDuration).SetEase(_moveEase));
-                transition.Join(item.transform.DOLocalRotateQuaternion(Quaternion.identity, _moveDuration).SetEase(_moveEase));
-                transition.Join(item.transform.DOScale(Vector3.one, _moveDuration).SetEase(_moveEase));
+                AttachFront(view, front);
+                Presentation(front).ShowFront();
+                transition.Join(front.transform.DOLocalMove(Vector3.zero, _moveDuration).SetEase(_moveEase));
+                transition.Join(front.transform.DOLocalRotateQuaternion(Quaternion.identity, _moveDuration).SetEase(_moveEase));
+                transition.Join(front.transform.DOScale(Vector3.one, _moveDuration).SetEase(_moveEase));
             }
 
             RefreshDepth(view);
@@ -128,12 +129,32 @@ public sealed class ShelfView : MonoBehaviour
 
     private void RefreshDepth(ShelfColumnView view)
     {
-        for (int depth = 1; depth < view.Column.Count; depth++)
-        {
-            ShelfItem item = view.Column.Items[depth];
-            SetPose(item, view.ItemAnchor, GetDepthPosition(view, depth), GetDepthScale(depth));
-            ShowAtDepth(item, depth);
-        }
+        ShelfColumn column = view.Column;
+
+        foreach (ShelfItem item in column.Items)
+            PlaceInQueue(view, item, column.GetQueueSlot(item));
+
+        foreach (ShelfKey key in column.Keys)
+            PlaceInQueue(view, key, column.GetQueueSlot(key));
+    }
+
+    private void PlaceInQueue(ShelfColumnView view, Component element, int slot)
+    {
+        if (slot == 0)
+            return;
+
+        SetPose(element, view.ItemAnchor, GetDepthPosition(view, slot), GetDepthScale(slot));
+        ShowAtDepth(element, slot);
+    }
+
+    private static Component GetFront(ShelfColumn column) => column.FrontKey != null ? column.FrontKey : (Component)column.FrontItem;
+
+    private static void AttachFront(ShelfColumnView view, Component front)
+    {
+        if (front is ShelfItem item)
+            view.AttachFront(item);
+        else
+            front.transform.SetParent(view.ItemAnchor, true);
     }
 
     private void InsertConveyorShift(Sequence transition, ShelfColumnView view, float duration)
@@ -163,14 +184,14 @@ public sealed class ShelfView : MonoBehaviour
         transition.InsertCallback(duration * ReturnMaterialSwitchProgress, () => ShowAtDepth(returningItem, returningDepth));
     }
 
-    private void ShowAtDepth(ShelfItem item, int depth)
+    private void ShowAtDepth(Component element, int depth)
     {
         if (depth == 0)
-            Presentation(item).ShowFront();
+            Presentation(element).ShowFront();
         else if (depth < _visibleDepth)
-            Presentation(item).ShowPreview(GetPreviewMaterial(depth));
+            Presentation(element).ShowPreview(GetPreviewMaterial(depth));
         else
-            Presentation(item).Hide();
+            Presentation(element).Hide();
     }
 
     private Vector3 GetDepthPosition(ShelfColumnView view, int depth) => ToAnchorSpace(view, _previewOffset * depth);
@@ -187,19 +208,19 @@ public sealed class ShelfView : MonoBehaviour
         return depth > 1 && _farPreviewMaterial != null ? _farPreviewMaterial : _previewMaterial;
     }
 
-    private static ShelfItemPresentation Presentation(ShelfItem item)
+    private static ShelfItemPresentation Presentation(Component element)
     {
-        if (!item.TryGetComponent(out ShelfItemPresentation presentation))
-            throw new MissingComponentException($"{item.name}: {nameof(ShelfItemPresentation)}");
+        if (!element.TryGetComponent(out ShelfItemPresentation presentation))
+            throw new MissingComponentException($"{element.name}: {nameof(ShelfItemPresentation)}");
 
         return presentation;
     }
 
-    private static void SetPose(ShelfItem item, Transform anchor, Vector3 position, float scale)
+    private static void SetPose(Component element, Transform anchor, Vector3 position, float scale)
     {
-        item.transform.SetParent(anchor, false);
-        item.transform.localPosition = position;
-        item.transform.localRotation = Quaternion.identity;
-        item.transform.localScale = Vector3.one * scale;
+        element.transform.SetParent(anchor, false);
+        element.transform.localPosition = position;
+        element.transform.localRotation = Quaternion.identity;
+        element.transform.localScale = Vector3.one * scale;
     }
 }

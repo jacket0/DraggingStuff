@@ -14,6 +14,7 @@ public sealed class MoveSuggestionProvider : MonoBehaviour, IMoveSuggestionProvi
             return false;
 
         int bestMatches = -1;
+        int bestOpenedShelves = -1;
         int bestGroupGain = -1;
         bool bestBreaksPair = true;
 
@@ -45,12 +46,16 @@ public sealed class MoveSuggestionProvider : MonoBehaviour, IMoveSuggestionProvi
                             : new List<ShelfItem>();
                         int groupGain = sourceShelf == targetShelf ? 0 : matchingItems.Count;
 
+                        bool isSameRank = simulation.MatchCount == bestMatches && simulation.OpenedShelfCount == bestOpenedShelves;
+
                         if (simulation.MatchCount < bestMatches
-                            || simulation.MatchCount == bestMatches && groupGain < bestGroupGain
-                            || simulation.MatchCount == bestMatches && groupGain == bestGroupGain && (!bestBreaksPair || breaksPair))
+                            || simulation.MatchCount == bestMatches && simulation.OpenedShelfCount < bestOpenedShelves
+                            || isSameRank && groupGain < bestGroupGain
+                            || isSameRank && groupGain == bestGroupGain && (!bestBreaksPair || breaksPair))
                             continue;
 
                         bestMatches = simulation.MatchCount;
+                        bestOpenedShelves = simulation.OpenedShelfCount;
                         bestGroupGain = groupGain;
                         bestBreaksPair = breaksPair;
                         suggestion = new MoveSuggestion(source, target, matchingItems);

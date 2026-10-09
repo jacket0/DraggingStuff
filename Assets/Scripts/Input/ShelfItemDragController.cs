@@ -158,7 +158,7 @@ public class ShelfItemDragController : MonoBehaviour
 
     private void UpdateSwapHover(Vector2 pointerPosition)
     {
-        if (_columnRaycaster.TryGetColumn(_sourceColumn, pointerPosition, out ShelfColumnView targetColumn) && !targetColumn.IsEmpty)
+        if (_columnRaycaster.TryGetColumn(_sourceColumn, pointerPosition, out ShelfColumnView targetColumn) && targetColumn.FrontItem != null)
             _swapHoverView.Show(targetColumn.FrontItem);
         else
             _swapHoverView.Stop();

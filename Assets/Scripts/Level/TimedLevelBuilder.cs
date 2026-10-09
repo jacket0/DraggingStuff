@@ -90,7 +90,7 @@ public sealed class TimedLevelBuilder : MonoBehaviour
     private ShelfKey CreateKey(int lockedShelfIndex)
     {
         ShelfKey key = Instantiate(_keyPrefab);
-        key.LockedShelf = _shelfBoard.Shelves[lockedShelfIndex];
+        key.Bind(_shelfBoard.Shelves[lockedShelfIndex]);
         return key;
     }
 }
