@@ -11853,8 +11853,8 @@ MonoBehaviour:
   _explosionClip: {fileID: 8300000, guid: 528ec6aa38d96144db737c49c059dfeb, type: 3}
   _mergeVolume: 0.3
   _explosionVolume: 0.4
-  _firstComboSemitones: -2
-  _semitonesPerComboStep: 0.5
+  _firstComboSemitones: -2.5
+  _semitonesPerComboStep: 0.35
 --- !u!82 &309989756
 AudioSource:
   m_ObjectHideFlags: 0
