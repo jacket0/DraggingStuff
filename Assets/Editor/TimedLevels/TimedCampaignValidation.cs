@@ -10,8 +10,8 @@ using UnityEngine.UI;
 public static class TimedCampaignValidation
 {
     private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
-    private const int ExpectedLevelCount = 20;
-    private const int ChapterCount = 4;
+    private const int ExpectedLevelCount = 25;
+    private const int ChapterCount = 5;
     private const int LevelsPerChapter = 5;
     private const string FirstClosedShelfDefinitionPath = "Assets/Levels/Timed/TimedLevel_C3_01.asset";
     private const string LevelResultWindowPath = "Assets/Prefabs/UI/Level/LevelResultWindow.prefab";
@@ -21,7 +21,8 @@ public static class TimedCampaignValidation
         { LevelMechanic.Basics, "SimpleLevel" },
         { LevelMechanic.ShelfFilter, "ThirdLevel" },
         { LevelMechanic.ClosedShelves, "FourthLevel" },
-        { LevelMechanic.Conveyor, "FifthLevel" }
+        { LevelMechanic.Conveyor, "FifthLevel" },
+        { LevelMechanic.KeyLocks, "SixthLevel" }
     };
 
     [MenuItem("Tools/Timed Levels/Validate Campaign")]

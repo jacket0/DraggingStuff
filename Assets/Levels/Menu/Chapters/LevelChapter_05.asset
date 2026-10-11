@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3ca231996022ff4e84800216e43d1ff, type: 3}
+  m_Name: LevelChapter_05
+  m_EditorClassIdentifier: 
+  _title:
+    _ru: "\u0425\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435"
+    _en: Vault
+    _tr: Kasa Dairesi
+  _description:
+    _ru: "\u0414\u043E\u0441\u0442\u0430\u043D\u044C \u043A\u043B\u044E\u0447 \u0438\u0437
+      \u043E\u0447\u0435\u0440\u0435\u0434\u0438, \u0438 \u0441\u0435\u0439\u0444
+      \u043E\u0442\u043A\u0440\u043E\u0435\u0442\u0441\u044F"
+    _en: Free the key from the queue to open the safe
+    _tr: "Anahtar\u0131 s\u0131radan \xE7\u0131kar, kasa a\xE7\u0131ls\u0131n"
+  _mechanic: 4
+  _mechanicIcon: {fileID: 21300000, guid: e1b49874b5602fc4dac0d0cfe36e20f7, type: 3}
+  _levels:
+  - {fileID: 11400000, guid: a109f4375e6106b4db9cd4c85746547b, type: 2}
+  - {fileID: 11400000, guid: a0f3498117598d945a4a51502d03df23, type: 2}
+  - {fileID: 11400000, guid: 38f6476fe000cf74abc49c948bdc1d79, type: 2}
+  - {fileID: 11400000, guid: 93c9f133d0a0a034d84c33b85fc9d7b0, type: 2}
+  - {fileID: 11400000, guid: e2822cea1b72cd3418780c1210beecfe, type: 2}

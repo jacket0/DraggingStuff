@@ -64,7 +64,7 @@ public static class KeyLockVisualsSetup
         material.SetFloat("_Glossiness", 0.6f);
         material.DisableKeyword("_EMISSION");
         material.SetColor("_EmissionColor", Color.black);
-        material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+        material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
         EditorUtility.SetDirty(material);
         return material;
     }

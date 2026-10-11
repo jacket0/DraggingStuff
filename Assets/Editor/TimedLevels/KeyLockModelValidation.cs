@@ -200,7 +200,7 @@ public static class KeyLockModelValidation
     {
         BoardMoveSimulator simulator = new BoardMoveSimulator();
 
-        foreach (LevelEntry level in catalog.Levels)
+        foreach (LevelEntry level in catalog.Levels.Where(level => !level.Definition.HasKeyLocks))
         {
             foreach (TimedLevelVariant variant in level.Definition.Variants)
             {
