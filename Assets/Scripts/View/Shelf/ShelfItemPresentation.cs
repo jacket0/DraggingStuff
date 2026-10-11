@@ -4,6 +4,8 @@ using UnityEngine.Rendering;
 
 public sealed class ShelfItemPresentation : MonoBehaviour
 {
+    [SerializeField] private bool _keepsMaterialsInPreview;
+
     private Renderer[] _renderers;
     private Material[][] _materials;
     private bool[] _rendererStates;
@@ -28,18 +30,10 @@ public sealed class ShelfItemPresentation : MonoBehaviour
         Capture();
         gameObject.SetActive(true);
 
-        for (int index = 0; index < _renderers.Length; index++)
-        {
-            Material[] materials = new Material[_materials[index].Length];
-
-            for (int materialIndex = 0; materialIndex < materials.Length; materialIndex++)
-                materials[materialIndex] = material;
-
-            _renderers[index].enabled = _rendererStates[index];
-            _renderers[index].sharedMaterials = materials;
-            _renderers[index].shadowCastingMode = ShadowCastingMode.Off;
-            _renderers[index].receiveShadows = false;
-        }
+        if (_keepsMaterialsInPreview)
+            Restore();
+        else
+            ApplyPreviewMaterial(material);
 
         foreach (Collider collider in _colliders)
             collider.enabled = false;
@@ -56,6 +50,22 @@ public sealed class ShelfItemPresentation : MonoBehaviour
     }
 
     public void Reset() => Restore();
+
+    private void ApplyPreviewMaterial(Material material)
+    {
+        for (int index = 0; index < _renderers.Length; index++)
+        {
+            Material[] materials = new Material[_materials[index].Length];
+
+            for (int materialIndex = 0; materialIndex < materials.Length; materialIndex++)
+                materials[materialIndex] = material;
+
+            _renderers[index].enabled = _rendererStates[index];
+            _renderers[index].sharedMaterials = materials;
+            _renderers[index].shadowCastingMode = ShadowCastingMode.Off;
+            _renderers[index].receiveShadows = false;
+        }
+    }
 
     private void Capture()
     {

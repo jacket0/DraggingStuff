@@ -4,10 +4,12 @@ using UnityEngine;
 public sealed class ShelfKey : MonoBehaviour
 {
     [SerializeField] private Transform _markPoint;
+    [SerializeField] private ShelfKeyView _view;
 
     public Shelf LockedShelf { get; private set; }
     public ShelfColumn Column { get; internal set; }
     public Transform MarkPoint => _markPoint;
+    public ShelfKeyView View => _view;
 
     public void Bind(Shelf lockedShelf)
     {

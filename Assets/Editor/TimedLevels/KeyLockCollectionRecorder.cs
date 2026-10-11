@@ -25,8 +25,17 @@ public static class KeyLockCollectionRecorder
     private const int MaximumWaitFrames = 3000;
     private const int DragFrameCount = 12;
     private const int TailFrameCount = 45;
-    private const int FlightSnapshotDelay = 8;
-    private const int UnlockSnapshotDelay = 24;
+
+    private static readonly (int Delay, string Name)[] CollectionMoments =
+    {
+        (3, "2-key-hop"),
+        (10, "3-key-flight"),
+        (21, "4-key-turn"),
+        (25, "5-lock-click"),
+        (33, "6-lock-drop"),
+        (40, "7-bars-lift"),
+        (45, "8-item-wave")
+    };
 
     private static readonly HashSet<string> CapturedMoments = new HashSet<string>();
     private static IEnumerator _steps;
@@ -149,11 +158,11 @@ public static class KeyLockCollectionRecorder
                 if (keyLocks.IsCollecting && collectionFrame < 0)
                     collectionFrame = frame;
 
-                if (collectionFrame >= 0 && frame - collectionFrame == FlightSnapshotDelay)
-                    CaptureMoment("2-key-flight");
-
-                if (collectionFrame >= 0 && frame - collectionFrame == UnlockSnapshotDelay)
-                    CaptureMoment("3-safe-unlocking");
+                foreach ((int delay, string name) in CollectionMoments)
+                {
+                    if (collectionFrame >= 0 && frame - collectionFrame == delay)
+                        CaptureMoment(name);
+                }
 
                 yield return null;
             }
@@ -162,7 +171,7 @@ public static class KeyLockCollectionRecorder
                 break;
         }
 
-        CaptureMoment("4-safe-open");
+        CaptureMoment("9-safe-open");
 
         for (int frame = 0; frame < TailFrameCount; frame++)
             yield return null;

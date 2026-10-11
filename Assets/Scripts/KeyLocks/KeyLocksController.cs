@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using DG.Tweening;
 using UnityEngine;
 
 public sealed class KeyLocksController : MonoBehaviour
@@ -10,9 +9,6 @@ public sealed class KeyLocksController : MonoBehaviour
     [SerializeField] private ShelfBoard _shelfBoard;
     [SerializeField] private List<SafeDoorView> _doors = new List<SafeDoorView>();
     [SerializeField] private List<KeyLockMark> _marks = new List<KeyLockMark>();
-    [SerializeField, Min(0.01f)] private float _flightDuration = 0.6f;
-    [SerializeField, Min(0f)] private float _hopHeight = 0.12f;
-    [SerializeField, Min(0f)] private float _arcHeight = 0.25f;
 
     private readonly HashSet<ShelfKey> _pendingKeys = new HashSet<ShelfKey>();
     private readonly Dictionary<Shelf, KeyLockMark> _safeMarks = new Dictionary<Shelf, KeyLockMark>();
@@ -84,13 +80,16 @@ public sealed class KeyLocksController : MonoBehaviour
 
     private void PlayCollection(Shelf shelf, ShelfColumn column, Action completed)
     {
+        if (column.FrontKey.View == null)
+            throw new InvalidOperationException($"{column.FrontKey.name}: the key has no view.");
+
         ShelfKey key = column.TakeFrontKey();
         Shelf safe = key.LockedShelf;
         _pendingKeys.Remove(key);
         _shelfBoard.OpenKeyLockedShelf(safe);
         SafeDoorView door = GetDoor(safe);
         _collectionCount++;
-        int pendingAnimationCount = 3;
+        int pendingAnimationCount = 2;
 
         void CompleteAnimation()
         {
@@ -105,26 +104,8 @@ public sealed class KeyLocksController : MonoBehaviour
             completed();
         }
 
-        PlayFlight(key, door.LockPoint.position, () =>
-        {
-            CompleteAnimation();
-            door.PlayOpen(CompleteAnimation);
-        });
+        key.View.PlayCollection(door.LockPoint, () => door.PlayOpen(CompleteAnimation));
         shelf.View.Advance(CompleteAnimation);
-    }
-
-    private void PlayFlight(ShelfKey key, Vector3 target, Action completed)
-    {
-        Transform keyTransform = key.transform;
-        keyTransform.SetParent(null, true);
-        Vector3 start = keyTransform.position;
-        Vector3 hop = start + Vector3.up * _hopHeight;
-        Vector3 apex = (hop + target) * 0.5f + Vector3.up * _arcHeight;
-        keyTransform
-            .DOPath(new[] { hop, apex, target }, _flightDuration, PathType.CatmullRom)
-            .SetEase(Ease.InOutSine)
-            .SetLink(key.gameObject, LinkBehaviour.KillOnDestroy)
-            .OnComplete(() => completed());
     }
 
     private SafeDoorView GetDoor(Shelf safe)
