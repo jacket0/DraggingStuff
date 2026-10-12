@@ -10254,6 +10254,9 @@ MonoBehaviour:
   _bestScoreResult: {fileID: 1163713885100873567}
   _lightRays: {fileID: 5881107705538448249}
   _clock: {fileID: 1900273528090388795}
+  _defeatClip: {fileID: 8300000, guid: d1367f54f4754fa4fb73d2990beb52a1, type: 3}
+  _outputAudioMixerGroup: {fileID: -2202310126120427073, guid: b541543115fcfbe4893c0262ea97557e, type: 2}
+  _defeatVolume: 0.7
 --- !u!1 &7849978495660897957
 GameObject:
   m_ObjectHideFlags: 0

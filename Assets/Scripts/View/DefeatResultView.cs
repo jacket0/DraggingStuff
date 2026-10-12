@@ -2,6 +2,7 @@ using System;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Audio;
 using UnityEngine.UI;
 
 public sealed class DefeatResultView : MonoBehaviour
@@ -21,6 +22,9 @@ public sealed class DefeatResultView : MonoBehaviour
     [SerializeField] private TMP_Text _bestScoreResult;
     [SerializeField] private RectTransform _lightRays;
     [SerializeField] private RectTransform _clock;
+    [SerializeField] private AudioClip _defeatClip;
+    [SerializeField] private AudioMixerGroup _outputAudioMixerGroup;
+    [SerializeField, Range(0f, 1f)] private float _defeatVolume = 0.7f;
 
     private Sequence _showSequence;
     private Tween _raysTween;
@@ -61,6 +65,7 @@ public sealed class DefeatResultView : MonoBehaviour
         _bestScoreResult.SetText(bestScore.ToString());
         gameObject.SetActive(true);
         PlayShowAnimation(GetCollectedShare(result));
+        UiAudioPlayer.Play(_defeatClip, _outputAudioMixerGroup, _defeatVolume);
     }
 
     public void Hide()

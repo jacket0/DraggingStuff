@@ -603,6 +603,8 @@ public static class TimedCampaignValidation
             RequireReference(defeat, "_bestScoreResult");
             RequireReference(defeat, "_lightRays");
             RequireReference(defeat, "_clock");
+            RequireReference(defeat, "_defeatClip");
+            RequireReference(defeat, "_outputAudioMixerGroup");
             ValidateCampaignHud(sceneName, timerView);
             ValidateResultWindowPrefab(sceneName, result);
             ValidateResultLayout(sceneName, result);
