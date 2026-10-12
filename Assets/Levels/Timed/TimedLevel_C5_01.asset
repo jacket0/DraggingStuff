@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: TimedLevel_C5_01
   m_EditorClassIdentifier: 
   _timeLimitSeconds: 70
-  _twoStarTimeSeconds: 55
-  _threeStarTimeSeconds: 40
+  _twoStarTimeSeconds: 50
+  _threeStarTimeSeconds: 35
   _emptyColumnCount: 3
   _itemGroups:
   - _type: 0

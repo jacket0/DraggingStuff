@@ -115,6 +115,9 @@ public sealed class BoardCameraFramer : MonoBehaviour
 
             foreach (Renderer renderer in columns[index].ItemAnchor.GetComponentsInChildren<Renderer>())
             {
+                if (renderer is ParticleSystemRenderer)
+                    continue;
+
                 Bounds bounds = itemBounds[index] ?? renderer.bounds;
                 bounds.Encapsulate(renderer.bounds);
                 itemBounds[index] = bounds;
