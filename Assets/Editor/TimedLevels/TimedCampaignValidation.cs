@@ -591,9 +591,18 @@ public static class TimedCampaignValidation
             RequireReference(result, "_timeResult");
             RequireReference(result, "_bestTimeResult");
             RequireReference(result, "_bestScoreResult");
-            RequireReference(result, "_remainingItemsRoot");
             RequireReference(result, "_lightRays");
-            RequireReference(result, "_defeatClock");
+            RequireReference(result, "_victoryPanel");
+            RequireReference(result, "_defeatPanel");
+            DefeatResultView defeat = GetReference<DefeatResultView>(result, "_defeatPanel");
+            RequireReference(defeat, "_restartButton");
+            RequireReference(defeat, "_menuButton");
+            RequireReference(defeat, "_collectedResult");
+            RequireReference(defeat, "_collectedFill");
+            RequireReference(defeat, "_scoreResult");
+            RequireReference(defeat, "_bestScoreResult");
+            RequireReference(defeat, "_lightRays");
+            RequireReference(defeat, "_clock");
             ValidateCampaignHud(sceneName, timerView);
             ValidateResultWindowPrefab(sceneName, result);
             ValidateResultLayout(sceneName, result);
@@ -736,17 +745,16 @@ public static class TimedCampaignValidation
             throw new InvalidOperationException($"{sceneName}: result layout elements overlap or leave the background.");
 
         RectTransform statistics = content.Find("Statistics") as RectTransform;
-        RectTransform remainingItems = statistics != null ? statistics.Find("RemainingItems") as RectTransform : null;
         RectTransform score = statistics != null ? statistics.Find("Score") as RectTransform : null;
         RectTransform bestScore = statistics != null ? statistics.Find("BestScore") as RectTransform : null;
 
-        if (remainingItems == null || score == null || bestScore == null)
+        if (score == null || bestScore == null || statistics.Find("RemainingItems") != null || content.Find("DefeatClock") != null)
             throw new InvalidOperationException($"{sceneName}: result statistics layout.");
 
-        Rect remainingItemsRect = GetRectInParent(remainingItems);
+        RectTransform defeatPanel = result.transform.Find("DefeatPanel") as RectTransform;
 
-        if (remainingItemsRect.Overlaps(GetRectInParent(score)) || remainingItemsRect.Overlaps(GetRectInParent(bestScore)))
-            throw new InvalidOperationException($"{sceneName}: remaining items overlap score.");
+        if (defeatPanel == null || defeatPanel.GetComponent<DefeatResultView>() == null)
+            throw new InvalidOperationException($"{sceneName}: defeat panel layout.");
     }
 
     private static void ValidateResultWindowPrefab(string sceneName, LevelResultView result)

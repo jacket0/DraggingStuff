@@ -8,6 +8,8 @@ public sealed class LevelRunResult
     public long ActiveTimeMilliseconds { get; }
     public long RemainingTimeMilliseconds { get; }
     public int RemainingItemCount { get; }
+    public int CollectedItemCount { get; }
+    public int TotalItemCount => CollectedItemCount + RemainingItemCount;
     public int Stars { get; }
     public int Seed { get; }
     public int VariantIndex { get; }
@@ -19,6 +21,7 @@ public sealed class LevelRunResult
         long activeTimeMilliseconds,
         long remainingTimeMilliseconds,
         int remainingItemCount,
+        int collectedItemCount,
         int stars,
         int seed,
         int variantIndex)
@@ -38,6 +41,9 @@ public sealed class LevelRunResult
         if (remainingItemCount < 0)
             throw new ArgumentOutOfRangeException(nameof(remainingItemCount));
 
+        if (collectedItemCount < 0)
+            throw new ArgumentOutOfRangeException(nameof(collectedItemCount));
+
         if (stars < 0 || stars > 3 || !won && stars != 0)
             throw new ArgumentOutOfRangeException(nameof(stars));
 
@@ -50,6 +56,7 @@ public sealed class LevelRunResult
         ActiveTimeMilliseconds = activeTimeMilliseconds;
         RemainingTimeMilliseconds = remainingTimeMilliseconds;
         RemainingItemCount = remainingItemCount;
+        CollectedItemCount = collectedItemCount;
         Stars = stars;
         Seed = seed;
         VariantIndex = variantIndex;

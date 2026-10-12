@@ -11,6 +11,7 @@ public class LevelSession : GameSession
 
     private TimedLevelBuildResult _buildResult;
     private LevelRunResult _result;
+    private int _collectedItemCount;
 
     public LevelEntry CurrentLevel { get; private set; }
     public CountdownTimer Timer => _timer;
@@ -61,6 +62,11 @@ public class LevelSession : GameSession
             _timer.StartTimer();
     }
 
+    protected override void HandleMatchRegistered(MatchResolution match)
+    {
+        _collectedItemCount += match.Items.Count;
+    }
+
     protected override void HandlePaused()
     {
         _timer.Pause();
@@ -100,6 +106,7 @@ public class LevelSession : GameSession
             activeTimeMilliseconds,
             remainingTimeMilliseconds,
             remainingItemCount,
+            _collectedItemCount,
             stars,
             _buildResult.Seed,
             _buildResult.VariantIndex);

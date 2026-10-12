@@ -14,18 +14,15 @@ public sealed class LevelResultView : MonoBehaviour
     [SerializeField] private Button _nextButton;
     [SerializeField] private LanguageYG _nextLevelLocalization;
     [SerializeField] private LanguageYG _endlessModeLocalization;
-    [SerializeField] private LanguageYG _victoryLocalization;
-    [SerializeField] private LanguageYG _defeatLocalization;
     [SerializeField] private StarRatingView _earnedStars;
     [SerializeField] private TMP_Text _timeResult;
     [SerializeField] private TMP_Text _bestTimeResult;
     [SerializeField] private TMP_Text _bestScoreResult;
     [SerializeField] private GameObject _newRecordRoot;
-    [SerializeField] private GameObject _remainingItemsRoot;
-    [SerializeField] private TMP_Text _remainingItemsResult;
     [SerializeField] private RectTransform _lightRays;
     [SerializeField] private GameObject _sparkles;
-    [SerializeField] private Image _defeatClock;
+    [SerializeField] private GameObject _victoryPanel;
+    [SerializeField] private DefeatResultView _defeatPanel;
 
     private Tween _raysTween;
 
@@ -45,6 +42,8 @@ public sealed class LevelResultView : MonoBehaviour
         _menuButton.onClick.AddListener(MenuButtonClicked);
         _reviewButton.onClick.AddListener(ReviewButtonClicked);
         _nextButton.onClick.AddListener(NextButtonClicked);
+        _defeatPanel.RestartRequested += RestartButtonClicked;
+        _defeatPanel.MenuRequested += MenuButtonClicked;
     }
 
     private void OnDisable()
@@ -53,6 +52,13 @@ public sealed class LevelResultView : MonoBehaviour
         _menuButton?.onClick.RemoveListener(MenuButtonClicked);
         _reviewButton?.onClick.RemoveListener(ReviewButtonClicked);
         _nextButton?.onClick.RemoveListener(NextButtonClicked);
+
+        if (_defeatPanel != null)
+        {
+            _defeatPanel.RestartRequested -= RestartButtonClicked;
+            _defeatPanel.MenuRequested -= MenuButtonClicked;
+        }
+
         _raysTween?.Kill();
         _raysTween = null;
     }
@@ -62,31 +68,13 @@ public sealed class LevelResultView : MonoBehaviour
         if (result == null)
             throw new ArgumentNullException(nameof(result));
 
-        _finalScoreResult.SetText(result.Score.ToString());
-        _bestScoreResult.SetText(bestScore.ToString());
-        _timeResult.SetText(TimeTextFormatter.FormatMilliseconds(result.ActiveTimeMilliseconds));
-        _bestTimeResult.SetText(TimeTextFormatter.FormatMilliseconds(bestTimeMilliseconds));
-        _remainingItemsResult.SetText(result.RemainingItemCount.ToString());
-
-        SetResultMode(result.Won);
-        _timeResult.transform.parent.gameObject.SetActive(result.Won);
-        _bestTimeResult.transform.parent.gameObject.SetActive(result.Won);
-        _bestScoreResult.transform.parent.gameObject.SetActive(result.Won);
-        _reviewButton.gameObject.SetActive(result.Won && isReviewAvailable);
-        _nextButton.gameObject.SetActive(result.Won);
-        _remainingItemsRoot.SetActive(!result.Won);
-
-        if (_newRecordRoot != null)
-            _newRecordRoot.SetActive(result.Won && isNewRecord);
-
-        SetNextButtonText(opensEndlessMode);
         gameObject.SetActive(true);
+        SetResultMode(result.Won);
 
         if (result.Won)
-        {
-            _earnedStars.RevealRating(result.Stars);
-            StartRaysAnimation(result.Stars);
-        }
+            ShowVictory(result, bestTimeMilliseconds, bestScore, isReviewAvailable, opensEndlessMode, isNewRecord);
+        else
+            _defeatPanel.Show(result, bestScore);
     }
 
     public void Hide()
@@ -105,21 +93,33 @@ public sealed class LevelResultView : MonoBehaviour
         _menuButton.interactable = interactable;
         _reviewButton.interactable = interactable;
         _nextButton.interactable = interactable;
+        _defeatPanel.SetInteractable(interactable);
+    }
+
+    private void ShowVictory(LevelRunResult result, long bestTimeMilliseconds, long bestScore, bool isReviewAvailable, bool opensEndlessMode, bool isNewRecord)
+    {
+        _finalScoreResult.SetText(result.Score.ToString());
+        _bestScoreResult.SetText(bestScore.ToString());
+        _timeResult.SetText(TimeTextFormatter.FormatMilliseconds(result.ActiveTimeMilliseconds));
+        _bestTimeResult.SetText(TimeTextFormatter.FormatMilliseconds(bestTimeMilliseconds));
+        _reviewButton.gameObject.SetActive(isReviewAvailable);
+
+        if (_newRecordRoot != null)
+            _newRecordRoot.SetActive(isNewRecord);
+
+        SetNextButtonText(opensEndlessMode);
+        _earnedStars.RevealRating(result.Stars);
+        StartRaysAnimation(result.Stars);
     }
 
     private void SetResultMode(bool won)
     {
-        _victoryLocalization.enabled = won;
-        _defeatLocalization.enabled = !won;
-        _earnedStars.gameObject.SetActive(won);
+        _victoryPanel.SetActive(won);
         _lightRays.gameObject.SetActive(won);
         _sparkles.SetActive(won);
-        _defeatClock.gameObject.SetActive(!won);
 
-        LanguageYG title = won ? _victoryLocalization : _defeatLocalization;
-
-        if (title.gameObject.activeInHierarchy)
-            title.SwitchLanguage();
+        if (won)
+            _defeatPanel.Hide();
     }
 
     private void StartRaysAnimation(int stars)
@@ -173,10 +173,10 @@ public sealed class LevelResultView : MonoBehaviour
         if (_finalScoreResult == null || _timeResult == null || _bestTimeResult == null || _bestScoreResult == null)
             throw new InvalidOperationException(nameof(TMP_Text));
 
-        if (_nextLevelLocalization == null || _endlessModeLocalization == null || _victoryLocalization == null || _defeatLocalization == null)
+        if (_nextLevelLocalization == null || _endlessModeLocalization == null)
             throw new InvalidOperationException(nameof(LanguageYG));
 
-        if (_earnedStars == null || _remainingItemsRoot == null || _remainingItemsResult == null || _lightRays == null || _sparkles == null || _defeatClock == null)
+        if (_earnedStars == null || _lightRays == null || _sparkles == null || _victoryPanel == null || _defeatPanel == null)
             throw new InvalidOperationException(nameof(LevelResultView));
     }
 }
