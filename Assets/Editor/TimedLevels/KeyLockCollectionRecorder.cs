@@ -17,7 +17,7 @@ public static class KeyLockCollectionRecorder
     private const string ActiveKey = "KeyLockCollectionRecorder.Active";
     private const string SelectionPath = "Assets/Levels/Menu/CurrentLevelSelection.asset";
     private const string ScenePath = "Assets/Scenes/SixthLevel.unity";
-    private const string OutputFolderName = ".utmp/key-locks/video";
+    private const string OutputFolderName = "LocalOutput/key-locks/video";
     private const string TakeName = "key-collection";
     private const int OutputWidth = 1280;
     private const int OutputHeight = 720;

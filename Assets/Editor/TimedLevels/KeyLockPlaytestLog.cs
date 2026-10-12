@@ -13,7 +13,7 @@ public static class KeyLockPlaytestLog
     private const string EnabledKey = "KeyLockPlaytestLog.Enabled";
     private const string MenuPath = "Tools/Key Locks/Playtest Log";
     private const string SceneName = "SixthLevel";
-    private const string LogFolder = ".utmp/key-locks";
+    private const string LogFolder = "LocalOutput/key-locks";
     private const string LogFileName = "playtest.csv";
     private const string Header = "date;level;variant;seed;solution_moves;won;stars;time_s;moves;safe_openings";
 

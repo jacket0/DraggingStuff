@@ -18,7 +18,7 @@ public static class TimedCampaignPlayModeValidation
     private const int MaximumClosedShelfMoves = 800;
     private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
     private const string SelectionPath = "Assets/Levels/Menu/CurrentLevelSelection.asset";
-    private const string OutputDirectory = "C:/Users/Михаил/DruggingStuff/.utmp/timed-campaign-playmode";
+    private const string OutputFolderName = "LocalOutput/timed-campaign-playmode";
 
     private static LevelSession _session;
     private static ShelfBoard _board;
@@ -44,6 +44,8 @@ public static class TimedCampaignPlayModeValidation
     private static readonly BoardMoveSimulator Simulator = new BoardMoveSimulator();
     private static readonly System.Random Random = new System.Random(20260926);
     private static readonly float[] FramingAspects = { 21f / 9f, 16f / 9f, 16f / 10f, 3f / 2f, 4f / 3f, 1f, 3f / 4f, 9f / 16f };
+
+    private static string OutputDirectory => System.IO.Path.Combine(System.IO.Directory.GetParent(Application.dataPath).FullName, OutputFolderName);
 
     static TimedCampaignPlayModeValidation()
     {

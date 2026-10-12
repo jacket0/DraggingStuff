@@ -7,7 +7,9 @@ using UnityEngine;
 
 public static class TimedCampaignWebGlBuild
 {
-    private const string OutputPath = "C:/Users/Михаил/DruggingStuff/.utmp/timed-campaign-webgl-final";
+    private const string OutputFolderName = "LocalOutput/timed-campaign-webgl-final";
+
+    private static string OutputPath => Path.Combine(Directory.GetParent(Application.dataPath).FullName, OutputFolderName);
 
     public static void Run()
     {
