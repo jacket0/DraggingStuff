@@ -116,7 +116,8 @@ public static class KeyLockPlayModeValidation
             ValidateTimeoutWithPendingCollection,
             ValidateDragFromShelfWithKey,
             ValidateDropOnLockedShelf,
-            ValidateSuggestionPrefersKey
+            ValidateSuggestionPrefersKey,
+            ValidateKeyShelfFreedDuringOpening
         };
 
         foreach (Func<IEnumerable> scenario in scenarios)
@@ -229,6 +230,26 @@ public static class KeyLockPlayModeValidation
         foreach (object step in WaitUntilSettledWatchingKeys("P5 resume")) yield return step;
 
         ExpectBoard(expected, "P5");
+    }
+
+    private static IEnumerable ValidateKeyShelfFreedDuringOpening()
+    {
+        foreach (object step in LoadLevel(GetScenarioLevel())) yield return step;
+
+        BoardStateSnapshot expected = Move(Arrange(new[] { 0 }, SingleKeyLayout()), new ColumnPosition(3, 0), new ColumnPosition(4, 2));
+        Shelf keyShelf = _board.Shelves[3];
+        Shelf safe = _board.Shelves[0];
+
+        foreach (object step in WaitUntil(() => _keyLocks.IsCollecting && FindFlyingKey() != null, "key flight")) yield return step;
+        foreach (object step in WaitUntil(() => !_board.IsShelfLocked(keyShelf) || !_keyLocks.IsCollecting, "key shelf release")) yield return step;
+
+        Expect(_keyLocks.IsCollecting, "P11: the key shelf must be released while the safe is still opening");
+        Expect(_session.CanPickUp(keyShelf.ColumnViews[0]), "P11: an item of the key shelf must be available during the opening");
+        Expect(_board.IsShelfLocked(safe) || _board.IsKeyLocked(safe), "P11: the safe must stay unavailable until its door is open");
+
+        foreach (object step in WaitUntilSettledWatchingKeys("P11")) yield return step;
+
+        ExpectBoard(expected, "P11");
     }
 
     private static IEnumerable ValidateRestartWithPendingCollection()

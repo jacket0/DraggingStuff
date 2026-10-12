@@ -84,7 +84,7 @@ public sealed class KeyLocksController : MonoBehaviour
             if (key == null || !_pendingKeys.Add(key))
                 continue;
 
-            _session.RequestBoardChange(new[] { shelf, key.LockedShelf }, completed => PlayCollection(shelf, column, completed));
+            _session.RequestBoardChange(new[] { shelf }, completed => PlayCollection(shelf, column, completed));
         }
     }
 
@@ -94,7 +94,7 @@ public sealed class KeyLocksController : MonoBehaviour
             GetDoor(shelf).PlayShudder();
     }
 
-    private void PlayCollection(Shelf shelf, ShelfColumn column, Action completed)
+    private void PlayCollection(Shelf shelf, ShelfColumn column, Action keyShelfCompleted)
     {
         if (column.FrontKey.View == null)
             throw new InvalidOperationException($"{column.FrontKey.name}: the key has no view.");
@@ -102,27 +102,36 @@ public sealed class KeyLocksController : MonoBehaviour
         ShelfKey key = column.TakeFrontKey();
         Shelf safe = key.LockedShelf;
         _pendingKeys.Remove(key);
-        _shelfBoard.OpenKeyLockedShelf(safe);
         SafeDoorView door = GetDoor(safe);
         _collectionCount++;
-        int pendingAnimationCount = 2;
+        bool isDoorOpened = false;
+        Action safeCompleted = null;
 
-        void CompleteAnimation()
+        void TryFinishSafe()
         {
-            pendingAnimationCount--;
-
-            if (pendingAnimationCount > 0)
+            if (!isDoorOpened || safeCompleted == null)
                 return;
 
             key.Delete();
             _collectionCount--;
             SafeOpened?.Invoke(safe);
-            completed();
+            safeCompleted();
         }
 
+        _session.RequestBoardChange(new[] { safe }, completed =>
+        {
+            _shelfBoard.OpenKeyLockedShelf(safe);
+            safeCompleted = completed;
+            TryFinishSafe();
+        });
+
         _audio.PlayKeyPickup();
-        key.View.PlayCollection(door.LockPoint, () => door.PlayOpen(CompleteAnimation));
-        shelf.View.Advance(CompleteAnimation);
+        key.View.PlayCollection(door.LockPoint, () => door.PlayOpen(() =>
+        {
+            isDoorOpened = true;
+            TryFinishSafe();
+        }));
+        shelf.View.Advance(keyShelfCompleted);
     }
 
     private SafeDoorView GetDoor(Shelf safe)
