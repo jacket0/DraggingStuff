@@ -1,67 +1,183 @@
 {
-    "idSave": 160,
+    "idSave": 485,
     "GameProgress": {
-        "Version": 1,
+        "Version": 3,
         "LegacyDataImported": true,
+        "TutorialCompleted": false,
         "Levels": [
             {
                 "LevelNumber": 1,
-                "BestScore": 9500,
+                "BestScore": 12400,
+                "BestCompletionTimeMilliseconds": 19335,
+                "Stars": 3,
                 "IsCompleted": true
             },
             {
                 "LevelNumber": 2,
-                "BestScore": 10500,
+                "BestScore": 11500,
+                "BestCompletionTimeMilliseconds": 24573,
+                "Stars": 3,
                 "IsCompleted": true
             },
             {
                 "LevelNumber": 3,
-                "BestScore": 13100,
+                "BestScore": 15500,
+                "BestCompletionTimeMilliseconds": 20670,
+                "Stars": 3,
                 "IsCompleted": true
             },
             {
                 "LevelNumber": 4,
-                "BestScore": 14300,
+                "BestScore": 11000,
+                "BestCompletionTimeMilliseconds": 25914,
+                "Stars": 3,
                 "IsCompleted": true
             },
             {
                 "LevelNumber": 5,
-                "BestScore": 16500,
+                "BestScore": 19500,
+                "BestCompletionTimeMilliseconds": 30937,
+                "Stars": 3,
                 "IsCompleted": true
             },
             {
                 "LevelNumber": 6,
-                "BestScore": 17900,
+                "BestScore": 8800,
+                "BestCompletionTimeMilliseconds": 30834,
+                "Stars": 3,
                 "IsCompleted": true
             },
             {
                 "LevelNumber": 7,
-                "BestScore": 8400,
+                "BestScore": 7300,
+                "BestCompletionTimeMilliseconds": 53537,
+                "Stars": 2,
                 "IsCompleted": true
             },
             {
                 "LevelNumber": 8,
-                "BestScore": 18800,
+                "BestScore": 10300,
+                "BestCompletionTimeMilliseconds": 47838,
+                "Stars": 3,
                 "IsCompleted": true
             },
             {
                 "LevelNumber": 9,
-                "BestScore": 17100,
+                "BestScore": 5000,
+                "BestCompletionTimeMilliseconds": 90000,
+                "Stars": 1,
                 "IsCompleted": true
             },
             {
                 "LevelNumber": 10,
-                "BestScore": 20000,
+                "BestScore": 5000,
+                "BestCompletionTimeMilliseconds": 90000,
+                "Stars": 1,
                 "IsCompleted": true
             },
             {
                 "LevelNumber": 11,
-                "BestScore": 21900,
+                "BestScore": 39900,
+                "BestCompletionTimeMilliseconds": 62653,
+                "Stars": 3,
                 "IsCompleted": true
             },
             {
                 "LevelNumber": 12,
-                "BestScore": 22700,
+                "BestScore": 16900,
+                "BestCompletionTimeMilliseconds": 74472,
+                "Stars": 3,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 13,
+                "BestScore": 34300,
+                "BestCompletionTimeMilliseconds": 167117,
+                "Stars": 1,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 14,
+                "BestScore": 5000,
+                "BestCompletionTimeMilliseconds": 90000,
+                "Stars": 1,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 15,
+                "BestScore": 22800,
+                "BestCompletionTimeMilliseconds": 74253,
+                "Stars": 3,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 16,
+                "BestScore": 18800,
+                "BestCompletionTimeMilliseconds": 43517,
+                "Stars": 3,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 17,
+                "BestScore": 23800,
+                "BestCompletionTimeMilliseconds": 63634,
+                "Stars": 3,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 18,
+                "BestScore": 5000,
+                "BestCompletionTimeMilliseconds": 90000,
+                "Stars": 1,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 19,
+                "BestScore": 5000,
+                "BestCompletionTimeMilliseconds": 90000,
+                "Stars": 1,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 20,
+                "BestScore": 19300,
+                "BestCompletionTimeMilliseconds": 66906,
+                "Stars": 3,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 21,
+                "BestScore": 9500,
+                "BestCompletionTimeMilliseconds": 21551,
+                "Stars": 3,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 22,
+                "BestScore": 10500,
+                "BestCompletionTimeMilliseconds": 22057,
+                "Stars": 3,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 23,
+                "BestScore": 11500,
+                "BestCompletionTimeMilliseconds": 29023,
+                "Stars": 3,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 24,
+                "BestScore": 12300,
+                "BestCompletionTimeMilliseconds": 30692,
+                "Stars": 3,
+                "IsCompleted": true
+            },
+            {
+                "LevelNumber": 25,
+                "BestScore": 12800,
+                "BestCompletionTimeMilliseconds": 37258,
+                "Stars": 3,
                 "IsCompleted": true
             }
         ],
@@ -69,11 +185,11 @@
         "Bonuses": [
             {
                 "Id": "combo_freeze",
-                "Amount": 0
+                "Amount": 2
             },
             {
                 "Id": "hint",
-                "Amount": 0
+                "Amount": 2
             }
         ]
     }
