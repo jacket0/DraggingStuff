@@ -12,6 +12,7 @@ public sealed class SafeDoorView : MonoBehaviour
     [SerializeField] private ParticleSystem _unlockFlash;
     [SerializeField] private ParticleSystem _barsDust;
     [SerializeField] private ParticleSystem _openSparkles;
+    [SerializeField] private KeyLockAudioPlayer _audio;
     [SerializeField, Min(0.01f)] private float _unlockDuration = 0.12f;
     [SerializeField, Min(0f)] private float _unlockPunchScale = 0.25f;
     [SerializeField, Min(0.01f)] private float _lockDropDuration = 0.3f;
@@ -25,6 +26,8 @@ public sealed class SafeDoorView : MonoBehaviour
     [SerializeField, Min(0f)] private float _itemHop = 0.04f;
     [SerializeField, Min(0.01f)] private float _itemHopDuration = 0.22f;
     [SerializeField, Min(0f)] private float _itemHopStagger = 0.06f;
+    [SerializeField, Min(0f)] private float _shudderStrength = 0.015f;
+    [SerializeField, Min(0.01f)] private float _shudderDuration = 0.25f;
 
     private Vector3 _closedBarsPosition;
     private Vector3 _closedBarsScale;
@@ -33,6 +36,7 @@ public sealed class SafeDoorView : MonoBehaviour
     private Vector3 _closedLockScale;
     private GameObject _mark;
     private Sequence _opening;
+    private Tween _shudder;
 
     public Shelf Shelf => _shelf;
     public Transform LockPoint => _lock;
@@ -63,6 +67,9 @@ public sealed class SafeDoorView : MonoBehaviour
         if (_openSparkles == null)
             throw new InvalidOperationException(nameof(_openSparkles));
 
+        if (_audio == null)
+            throw new InvalidOperationException(nameof(_audio));
+
         _closedBarsPosition = _bars.localPosition;
         _closedBarsScale = _bars.localScale;
         _closedLockPosition = _lock.localPosition;
@@ -76,6 +83,7 @@ public sealed class SafeDoorView : MonoBehaviour
             throw new ArgumentNullException(nameof(mark));
 
         Cancel();
+        StopShudder();
         _bars.localPosition = _closedBarsPosition;
         _bars.localScale = _closedBarsScale;
         _lock.localPosition = _closedLockPosition;
@@ -89,12 +97,27 @@ public sealed class SafeDoorView : MonoBehaviour
         _doorRoot.SetActive(true);
     }
 
+    public void PlayShudder()
+    {
+        if (_opening != null || !_doorRoot.activeSelf || _shudder != null)
+            return;
+
+        _shudder = _bars.DOPunchPosition(Vector3.right * _shudderStrength, _shudderDuration, 10, 0.5f)
+            .SetLink(gameObject, LinkBehaviour.KillOnDestroy)
+            .OnKill(() => _shudder = null);
+    }
+
     public void PlayOpen(Action completed)
     {
         Cancel();
+        StopShudder();
         Sequence opening = DOTween.Sequence();
         _opening = opening;
-        opening.AppendCallback(() => _unlockFlash.Play(true));
+        opening.AppendCallback(() =>
+        {
+            _unlockFlash.Play(true);
+            _audio.PlayLockClick();
+        });
         opening.Append(_lock.DOPunchScale(Vector3.one * _unlockPunchScale, _unlockDuration, 6, 0.5f));
 
         float dropStart = opening.Duration();
@@ -103,7 +126,11 @@ public sealed class SafeDoorView : MonoBehaviour
         opening.Insert(dropStart + _lockDropDuration * 0.5f, _lock.DOScale(Vector3.zero, _lockDropDuration * 0.5f).SetEase(Ease.InBack));
 
         float liftStart = dropStart + _lockDropDuration * _liftStart;
-        opening.InsertCallback(liftStart, () => _barsDust.Play(true));
+        opening.InsertCallback(liftStart, () =>
+        {
+            _barsDust.Play(true);
+            _audio.PlayBars();
+        });
         Vector3 rolledPosition = _closedBarsPosition + Vector3.up * (_barsTop * _closedBarsScale.y * (1f - _rolledBarsScale));
         opening.Insert(liftStart, _bars.DOLocalMove(rolledPosition, _liftDuration).SetEase(Ease.OutCubic));
         opening.Insert(liftStart, _bars.DOScaleY(_closedBarsScale.y * _rolledBarsScale, _liftDuration).SetEase(Ease.OutCubic));
@@ -137,6 +164,12 @@ public sealed class SafeDoorView : MonoBehaviour
         Sequence opening = _opening;
         _opening = null;
         opening?.Kill();
+    }
+
+    private void StopShudder()
+    {
+        _shudder?.Kill();
+        _bars.localPosition = _closedBarsPosition;
     }
 
     private void InsertItemWave(Sequence opening, float startTime)

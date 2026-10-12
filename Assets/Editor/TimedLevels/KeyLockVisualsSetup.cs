@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -9,7 +10,22 @@ public static class KeyLockVisualsSetup
 {
     private const string OldKeyMaterialPath = "Assets/Materials/KeyLocks/KeyGold.mat";
     private const string KeyMaterialPath = "Assets/Materials/KeyLocks/KeyIron.mat";
+    private const string WallMaterialPath = "Assets/Materials/KeyLocks/VaultWall.mat";
+    private const string WallMeshName = "Prop_Wall_01";
+    private const string SeamMaterialPath = "Assets/Materials/KeyLocks/VaultWallSeam.mat";
+    private const string WheelMaterialPath = "Assets/Materials/KeyLocks/SafeWheel.mat";
+    private const string SeamsName = "VaultWallSeams";
+    private const string SeamMeshFolder = "Assets/Models/KeyLocks";
+    private const string SeamMeshPath = "Assets/Models/KeyLocks/VaultWallSeams.asset";
+    private const float SeamWidth = 0.025f;
+    private const float SeamDepth = 0.01f;
+    private static readonly float[] HorizontalSeamHeights = { 1.0f, 3.1f };
     private const float KeyBodyDrop = -0.076f;
+    private const string KeyModelPath = "Assets/Models/Keys/ShelfKey.fbx";
+    private const string KeyMeshName = "KeyMesh";
+    private static readonly string[] PrimitiveKeyParts = { "Bow", "Shaft", "ToothLow", "ToothHigh" };
+    private static readonly Vector3 MarkPointPosition = new Vector3(0f, 0.17f, 0f);
+    private const float MarkPointScale = 0.5f;
     private const string GlowTextureFolder = "Assets/Sprites/KeyLocks";
     private const string GlowTexturePath = "Assets/Sprites/KeyLocks/SoftGlow.png";
     private const string GlowMaterialPath = "Assets/Materials/KeyLocks/KeyGlow.mat";
@@ -20,8 +36,12 @@ public static class KeyLockVisualsSetup
     private const string KeyPrefabPath = "Assets/Prefabs/Keys/ShelfKey.prefab";
     private const string ScenePath = "Assets/Scenes/SixthLevel.unity";
     private const string DoorEffectsName = "SafeDoorEffects";
+    private const string SoundFolder = "Assets/Audio/Sounds/KeyLocks";
 
     private static readonly Color Iron = new Color(0.16f, 0.13f, 0.11f);
+    private static readonly Color VaultSteel = new Color(0.36f, 0.39f, 0.43f);
+    private static readonly Color SeamSteel = new Color(0.2f, 0.22f, 0.25f);
+    private static readonly Color WheelBrass = new Color(0.72f, 0.58f, 0.32f);
     private static readonly Color HaloColor = new Color(1f, 0.82f, 0.35f, 0.4f);
     private static readonly Color SparkColor = new Color(1f, 0.86f, 0.4f, 1f);
     private static readonly Color FlashColor = new Color(1f, 0.85f, 0.45f, 0.9f);
@@ -127,10 +147,10 @@ public static class KeyLockVisualsSetup
             Transform body = GetOrCreateChild(root.transform, "Body");
             body.localPosition = new Vector3(0f, KeyBodyDrop, 0f);
             Transform model = MoveChild(root.transform, body, "Model");
-            MoveChild(root.transform, body, "MarkPoint");
-
-            foreach (MeshRenderer renderer in model.GetComponentsInChildren<MeshRenderer>(true))
-                renderer.sharedMaterial = keyMaterial;
+            Transform markPoint = MoveChild(root.transform, body, "MarkPoint");
+            markPoint.localPosition = MarkPointPosition;
+            markPoint.localScale = Vector3.one * MarkPointScale;
+            BuildKeyMesh(model, keyMaterial);
 
             foreach (string effect in new[] { "Halo", "Trail", "Sparks" })
             {
@@ -166,6 +186,34 @@ public static class KeyLockVisualsSetup
         }
     }
 
+    private static void BuildKeyMesh(Transform model, Material keyMaterial)
+    {
+        foreach (string part in PrimitiveKeyParts)
+            RemoveChild(model, part);
+
+        Mesh mesh = AssetDatabase.LoadAllAssetsAtPath(KeyModelPath).OfType<Mesh>().FirstOrDefault();
+
+        if (mesh == null)
+            throw new InvalidOperationException($"{KeyModelPath}: the key mesh was not found.");
+
+        Transform meshTransform = GetOrCreateChild(model, KeyMeshName);
+        meshTransform.localPosition = Vector3.zero;
+        meshTransform.localRotation = Quaternion.identity;
+        meshTransform.localScale = Vector3.one;
+        MeshFilter filter = meshTransform.GetComponent<MeshFilter>();
+
+        if (filter == null)
+            filter = meshTransform.gameObject.AddComponent<MeshFilter>();
+
+        MeshRenderer renderer = meshTransform.GetComponent<MeshRenderer>();
+
+        if (renderer == null)
+            renderer = meshTransform.gameObject.AddComponent<MeshRenderer>();
+
+        filter.sharedMesh = mesh;
+        renderer.sharedMaterial = keyMaterial;
+    }
+
     private static void SetupScene(Material glow, Material spark, Material dust)
     {
         Scene scene = SceneManager.GetActiveScene();
@@ -183,11 +231,135 @@ public static class KeyLockVisualsSetup
         if (doors.Length == 0)
             throw new InvalidOperationException($"{ScenePath}: no safe doors were found.");
 
+        KeyLockAudioPlayer audio = SetupAudio();
+
         foreach (SafeDoorView door in doors)
+        {
             SetupDoor(door, glow, spark, dust);
+            Assign(door, "_audio", audio);
+        }
+
+        SetupWalls(CreateSteelMaterial(WallMaterialPath, VaultSteel, 0.45f, 0.35f), CreateSteelMaterial(SeamMaterialPath, SeamSteel, 0.45f, 0.3f));
+        CreateSteelMaterial(WheelMaterialPath, WheelBrass, 0.4f, 0.5f);
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
+    }
+
+    private static KeyLockAudioPlayer SetupAudio()
+    {
+        KeyLocksController controller = FindSingle<KeyLocksController>();
+        MatchAudioPlayer matchAudio = FindSingle<MatchAudioPlayer>();
+        GameObject host = controller.gameObject;
+        AudioSource source = host.GetComponent<AudioSource>();
+
+        if (source == null)
+            source = host.AddComponent<AudioSource>();
+
+        source.playOnAwake = false;
+        source.outputAudioMixerGroup = matchAudio.GetComponent<AudioSource>().outputAudioMixerGroup;
+        KeyLockAudioPlayer audio = host.GetComponent<KeyLockAudioPlayer>();
+
+        if (audio == null)
+            audio = host.AddComponent<KeyLockAudioPlayer>();
+
+        Assign(audio, "_keyPickupClip", Load<AudioClip>($"{SoundFolder}/KeyPickup.wav"));
+        Assign(audio, "_lockClickClip", Load<AudioClip>($"{SoundFolder}/LockClick.wav"));
+        Assign(audio, "_barsClip", Load<AudioClip>($"{SoundFolder}/BarsRoll.wav"));
+        Assign(controller, "_audio", audio);
+        Assign(controller, "_dragController", FindSingle<ShelfItemDragController>());
+        return audio;
+    }
+
+    private static T FindSingle<T>() where T : UnityEngine.Object
+    {
+        T[] found = UnityEngine.Object.FindObjectsOfType<T>(true);
+
+        if (found.Length != 1)
+            throw new InvalidOperationException($"Expected exactly one {typeof(T).Name} in the scene, found {found.Length}.");
+
+        return found[0];
+    }
+
+    private static Material CreateSteelMaterial(string path, Color color, float metallic, float smoothness)
+    {
+        Material material = AssetDatabase.LoadAssetAtPath<Material>(path);
+
+        if (material == null)
+        {
+            material = new Material(Shader.Find("Standard"));
+            AssetDatabase.CreateAsset(material, path);
+        }
+
+        material.color = color;
+        material.SetFloat("_Metallic", metallic);
+        material.SetFloat("_Glossiness", smoothness);
+        material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+        EditorUtility.SetDirty(material);
+        return material;
+    }
+
+    private static void SetupWalls(Material wallMaterial, Material seamMaterial)
+    {
+        MeshRenderer[] walls = UnityEngine.Object.FindObjectsOfType<MeshRenderer>(true)
+            .Where(renderer => renderer.TryGetComponent(out MeshFilter filter) && filter.sharedMesh != null && filter.sharedMesh.name == WallMeshName)
+            .ToArray();
+
+        if (walls.Length == 0)
+            throw new InvalidOperationException($"{ScenePath}: no {WallMeshName} walls were found.");
+
+        Bounds bounds = walls[0].bounds;
+
+        foreach (MeshRenderer wall in walls)
+        {
+            wall.sharedMaterial = wallMaterial;
+            bounds.Encapsulate(wall.bounds);
+        }
+
+        Transform wallsRoot = walls[0].transform.parent;
+        RemoveChild(wallsRoot, SeamsName);
+        Transform seams = GetOrCreateChild(wallsRoot, SeamsName);
+        seams.position = Vector3.zero;
+        seams.rotation = Quaternion.identity;
+        seams.localScale = Vector3.one;
+        float frontZ = bounds.max.z + SeamDepth * 0.5f;
+        List<Matrix4x4> parts = new List<Matrix4x4>();
+
+        for (float x = Mathf.Ceil(bounds.min.x) + 1f; x < bounds.max.x; x += 1f)
+            parts.Add(Matrix4x4.TRS(new Vector3(x, bounds.center.y, frontZ), Quaternion.identity, new Vector3(SeamWidth, bounds.size.y, SeamDepth)));
+
+        foreach (float height in HorizontalSeamHeights)
+            parts.Add(Matrix4x4.TRS(new Vector3(bounds.center.x, height, frontZ), Quaternion.identity, new Vector3(bounds.size.x, SeamWidth, SeamDepth)));
+
+        MeshFilter filter = seams.gameObject.AddComponent<MeshFilter>();
+        filter.sharedMesh = SaveSeamMesh(seams.worldToLocalMatrix, parts);
+        MeshRenderer renderer = seams.gameObject.AddComponent<MeshRenderer>();
+        renderer.sharedMaterial = seamMaterial;
+        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        seams.gameObject.isStatic = true;
+    }
+
+    private static Mesh SaveSeamMesh(Matrix4x4 worldToLocal, List<Matrix4x4> parts)
+    {
+        Mesh cube = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+        CombineInstance[] instances = parts
+            .Select(part => new CombineInstance { mesh = cube, transform = worldToLocal * part })
+            .ToArray();
+        Mesh combined = new Mesh { name = SeamsName };
+        combined.CombineMeshes(instances, true, true);
+        Mesh existing = AssetDatabase.LoadAssetAtPath<Mesh>(SeamMeshPath);
+
+        if (existing == null)
+        {
+            EnsureFolder(SeamMeshFolder);
+            AssetDatabase.CreateAsset(combined, SeamMeshPath);
+            return combined;
+        }
+
+        EditorUtility.CopySerialized(combined, existing);
+        UnityEngine.Object.DestroyImmediate(combined);
+        EditorUtility.SetDirty(existing);
+        return existing;
     }
 
     private static void SetupDoor(SafeDoorView door, Material glow, Material spark, Material dust)

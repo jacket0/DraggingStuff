@@ -7,8 +7,10 @@ public sealed class KeyLocksController : MonoBehaviour
 {
     [SerializeField] private LevelSession _session;
     [SerializeField] private ShelfBoard _shelfBoard;
+    [SerializeField] private ShelfItemDragController _dragController;
     [SerializeField] private List<SafeDoorView> _doors = new List<SafeDoorView>();
     [SerializeField] private List<KeyLockMark> _marks = new List<KeyLockMark>();
+    [SerializeField] private KeyLockAudioPlayer _audio;
 
     private readonly HashSet<ShelfKey> _pendingKeys = new HashSet<ShelfKey>();
     private readonly Dictionary<Shelf, KeyLockMark> _safeMarks = new Dictionary<Shelf, KeyLockMark>();
@@ -26,6 +28,12 @@ public sealed class KeyLocksController : MonoBehaviour
         if (_shelfBoard == null)
             throw new InvalidOperationException(nameof(_shelfBoard));
 
+        if (_dragController == null)
+            throw new InvalidOperationException(nameof(_dragController));
+
+        if (_audio == null)
+            throw new InvalidOperationException(nameof(_audio));
+
         if (_doors.Contains(null) || _doors.Select(door => door.Shelf).Distinct().Count() != _doors.Count)
             throw new InvalidOperationException($"{name}: every safe door must belong to its own shelf.");
 
@@ -37,12 +45,14 @@ public sealed class KeyLocksController : MonoBehaviour
     {
         _session.SessionStarted += HandleSessionStarted;
         _session.ShelfResolved += HandleShelfResolved;
+        _dragController.HoveredShelfChanged += HandleHoveredShelfChanged;
     }
 
     private void OnDisable()
     {
         _session.SessionStarted -= HandleSessionStarted;
         _session.ShelfResolved -= HandleShelfResolved;
+        _dragController.HoveredShelfChanged -= HandleHoveredShelfChanged;
     }
 
     private void HandleSessionStarted()
@@ -78,6 +88,12 @@ public sealed class KeyLocksController : MonoBehaviour
         }
     }
 
+    private void HandleHoveredShelfChanged(Shelf shelf)
+    {
+        if (shelf != null && _safeMarks.ContainsKey(shelf) && _shelfBoard.IsKeyLocked(shelf))
+            GetDoor(shelf).PlayShudder();
+    }
+
     private void PlayCollection(Shelf shelf, ShelfColumn column, Action completed)
     {
         if (column.FrontKey.View == null)
@@ -104,6 +120,7 @@ public sealed class KeyLocksController : MonoBehaviour
             completed();
         }
 
+        _audio.PlayKeyPickup();
         key.View.PlayCollection(door.LockPoint, () => door.PlayOpen(CompleteAnimation));
         shelf.View.Advance(CompleteAnimation);
     }
