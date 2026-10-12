@@ -12,6 +12,7 @@ public static class TimedLevelVariantGenerator
     private const int RequiredVariantCount = 12;
     private const int CandidatePoolSize = 24;
     private const int MaximumSeedAttempts = 10000;
+    private const int MaximumKeyLockSeedAttempts = 60000;
 
     [MenuItem("Tools/Timed Levels/Generate All Variants")]
     public static void GenerateAll()
@@ -205,7 +206,9 @@ public static class TimedLevelVariantGenerator
         List<TimedLevelVariant> candidates = new List<TimedLevelVariant>();
         int seedOffset = 1;
 
-        while (candidates.Count < CandidatePoolSize && seedOffset <= MaximumSeedAttempts)
+        int maximumSeedAttempts = definition.HasKeyLocks ? MaximumKeyLockSeedAttempts : MaximumSeedAttempts;
+
+        while (candidates.Count < CandidatePoolSize && seedOffset <= maximumSeedAttempts)
         {
             int seed = checked(levelNumber * 100000 + seedOffset);
             seedOffset++;
