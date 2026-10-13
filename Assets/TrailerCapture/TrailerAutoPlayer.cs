@@ -7,6 +7,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using YG;
 
 public static class TrailerCaptureKeys
 {
@@ -17,11 +18,16 @@ public static class TrailerCaptureKeys
     public const string TailSeconds = "TrailerCapture.TailSeconds";
     public const string EventLogPath = "TrailerCapture.EventLogPath";
     public const string RecordingStartFrame = "TrailerCapture.RecordingStartFrame";
+    public const string Language = "TrailerCapture.Language";
+    public const string ShotsFolder = "TrailerCapture.ShotsFolder";
+    public const string IsCinematic = "TrailerCapture.IsCinematic";
+    public const string ShowsHud = "TrailerCapture.ShowsHud";
+    public const string IntroSeconds = "TrailerCapture.IntroSeconds";
 }
 
 public sealed class TrailerAutoPlayer : MonoBehaviour
 {
-    private const float IntroSeconds = 1.2f;
+    private const float DefaultIntroSeconds = 1.2f;
     private const float ApproachSeconds = 0.3f;
     private const float HoverSeconds = 0.12f;
     private const float DragSeconds = 0.42f;
@@ -37,13 +43,17 @@ public sealed class TrailerAutoPlayer : MonoBehaviour
     private const float MusicCheckIntervalSeconds = 0.25f;
     private const float MusicMinimumClipLengthSeconds = 45f;
     private const int PointerTextureSize = 128;
+    private const float ShotIntervalSeconds = 0.2f;
+    private const float ShotsStartDelaySeconds = 0.8f;
 
     private readonly List<TrailerCaptureEvent> _events = new List<TrailerCaptureEvent>();
+    private readonly List<TrailerPointerSample> _pointerSamples = new List<TrailerPointerSample>();
 
     private GameSession _session;
     private ShelfBoard _shelfBoard;
     private ShelfItemDragController _dragController;
     private Camera _camera;
+    private Canvas _pointerCanvas;
     private RectTransform _pointer;
     private Vector2 _pointerPosition;
     private bool _isPointerPressed;
@@ -54,6 +64,15 @@ public sealed class TrailerAutoPlayer : MonoBehaviour
     private float _startTime;
     private float _nextMusicCheckTime;
     private bool _isFinished;
+    private string _originalLanguage;
+    private string _shotsFolder;
+    private int _moveCount;
+    private bool _isCinematic;
+    private bool _showsHud;
+
+    private bool IsShotsMode => !string.IsNullOrEmpty(_shotsFolder);
+
+    private bool HidesInterface => _isCinematic && !_showsHud;
 
     private float PointerScale => Screen.height / ReferenceScreenHeight;
 
@@ -95,10 +114,24 @@ public sealed class TrailerAutoPlayer : MonoBehaviour
     private IEnumerator Start()
     {
         _startTime = Time.time;
+        _shotsFolder = SessionState.GetString(TrailerCaptureKeys.ShotsFolder, string.Empty);
+        _isCinematic = SessionState.GetBool(TrailerCaptureKeys.IsCinematic, false);
+        _showsHud = SessionState.GetBool(TrailerCaptureKeys.ShowsHud, false);
         CreatePointer();
+
+        if (_isCinematic)
+            _pointer.gameObject.SetActive(false);
 
         yield return null;
         yield return null;
+        yield return ApplyCaptureLanguage();
+
+        if (IsShotsMode)
+        {
+            _pointer.gameObject.SetActive(false);
+            HideLeaderboardPanel();
+            StartCoroutine(CaptureShots());
+        }
 
         _session = FindObjectOfType<GameSession>();
 
@@ -129,12 +162,38 @@ public sealed class TrailerAutoPlayer : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (HidesInterface)
+            HideScreenCanvases();
+
         if (_pointer == null)
             return;
 
         _pointer.position = _pointerPosition;
         float pressScale = _isPointerPressed ? PressedPointerScale : 1f;
         _pointer.localScale = Vector3.one * PointerScale * pressScale;
+
+        if (_isCinematic && !_isFinished)
+            RecordPointerSample();
+    }
+
+    private void HideScreenCanvases()
+    {
+        foreach (Canvas canvas in FindObjectsOfType<Canvas>())
+        {
+            if (canvas != _pointerCanvas && canvas.renderMode != RenderMode.WorldSpace)
+                canvas.enabled = false;
+        }
+    }
+
+    private void RecordPointerSample()
+    {
+        _pointerSamples.Add(new TrailerPointerSample
+        {
+            frame = Time.frameCount,
+            x = _pointerPosition.x / Screen.width,
+            y = _pointerPosition.y / Screen.height,
+            pressed = _isPointerPressed
+        });
     }
 
     private IEnumerator PlayMenu()
@@ -177,7 +236,7 @@ public sealed class TrailerAutoPlayer : MonoBehaviour
         _solution = LoadSolution();
         _pointerPosition = new Vector2(Screen.width * 1.05f, Screen.height * 0.2f);
         LogEvent("start", _solution != null ? "solution" : "greedy");
-        yield return WaitSeconds(IntroSeconds);
+        yield return WaitSeconds(SessionState.GetFloat(TrailerCaptureKeys.IntroSeconds, DefaultIntroSeconds));
 
         int maximumMoves = SessionState.GetInt(TrailerCaptureKeys.MaximumMoves, int.MaxValue);
         int moveCount = 0;
@@ -209,10 +268,47 @@ public sealed class TrailerAutoPlayer : MonoBehaviour
 
             yield return PerformMove(source, target);
             moveCount++;
+            _moveCount = moveCount;
         }
 
         LogEvent("moves_done", moveCount.ToString());
         yield return MovePointerTo(() => new Vector2(Screen.width * 1.1f, Screen.height * 0.1f), PointerExitSeconds);
+    }
+
+    private IEnumerator ApplyCaptureLanguage()
+    {
+        string language = SessionState.GetString(TrailerCaptureKeys.Language, string.Empty);
+
+        if (string.IsNullOrEmpty(language))
+            yield break;
+
+        yield return WaitUntilOrTimeout(() => YG2.isSDKEnabled, WaitForMoveTimeoutSeconds);
+        _originalLanguage = YG2.lang;
+        YG2.SwitchLanguage(language);
+        LogEvent("language", language);
+    }
+
+    private static void HideLeaderboardPanel()
+    {
+        foreach (Transform candidate in FindObjectsOfType<Transform>())
+        {
+            if (candidate.name == "LeaderboardPanel")
+                candidate.gameObject.SetActive(false);
+        }
+    }
+
+    private IEnumerator CaptureShots()
+    {
+        Directory.CreateDirectory(_shotsFolder);
+        yield return WaitSeconds(ShotsStartDelaySeconds);
+        int shotIndex = 0;
+
+        while (!_isFinished)
+        {
+            ScreenCapture.CaptureScreenshot(Path.Combine(_shotsFolder, $"{shotIndex:000}_move{_moveCount:00}.png"));
+            shotIndex++;
+            yield return WaitSeconds(ShotIntervalSeconds);
+        }
     }
 
     private IReadOnlyList<TimedLevelMove> LoadSolution()
@@ -408,6 +504,16 @@ public sealed class TrailerAutoPlayer : MonoBehaviour
         if (closedShelves != null)
             closedShelves.ShelfOpened += shelfIndex => LogEvent("shelf_opened", shelfIndex.ToString());
 
+        KeyLocksController keyLocks = FindObjectOfType<KeyLocksController>();
+
+        if (keyLocks != null)
+            keyLocks.SafeOpened += shelf => LogEvent("safe_opened", shelf.name);
+
+        ShelfFiltersController filters = FindObjectOfType<ShelfFiltersController>();
+
+        if (filters != null)
+            filters.SignsShown += signs => LogEvent("signs_shown", signs.Count.ToString());
+
         ConveyorController conveyor = FindObjectOfType<ConveyorController>();
 
         if (conveyor != null)
@@ -418,9 +524,9 @@ public sealed class TrailerAutoPlayer : MonoBehaviour
     {
         GameObject canvasObject = new GameObject("TrailerPointerCanvas");
         canvasObject.transform.SetParent(transform, false);
-        Canvas canvas = canvasObject.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = short.MaxValue;
+        _pointerCanvas = canvasObject.AddComponent<Canvas>();
+        _pointerCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        _pointerCanvas.sortingOrder = short.MaxValue;
 
         GameObject pointerObject = new GameObject("TrailerPointer");
         pointerObject.transform.SetParent(canvasObject.transform, false);
@@ -500,6 +606,10 @@ public sealed class TrailerAutoPlayer : MonoBehaviour
 
         _isFinished = true;
         _isPointerPressed = false;
+
+        if (!string.IsNullOrEmpty(_originalLanguage))
+            YG2.SwitchLanguage(_originalLanguage);
+
         LogEvent("finish");
         WriteEventLog();
         SessionState.SetBool(TrailerCaptureKeys.IsFinished, true);
@@ -515,7 +625,8 @@ public sealed class TrailerAutoPlayer : MonoBehaviour
         TrailerCaptureLog log = new TrailerCaptureLog
         {
             recordingStartFrame = SessionState.GetInt(TrailerCaptureKeys.RecordingStartFrame, 0),
-            events = _events
+            events = _events,
+            pointer = _pointerSamples
         };
 
         Directory.CreateDirectory(Path.GetDirectoryName(path));
@@ -571,10 +682,20 @@ public sealed class TrailerAutoPlayer : MonoBehaviour
     }
 
     [Serializable]
+    private sealed class TrailerPointerSample
+    {
+        public int frame;
+        public float x;
+        public float y;
+        public bool pressed;
+    }
+
+    [Serializable]
     private sealed class TrailerCaptureLog
     {
         public int recordingStartFrame;
         public List<TrailerCaptureEvent> events;
+        public List<TrailerPointerSample> pointer;
     }
 }
 #endif
