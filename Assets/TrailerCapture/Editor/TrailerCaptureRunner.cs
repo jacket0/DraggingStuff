@@ -210,8 +210,17 @@ public static class TrailerCaptureRunner
         if (change == PlayModeStateChange.EnteredPlayMode)
             StartRecording(SessionState.GetString(CurrentTakeKey, "take"));
 
-        if (change == PlayModeStateChange.EnteredEditMode)
-            _isStopping = false;
+        if (change != PlayModeStateChange.EnteredEditMode)
+            return;
+
+        _isStopping = false;
+
+        if (!SessionState.GetBool(TrailerCaptureKeys.IsFinished, false))
+        {
+            _recorderController = null;
+            Debug.LogWarning("Trailer capture: take interrupted, queue stopped.");
+            EditorApplication.delayCall += Complete;
+        }
     }
 
     private static void Update()

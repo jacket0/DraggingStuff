@@ -144,6 +144,12 @@ public sealed class TrailerAutoPlayer : MonoBehaviour
         Finish();
     }
 
+    private void OnDestroy()
+    {
+        if (!string.IsNullOrEmpty(_originalLanguage))
+            YG2.SwitchLanguage(_originalLanguage);
+    }
+
     private void Update()
     {
         if (Time.time >= _nextMusicCheckTime)
@@ -606,10 +612,6 @@ public sealed class TrailerAutoPlayer : MonoBehaviour
 
         _isFinished = true;
         _isPointerPressed = false;
-
-        if (!string.IsNullOrEmpty(_originalLanguage))
-            YG2.SwitchLanguage(_originalLanguage);
-
         LogEvent("finish");
         WriteEventLog();
         SessionState.SetBool(TrailerCaptureKeys.IsFinished, true);

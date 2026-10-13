@@ -19,6 +19,9 @@ public static class PromoStageRenderer
     [MenuItem("Tools/Promo/Render Stage Variants")]
     private static void RenderAll()
     {
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            return;
+
         string returnScenePath = SceneManager.GetActiveScene().path;
         Directory.CreateDirectory(OutputFolder);
 
@@ -55,13 +58,17 @@ public static class PromoStageRenderer
         target.antiAliasing = 8;
         camera.targetTexture = target;
         camera.Render();
+        camera.targetTexture = null;
 
-        RenderTexture.active = target;
-        Texture2D texture = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
-        texture.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+        RenderTexture output = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32);
+        Graphics.Blit(target, output);
+
+        RenderTexture.active = output;
+        Texture2D texture = new Texture2D(width, height, TextureFormat.RGB24, false);
+        texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
         texture.Apply();
         RenderTexture.active = null;
-        camera.targetTexture = null;
+        RenderTexture.ReleaseTemporary(output);
 
         File.WriteAllBytes(Path.Combine(OutputFolder, name + ".png"), texture.EncodeToPNG());
         Object.DestroyImmediate(texture);
