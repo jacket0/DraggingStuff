@@ -46,6 +46,23 @@ public sealed class EndlessUiController : MonoBehaviour
         _resultRecorder.ResultRecorded -= HandleResultRecorded;
     }
 
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+            TogglePause();
+    }
+
+    private void TogglePause()
+    {
+        if (_isMenuTransitionPending)
+            return;
+
+        if (_session.State == LevelState.Paused)
+            HandleResumeRequested();
+        else
+            HandlePauseRequested();
+    }
+
     private void HandlePauseRequested()
     {
         if (_session.TryPause())

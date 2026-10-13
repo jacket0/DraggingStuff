@@ -57,6 +57,23 @@ public class LevelUiController : MonoBehaviour
         _levelResultView.ReviewRequested -= HandleReviewRequested;
     }
 
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+            TogglePause();
+    }
+
+    private void TogglePause()
+    {
+        if (_isTransitionPending)
+            return;
+
+        if (_levelSession.State == LevelState.Paused)
+            HandleResumeRequested();
+        else
+            HandlePauseRequested();
+    }
+
     private void HandlePauseRequested()
     {
         if (_levelSession.TryPause())
