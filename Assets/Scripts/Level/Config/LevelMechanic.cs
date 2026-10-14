@@ -4,5 +4,6 @@ public enum LevelMechanic
     ShelfFilter,
     ClosedShelves,
     Conveyor,
-    KeyLocks
+    KeyLocks,
+    CyclicShelves
 }

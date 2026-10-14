@@ -150,6 +150,47 @@ public static class TimedLevelValidator
 
         ValidateShelfFilterDefinition(definition, types);
         ValidateKeyLockDefinition(definition);
+        ValidateCyclicShelfDefinition(definition);
+    }
+
+    private static void ValidateCyclicShelfDefinition(TimedLevelDefinition definition)
+    {
+        if (!definition.HasCyclicShelves)
+        {
+            if (definition.MinimumItemsBehindShutter != 0 || definition.MinimumPreparationMoves != 0)
+                throw new InvalidOperationException($"{definition.name}: shutter and preparation minimums require cyclic shelves.");
+
+            return;
+        }
+
+        IReadOnlyList<CyclicShelfDefinition> cyclicShelves = definition.CyclicShelves;
+
+        if (cyclicShelves.Any(cyclicShelf => cyclicShelf == null))
+            throw new InvalidOperationException($"{definition.name}: a cyclic shelf is missing.");
+
+        if (cyclicShelves.Count < TimedLevelLayoutRules.MinimumCyclicShelfCount || cyclicShelves.Count > TimedLevelLayoutRules.MaximumCyclicShelfCount)
+            throw new InvalidOperationException($"{definition.name}: a level needs {TimedLevelLayoutRules.MinimumCyclicShelfCount} to {TimedLevelLayoutRules.MaximumCyclicShelfCount} cyclic shelves.");
+
+        if (cyclicShelves.Any(cyclicShelf => cyclicShelf.ShelfIndex < 0))
+            throw new InvalidOperationException($"{definition.name}: cyclic shelf indices must be non-negative.");
+
+        if (cyclicShelves.Select(cyclicShelf => cyclicShelf.ShelfIndex).Distinct().Count() != cyclicShelves.Count)
+            throw new InvalidOperationException($"{definition.name}: a cyclic shelf index is duplicated.");
+
+        if (definition.HasClosedShelves || definition.HasConveyors || definition.HasShelfFilters || definition.HasKeyLocks)
+            throw new InvalidOperationException($"{definition.name}: cyclic shelves cannot share a level with closed shelves, conveyors, shelf filters or key locks.");
+
+        foreach (CyclicShelfDefinition cyclicShelf in cyclicShelves)
+        {
+            if (cyclicShelf.OpenMoves < 1 || cyclicShelf.ClosedMoves < 1 || cyclicShelf.MovesToFirstSwitch < 1)
+                throw new InvalidOperationException($"{definition.name}: cyclic shelf {cyclicShelf.ShelfIndex} needs positive durations and moves to the first switch.");
+
+            if (cyclicShelf.MovesToFirstSwitch > cyclicShelf.StartDuration)
+                throw new InvalidOperationException($"{definition.name}: cyclic shelf {cyclicShelf.ShelfIndex} switches after {cyclicShelf.MovesToFirstSwitch} moves, longer than its starting state of {cyclicShelf.StartDuration}.");
+
+            if (cyclicShelf.OpenMoves != cyclicShelves[0].OpenMoves || cyclicShelf.ClosedMoves != cyclicShelves[0].ClosedMoves)
+                throw new InvalidOperationException($"{definition.name}: cyclic shelves of one level must share their open and closed durations.");
+        }
     }
 
     private static void ValidateKeyLockDefinition(TimedLevelDefinition definition)
@@ -297,6 +338,24 @@ public static class TimedLevelValidator
 
         if (definition.HasKeyLocks)
             ValidateKeyLockBoard(definition, board);
+
+        if (definition.HasCyclicShelves)
+            ValidateCyclicShelfBoard(definition, board);
+    }
+
+    private static void ValidateCyclicShelfBoard(TimedLevelDefinition definition, BoardStateSnapshot board)
+    {
+        foreach (CyclicShelfDefinition cyclicShelf in definition.CyclicShelves)
+        {
+            if (cyclicShelf.ShelfIndex >= board.Shelves.Count)
+                throw new InvalidOperationException($"{definition.name}: cyclic shelf index {cyclicShelf.ShelfIndex} is out of range.");
+
+            if (board.Shelves[cyclicShelf.ShelfIndex].Capacity != TimedLevelLayoutRules.CyclicShelfCapacity)
+                throw new InvalidOperationException($"{definition.name}: cyclic shelf {cyclicShelf.ShelfIndex} must have capacity {TimedLevelLayoutRules.CyclicShelfCapacity}.");
+        }
+
+        if (board.Shelves.Count - definition.CyclicShelves.Count < TimedLevelLayoutRules.MinimumAlwaysOpenShelfCount)
+            throw new InvalidOperationException($"{definition.name}: at least {TimedLevelLayoutRules.MinimumAlwaysOpenShelfCount} regular shelves must stay open next to cyclic shelves.");
     }
 
     private static void ValidateKeyLockBoard(TimedLevelDefinition definition, BoardStateSnapshot board)
@@ -361,6 +420,7 @@ public static class TimedLevelValidator
         HashSet<int> closedShelfIndices = new HashSet<int>(definition.ClosedShelves.Select(closedShelf => closedShelf.ShelfIndex));
         HashSet<int> keyLockedShelfIndices = new HashSet<int>(definition.KeyLockedShelfIndices);
         HashSet<int> conveyorShelfIndices = new HashSet<int>(definition.ConveyorShelfIndices);
+        Dictionary<int, CyclicShelfDefinition> cyclicShelves = definition.CyclicShelves.ToDictionary(cyclicShelf => cyclicShelf.ShelfIndex);
 
         for (int shelfIndex = 0; shelfIndex < layout.Shelves.Count; shelfIndex++)
         {
@@ -370,13 +430,17 @@ public static class TimedLevelValidator
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has an incompatible shelf capacity.");
 
             bool isKeyLocked = keyLockedShelfIndices.Contains(shelfIndex);
-            bool shouldBeOpen = !closedShelfIndices.Contains(shelfIndex) && !isKeyLocked;
+            bool isCyclic = cyclicShelves.TryGetValue(shelfIndex, out CyclicShelfDefinition cyclicShelf);
+            bool shouldBeOpen = isCyclic ? cyclicShelf.StartsOpen : !closedShelfIndices.Contains(shelfIndex) && !isKeyLocked;
 
             if (shelf.IsOpen != shouldBeOpen)
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has an incorrect open state for shelf {shelfIndex}.");
 
-            if (!shelf.IsOpen && !isKeyLocked && !shelf.Columns.All(column => column.IsEmpty))
+            if (!shelf.IsOpen && !isKeyLocked && !isCyclic && !shelf.Columns.All(column => column.IsEmpty))
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has items on closed shelf {shelfIndex}.");
+
+            if (isCyclic && !shelf.IsOpen && shelf.Columns.Any(column => column.Count == 0))
+                throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has an empty column on closed cyclic shelf {shelfIndex}.");
 
             if (isKeyLocked && shelf.Columns.Any(column => column.Count == 0))
                 throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} has an empty column on key-locked shelf {shelfIndex}.");

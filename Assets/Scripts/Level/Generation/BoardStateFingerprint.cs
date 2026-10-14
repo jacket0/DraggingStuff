@@ -17,7 +17,8 @@ public static class BoardStateFingerprint
             List<string> columns = shelf.Columns.Select(CreateColumnKey).ToList();
             columns.Sort(StringComparer.Ordinal);
             string marker = !shelf.IsOpen ? "C" : shelf.IsConveyor ? "B" : shelf.IsFiltered ? $"{CreateFilterMarker(shelf)}|" : "";
-            shelves.Add($"[{marker}{string.Join("", columns)}]");
+            string cycleMarker = shelf.IsCyclic ? $"{CreateCycleMarker(shelf)}|" : "";
+            shelves.Add($"[{marker}{cycleMarker}{string.Join("", columns)}]");
         }
 
         if (!HasPhysicalShelfReferences(board))
@@ -44,6 +45,9 @@ public static class BoardStateFingerprint
             if (shelf.IsFiltered)
                 layout.Append(CreateFilterMarker(shelf));
 
+            if (shelf.IsCyclic)
+                layout.Append(CreateCycleMarker(shelf));
+
             layout.Append('[');
 
             foreach (ColumnStateSnapshot column in shelf.Columns)
@@ -68,12 +72,17 @@ public static class BoardStateFingerprint
 
     private static bool HasPhysicalShelfReferences(BoardStateSnapshot board)
     {
-        return board.HasKeys || board.Shelves.Any(shelf => !shelf.IsOpen && shelf.Columns.Any(column => column.Count > 0));
+        return board.HasKeys || board.HasCycles || board.Shelves.Any(shelf => !shelf.IsOpen && shelf.Columns.Any(column => column.Count > 0));
     }
 
     private static string CreateFilterMarker(ShelfStateSnapshot shelf)
     {
         return "F" + string.Join(".", shelf.AcceptedTypes.Select(type => (int)type));
+    }
+
+    private static string CreateCycleMarker(ShelfStateSnapshot shelf)
+    {
+        return $"Y{shelf.Cycle.OpenMoves}.{shelf.Cycle.ClosedMoves}.{shelf.Cycle.MovesToSwitch}";
     }
 
     private static string CreateColumnKey(ColumnStateSnapshot column)

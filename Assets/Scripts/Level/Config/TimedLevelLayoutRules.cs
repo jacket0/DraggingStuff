@@ -8,6 +8,10 @@ public static class TimedLevelLayoutRules
     public const int ConveyorShelfCapacity = 3;
     public const int KeyLockedShelfCapacity = 3;
     public const int MaximumKeyLockedShelfCount = 4;
+    public const int CyclicShelfCapacity = 3;
+    public const int MinimumCyclicShelfCount = 2;
+    public const int MaximumCyclicShelfCount = 3;
+    public const int MinimumAlwaysOpenShelfCount = 2;
     public const int MaximumAcceptedTypeCount = ShelfStateSnapshot.MaximumAcceptedTypeCount;
 
     public static bool IsConveyorStartFilled(ShelfStateSnapshot shelf)

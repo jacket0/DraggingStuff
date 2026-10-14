@@ -56,8 +56,11 @@ public sealed class BoardMoveSimulator
         affectedShelves[target.ShelfIndex] = true;
         List<int> openedShelfIndexes = new List<int>();
         List<MatchInfo> matches = ResolveBoard(shelves, affectedShelves, openedShelfIndexes, board.FilteredTypes);
-        bool conveyorsShifted = matches.Count > 0 && board.HasConveyors;
+        bool isMatchingMove = matches.Count > 0;
+        bool conveyorsShifted = isMatchingMove && board.HasConveyors;
         int matchCountAfterShift = 0;
+        List<int> switchedShelfIndexes = new List<int>();
+        int matchCountAfterSwitch = 0;
 
         if (conveyorsShifted)
         {
@@ -67,8 +70,54 @@ public sealed class BoardMoveSimulator
             matches.AddRange(matchesAfterShift);
         }
 
-        simulation = CreateSimulation(shelves, board.FilteredTypes, matches, affectedShelves, openedShelfIndexes, isSwap, conveyorsShifted, matchCountAfterShift);
+        if (isMatchingMove && board.HasCycles)
+        {
+            AdvanceCycles(shelves, affectedShelves, switchedShelfIndexes);
+            List<MatchInfo> matchesAfterSwitch = ResolveBoard(shelves, affectedShelves, openedShelfIndexes, board.FilteredTypes);
+            matchCountAfterSwitch = matchesAfterSwitch.Count;
+            matches.AddRange(matchesAfterSwitch);
+        }
+
+        simulation = CreateSimulation(
+            shelves,
+            board.FilteredTypes,
+            matches,
+            affectedShelves,
+            openedShelfIndexes,
+            isSwap,
+            conveyorsShifted,
+            matchCountAfterShift,
+            switchedShelfIndexes,
+            matchCountAfterSwitch);
         return true;
+    }
+
+    public BoardStateSnapshot AdvanceCycles(BoardStateSnapshot board, out IReadOnlyList<int> switchedShelfIndexes)
+    {
+        if (board == null)
+            throw new ArgumentNullException(nameof(board));
+
+        ShelfStateSnapshot[] shelves = CopyShelves(board);
+        List<int> switchedIndexes = new List<int>();
+        AdvanceCycles(shelves, new bool[shelves.Length], switchedIndexes);
+        switchedShelfIndexes = switchedIndexes.AsReadOnly();
+        return new BoardStateSnapshot(shelves, board.FilteredTypes);
+    }
+
+    public BoardStateSnapshot ApplyCycleRescue(BoardStateSnapshot board, bool isRepeated, out IReadOnlyList<MatchInfo> matches)
+    {
+        BoardStateSnapshot rescuedBoard = CycleDeadlockRule.ApplyRescue(board, isRepeated, out _);
+        return ResolveMatches(rescuedBoard, out matches);
+    }
+
+    public BoardStateSnapshot ResolveMatches(BoardStateSnapshot board, out IReadOnlyList<MatchInfo> matches)
+    {
+        if (board == null)
+            throw new ArgumentNullException(nameof(board));
+
+        ShelfStateSnapshot[] shelves = CopyShelves(board);
+        matches = ResolveBoard(shelves, new bool[shelves.Length], new List<int>(), board.FilteredTypes).AsReadOnly();
+        return new BoardStateSnapshot(shelves, board.FilteredTypes);
     }
 
     public ShelfStateSnapshot ResolveShelfMatches(BoardStateSnapshot board, int shelfIndex)
@@ -123,6 +172,23 @@ public sealed class BoardMoveSimulator
 
             shelves[shelfIndex] = shelves[shelfIndex].ShiftConveyor();
             affectedShelves[shelfIndex] = true;
+        }
+    }
+
+    private static void AdvanceCycles(ShelfStateSnapshot[] shelves, bool[] affectedShelves, List<int> switchedShelfIndexes)
+    {
+        for (int shelfIndex = 0; shelfIndex < shelves.Length; shelfIndex++)
+        {
+            if (!shelves[shelfIndex].IsCyclic)
+                continue;
+
+            shelves[shelfIndex] = shelves[shelfIndex].AdvanceCycle(1, out bool switched);
+
+            if (!switched)
+                continue;
+
+            affectedShelves[shelfIndex] = true;
+            switchedShelfIndexes.Add(shelfIndex);
         }
     }
 
@@ -226,7 +292,9 @@ public sealed class BoardMoveSimulator
         List<int> openedShelfIndexes,
         bool isSwap,
         bool conveyorsShifted,
-        int matchCountAfterShift)
+        int matchCountAfterShift,
+        List<int> switchedShelfIndexes,
+        int matchCountAfterSwitch)
     {
         List<int> affectedShelfIndexes = new List<int>();
 
@@ -243,7 +311,9 @@ public sealed class BoardMoveSimulator
             openedShelfIndexes,
             isSwap,
             conveyorsShifted,
-            matchCountAfterShift);
+            matchCountAfterShift,
+            switchedShelfIndexes,
+            matchCountAfterSwitch);
     }
 
     private static void ReplaceColumn(ShelfStateSnapshot[] shelves, ColumnPosition position, ColumnStateSnapshot column)

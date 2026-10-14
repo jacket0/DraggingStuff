@@ -52,13 +52,15 @@ public sealed class Shelf : MonoBehaviour
         bool isOpen = true,
         bool isConveyor = false,
         IReadOnlyList<ItemType> acceptedTypes = null,
-        Func<Shelf, int> getLockedShelfIndex = null)
+        Func<Shelf, int> getLockedShelfIndex = null,
+        ShelfCycleSnapshot cycle = null)
     {
         return new ShelfStateSnapshot(
             Columns.Select(column => column.CreateSnapshot(getLockedShelfIndex)).ToArray(),
             isOpen,
             isConveyor,
-            acceptedTypes ?? Array.Empty<ItemType>());
+            acceptedTypes ?? Array.Empty<ItemType>(),
+            cycle);
     }
 
     public bool ShiftConveyor()

@@ -43,6 +43,7 @@ public static class TimedCampaignValidation
         ConveyorModelValidation.Run(catalog);
         ShelfFilterModelValidation.Run(catalog);
         KeyLockModelValidation.Run(catalog);
+        CyclicShelfModelValidation.Run(catalog);
         ValidateTripleRefillGenerator();
         ValidateRevealedShelfLatinSquare();
         ValidateCampaignScenes(catalog);
@@ -73,6 +74,7 @@ public static class TimedCampaignValidation
         ConveyorModelValidation.Run(catalog);
         ShelfFilterModelValidation.Run(catalog);
         KeyLockModelValidation.Run(catalog);
+        CyclicShelfModelValidation.Run(catalog);
         ValidateTripleRefillGenerator();
         ValidateRevealedShelfLatinSquare();
         ValidateSwapHoverViews();

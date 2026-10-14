@@ -18,6 +18,8 @@ public sealed class ShelfStateSnapshot
     public IReadOnlyList<ItemType> AcceptedTypes { get; }
     public bool IsFiltered => AcceptedTypes.Count > 0;
     public bool HasKeys => Columns.Any(column => column.HasKeys);
+    public ShelfCycleSnapshot Cycle { get; }
+    public bool IsCyclic => Cycle != null;
 
     public ShelfStateSnapshot(IReadOnlyList<ColumnStateSnapshot> columns) : this(columns, true)
     {
@@ -33,6 +35,16 @@ public sealed class ShelfStateSnapshot
     }
 
     public ShelfStateSnapshot(IReadOnlyList<ColumnStateSnapshot> columns, bool isOpen, bool isConveyor, IReadOnlyList<ItemType> acceptedTypes)
+        : this(columns, isOpen, isConveyor, acceptedTypes, null)
+    {
+    }
+
+    public ShelfStateSnapshot(
+        IReadOnlyList<ColumnStateSnapshot> columns,
+        bool isOpen,
+        bool isConveyor,
+        IReadOnlyList<ItemType> acceptedTypes,
+        ShelfCycleSnapshot cycle)
     {
         if (columns == null)
             throw new ArgumentNullException(nameof(columns));
@@ -58,18 +70,37 @@ public sealed class ShelfStateSnapshot
 
         if (IsFiltered && (!isOpen || isConveyor))
             throw new ArgumentException("Only an open regular shelf can be filtered.", nameof(acceptedTypes));
+
+        if (cycle != null && (isConveyor || IsFiltered))
+            throw new ArgumentException("Only a regular shelf can be cyclic.", nameof(cycle));
+
+        Cycle = cycle;
     }
 
     public bool Accepts(ItemType type) => !IsFiltered || AcceptedTypes.Contains(type);
 
     public ShelfStateSnapshot WithColumns(IReadOnlyList<ColumnStateSnapshot> columns)
     {
-        return new ShelfStateSnapshot(columns, IsOpen, IsConveyor, AcceptedTypes);
+        return new ShelfStateSnapshot(columns, IsOpen, IsConveyor, AcceptedTypes, Cycle);
     }
 
     public ShelfStateSnapshot WithOpenState(bool isOpen)
     {
-        return new ShelfStateSnapshot(Columns, isOpen, IsConveyor, AcceptedTypes);
+        return new ShelfStateSnapshot(Columns, isOpen, IsConveyor, AcceptedTypes, Cycle);
+    }
+
+    public ShelfStateSnapshot WithCycle(ShelfCycleSnapshot cycle, bool isOpen)
+    {
+        return new ShelfStateSnapshot(Columns, isOpen, IsConveyor, AcceptedTypes, cycle);
+    }
+
+    public ShelfStateSnapshot AdvanceCycle(int moves, out bool switched)
+    {
+        if (!IsCyclic)
+            throw new InvalidOperationException("Only a cyclic shelf can advance its cycle.");
+
+        ShelfCycleSnapshot cycle = Cycle.Advance(IsOpen, moves, out switched);
+        return WithCycle(cycle, switched ? !IsOpen : IsOpen);
     }
 
     public ShelfStateSnapshot ShiftConveyor()

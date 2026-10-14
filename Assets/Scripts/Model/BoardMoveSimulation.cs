@@ -11,6 +11,8 @@ public sealed class BoardMoveSimulation
     public bool IsSwap { get; }
     public bool ConveyorsShifted { get; }
     public int MatchCountAfterShift { get; }
+    public IReadOnlyList<int> SwitchedShelfIndexes { get; }
+    public int MatchCountAfterSwitch { get; }
     public IReadOnlyList<int> OpenedShelfIndexes { get; }
     public int OpenedShelfCount => OpenedShelfIndexes.Count;
     public int EmptyColumnCount => State.EmptyColumnCount;
@@ -23,7 +25,9 @@ public sealed class BoardMoveSimulation
         IReadOnlyList<int> openedShelfIndexes,
         bool isSwap = false,
         bool conveyorsShifted = false,
-        int matchCountAfterShift = 0)
+        int matchCountAfterShift = 0,
+        IReadOnlyList<int> switchedShelfIndexes = null,
+        int matchCountAfterSwitch = 0)
     {
         State = state ?? throw new ArgumentNullException(nameof(state));
         Matches = new List<MatchInfo>(matches).AsReadOnly();
@@ -32,5 +36,7 @@ public sealed class BoardMoveSimulation
         MatchCountAfterShift = matchCountAfterShift;
         AffectedShelfIndexes = Array.AsReadOnly(affectedShelfIndexes.ToArray());
         OpenedShelfIndexes = Array.AsReadOnly(openedShelfIndexes.ToArray());
+        SwitchedShelfIndexes = Array.AsReadOnly(switchedShelfIndexes?.ToArray() ?? Array.Empty<int>());
+        MatchCountAfterSwitch = matchCountAfterSwitch;
     }
 }

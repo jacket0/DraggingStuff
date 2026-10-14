@@ -11,6 +11,7 @@ public sealed class BoardStateSnapshot
     public int EmptyColumnCount { get; }
     public int ItemCount { get; }
     public bool HasConveyors { get; }
+    public bool HasCycles { get; }
     public int KeyCount { get; }
     public bool HasKeys => KeyCount > 0;
     public bool IsCleared => ItemCount == 0;
@@ -31,6 +32,7 @@ public sealed class BoardStateSnapshot
             ShelfStateSnapshot shelf = shelves[index] ?? throw new ArgumentException("The board contains a null shelf.", nameof(shelves));
             copy[index] = shelf;
             HasConveyors |= shelf.IsConveyor;
+            HasCycles |= shelf.IsCyclic;
 
             foreach (ColumnStateSnapshot column in shelf.Columns)
             {

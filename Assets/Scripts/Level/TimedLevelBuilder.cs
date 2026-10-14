@@ -74,8 +74,12 @@ public sealed class TimedLevelBuilder : MonoBehaviour
                     column.AddKey(CreateKey(key.LockedShelfIndex), key.ItemsInFront);
             }
 
+            CyclicShelfDefinition cyclicShelf = definition.CyclicShelves.FirstOrDefault(cell => cell.ShelfIndex == shelfIndex);
+
             if (definition.KeyLockedShelfIndices.Contains(shelfIndex))
                 _shelfBoard.CloseKeyLockedShelf(shelf);
+            else if (cyclicShelf != null)
+                _shelfBoard.MarkCyclic(shelf, cyclicShelf.CreateCycle(), layout.Shelves[shelfIndex].IsOpen);
             else if (!layout.Shelves[shelfIndex].IsOpen)
                 _shelfBoard.CloseShelf(shelf);
 

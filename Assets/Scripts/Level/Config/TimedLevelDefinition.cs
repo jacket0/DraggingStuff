@@ -21,6 +21,9 @@ public sealed class TimedLevelDefinition : ScriptableObject
     [SerializeField] private List<int> _keyLockedShelfIndices = new List<int>();
     [SerializeField, Min(1)] private int _minimumKeyDepth = 1;
     [SerializeField, Min(0)] private int _minimumMovesToFirstKey;
+    [SerializeField] private List<CyclicShelfDefinition> _cyclicShelves = new List<CyclicShelfDefinition>();
+    [SerializeField, Min(0)] private int _minimumItemsBehindShutter;
+    [SerializeField, Min(0)] private int _minimumPreparationMoves;
 
     public int TimeLimitSeconds => _timeLimitSeconds;
     public int TwoStarTimeSeconds => _twoStarTimeSeconds;
@@ -42,6 +45,10 @@ public sealed class TimedLevelDefinition : ScriptableObject
     public bool HasKeyLocks => _keyLockedShelfIndices.Count > 0;
     public int MinimumKeyDepth => _minimumKeyDepth;
     public int MinimumMovesToFirstKey => _minimumMovesToFirstKey;
+    public IReadOnlyList<CyclicShelfDefinition> CyclicShelves => _cyclicShelves;
+    public bool HasCyclicShelves => _cyclicShelves.Count > 0;
+    public int MinimumItemsBehindShutter => _minimumItemsBehindShutter;
+    public int MinimumPreparationMoves => _minimumPreparationMoves;
 
     public int GetMechanicElementCount(LevelMechanic mechanic) => mechanic switch
     {
@@ -50,6 +57,9 @@ public sealed class TimedLevelDefinition : ScriptableObject
         LevelMechanic.ClosedShelves => _closedShelves.Count,
         LevelMechanic.Conveyor => _conveyorShelfIndices.Count,
         LevelMechanic.KeyLocks => _keyLockedShelfIndices.Count,
+        LevelMechanic.CyclicShelves => _cyclicShelves.Count,
         _ => throw new ArgumentOutOfRangeException(nameof(mechanic))
     };
+
+    public BoardStateSnapshot AddCyclicShelves(BoardStateSnapshot layout) => CyclicShelfDefinition.AddCycles(layout, _cyclicShelves);
 }

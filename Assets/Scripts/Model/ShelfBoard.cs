@@ -11,6 +11,8 @@ public sealed class ShelfBoard : MonoBehaviour
     private readonly HashSet<Shelf> _closedShelves = new HashSet<Shelf>();
     private readonly HashSet<Shelf> _conveyorShelves = new HashSet<Shelf>();
     private readonly HashSet<Shelf> _keyLockedShelves = new HashSet<Shelf>();
+    private readonly Dictionary<Shelf, ShelfCycleSnapshot> _shelfCycles = new Dictionary<Shelf, ShelfCycleSnapshot>();
+    private readonly Dictionary<Shelf, bool> _cyclePhases = new Dictionary<Shelf, bool>();
     private readonly Dictionary<Shelf, IReadOnlyList<ItemType>> _shelfFilters = new Dictionary<Shelf, IReadOnlyList<ItemType>>();
     private IReadOnlyCollection<ItemType> _filteredTypes = Array.Empty<ItemType>();
     private readonly Dictionary<ShelfColumn, ColumnPosition> _positions = new Dictionary<ShelfColumn, ColumnPosition>();
@@ -18,13 +20,14 @@ public sealed class ShelfBoard : MonoBehaviour
     private bool _initialized;
 
     public IReadOnlyList<Shelf> Shelves => _shelves;
-    public bool IsCleared => _closedShelves.Count == 0 && _shelves.All(shelf => shelf.IsCleared);
+    public bool IsCleared => _closedShelves.All(IsCyclic) && _shelves.All(shelf => shelf.IsCleared);
     public bool HasLockedShelves => _lockedShelves.Count > 0;
     public bool HasClosedShelves => _closedShelves.Count > 0;
     public bool HasConveyors => _conveyorShelves.Count > 0;
     public IReadOnlyList<Shelf> ConveyorShelves => _shelves.Where(IsConveyor).ToArray();
     public bool HasFilters => _shelfFilters.Count > 0;
     public bool HasKeyLocks => _keyLockedShelves.Count > 0;
+    public bool HasCycles => _shelfCycles.Count > 0;
     public ShelfItemPlacementAnimator ItemAnimations { get; } = new ShelfItemPlacementAnimator();
 
     public void Initialize()
@@ -71,7 +74,7 @@ public sealed class ShelfBoard : MonoBehaviour
 
     public void CloseShelf(Shelf shelf)
     {
-        if (shelf == null || !_shelves.Contains(shelf) || !shelf.IsCleared || IsConveyor(shelf) || IsFiltered(shelf) || !_closedShelves.Add(shelf))
+        if (shelf == null || !_shelves.Contains(shelf) || !shelf.IsCleared || IsConveyor(shelf) || IsFiltered(shelf) || IsCyclic(shelf) || !_closedShelves.Add(shelf))
             throw new InvalidOperationException("Only an empty shelf on this board can be closed.");
     }
 
@@ -81,7 +84,7 @@ public sealed class ShelfBoard : MonoBehaviour
 
     public void CloseKeyLockedShelf(Shelf shelf)
     {
-        if (shelf == null || !_shelves.Contains(shelf) || shelf.IsCleared || IsConveyor(shelf) || IsFiltered(shelf) || IsShelfClosed(shelf))
+        if (shelf == null || !_shelves.Contains(shelf) || shelf.IsCleared || IsConveyor(shelf) || IsFiltered(shelf) || IsCyclic(shelf) || IsShelfClosed(shelf))
             throw new InvalidOperationException("Only a filled regular open shelf on this board can be locked by a key.");
 
         _closedShelves.Add(shelf);
@@ -100,7 +103,7 @@ public sealed class ShelfBoard : MonoBehaviour
 
     public void MarkConveyor(Shelf shelf)
     {
-        if (shelf == null || !_shelves.Contains(shelf) || IsShelfClosed(shelf) || IsFiltered(shelf) || !_conveyorShelves.Add(shelf))
+        if (shelf == null || !_shelves.Contains(shelf) || IsShelfClosed(shelf) || IsFiltered(shelf) || IsCyclic(shelf) || !_conveyorShelves.Add(shelf))
             throw new InvalidOperationException("Only an open shelf on this board can be marked as a conveyor once.");
     }
 
@@ -115,7 +118,7 @@ public sealed class ShelfBoard : MonoBehaviour
 
     public void SetFilter(Shelf shelf, IReadOnlyList<ItemType> acceptedTypes)
     {
-        if (shelf == null || !_shelves.Contains(shelf) || IsShelfClosed(shelf) || IsConveyor(shelf) || IsFiltered(shelf))
+        if (shelf == null || !_shelves.Contains(shelf) || IsShelfClosed(shelf) || IsConveyor(shelf) || IsFiltered(shelf) || IsCyclic(shelf))
             throw new InvalidOperationException("Only an open regular shelf on this board can be filtered once.");
 
         ItemType[] normalizedTypes = acceptedTypes?.Distinct().OrderBy(type => type).ToArray() ?? Array.Empty<ItemType>();
@@ -125,6 +128,84 @@ public sealed class ShelfBoard : MonoBehaviour
 
         _shelfFilters.Add(shelf, Array.AsReadOnly(normalizedTypes));
         _filteredTypes = BoardStateSnapshot.CollectFilteredTypes(_shelfFilters.Values);
+    }
+
+    public bool IsCyclic(Shelf shelf) => shelf != null && _cyclePhases.ContainsKey(shelf);
+
+    public ShelfCycleSnapshot GetCycle(Shelf shelf) => shelf != null && _shelfCycles.TryGetValue(shelf, out ShelfCycleSnapshot cycle) ? cycle : null;
+
+    public bool IsCyclePhaseOpen(Shelf shelf)
+    {
+        return IsCyclic(shelf) ? _cyclePhases[shelf] : throw new InvalidOperationException("Only a cyclic shelf on this board has a cycle phase.");
+    }
+
+    public void MarkCyclic(Shelf shelf, ShelfCycleSnapshot cycle, bool isOpen)
+    {
+        if (cycle == null)
+            throw new ArgumentNullException(nameof(cycle));
+
+        if (shelf == null || !_shelves.Contains(shelf) || IsShelfClosed(shelf) || IsConveyor(shelf) || IsFiltered(shelf) || IsCyclic(shelf))
+            throw new InvalidOperationException("Only an open regular shelf on this board can be marked as cyclic once.");
+
+        if (cycle.MovesToSwitch > cycle.GetDuration(isOpen))
+            throw new InvalidOperationException("The first switch of a cyclic shelf cannot come later than its starting state lasts.");
+
+        _shelfCycles.Add(shelf, cycle);
+        _cyclePhases.Add(shelf, isOpen);
+
+        if (!isOpen)
+            _closedShelves.Add(shelf);
+    }
+
+    public void SetCyclicShelfOpen(Shelf shelf, bool isOpen)
+    {
+        if (!IsCyclic(shelf))
+            throw new InvalidOperationException("Only a cyclic shelf on this board can be switched.");
+
+        if (isOpen)
+            _closedShelves.Remove(shelf);
+        else
+            _closedShelves.Add(shelf);
+    }
+
+    public IReadOnlyList<Shelf> AdvanceCycles()
+    {
+        List<Shelf> switchedShelves = new List<Shelf>();
+
+        foreach (Shelf shelf in _shelfCycles.Keys.ToArray())
+        {
+            bool isOpen = _cyclePhases[shelf];
+            _shelfCycles[shelf] = _shelfCycles[shelf].Advance(isOpen, out bool switched);
+
+            if (!switched)
+                continue;
+
+            _cyclePhases[shelf] = !isOpen;
+            switchedShelves.Add(shelf);
+        }
+
+        return switchedShelves;
+    }
+
+    public IReadOnlyList<Shelf> ApplyCycleRescue(bool isRepeated)
+    {
+        if (_cyclePhases.Any(phase => phase.Value == IsShelfClosed(phase.Key)))
+            throw new InvalidOperationException("A cycle rescue requires every cyclic shelf to finish its switch.");
+
+        BoardStateSnapshot rescuedBoard = CycleDeadlockRule.ApplyRescue(CreateSnapshot(), isRepeated, out IReadOnlyList<int> switchedShelfIndexes);
+
+        foreach (Shelf shelf in _cyclePhases.Keys.ToArray())
+        {
+            ShelfStateSnapshot rescuedShelf = rescuedBoard.Shelves[GetShelfIndex(shelf)];
+            _cyclePhases[shelf] = rescuedShelf.IsOpen;
+
+            if (rescuedShelf.IsCyclic)
+                _shelfCycles[shelf] = rescuedShelf.Cycle;
+            else
+                _shelfCycles.Remove(shelf);
+        }
+
+        return switchedShelfIndexes.Select(shelfIndex => _shelves[shelfIndex]).ToArray();
     }
 
     public bool CanMatch(Shelf shelf) => CreateShelfSnapshot(shelf).CanMatch(_filteredTypes);
@@ -209,7 +290,10 @@ public sealed class ShelfBoard : MonoBehaviour
         return MoveOutcome.SuccessfulSwap(sourceItem, targetItem, source, target, affected);
     }
 
-    private ShelfStateSnapshot CreateShelfSnapshot(Shelf shelf) => shelf.CreateSnapshot(!IsShelfClosed(shelf), IsConveyor(shelf), GetAcceptedTypes(shelf), GetShelfIndex);
+    private ShelfStateSnapshot CreateShelfSnapshot(Shelf shelf)
+    {
+        return shelf.CreateSnapshot(!IsShelfClosed(shelf), IsConveyor(shelf), GetAcceptedTypes(shelf), GetShelfIndex, GetCycle(shelf));
+    }
 
     private int GetShelfIndex(Shelf shelf)
     {
