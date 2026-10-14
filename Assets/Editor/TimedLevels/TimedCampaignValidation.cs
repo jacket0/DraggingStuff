@@ -15,6 +15,8 @@ public static class TimedCampaignValidation
     private const int LevelsPerChapter = 5;
     private const string FirstClosedShelfDefinitionPath = "Assets/Levels/Timed/TimedLevel_C3_01.asset";
     private const string LevelResultWindowPath = "Assets/Prefabs/UI/Level/LevelResultWindow.prefab";
+    private const string CampaignTimerPrefabPath = "Assets/Prefabs/UI/Common/CampaignTimerHud.prefab";
+    private const string EndlessTimerPrefabPath = "Assets/Prefabs/UI/Common/EndlessTimerHud.prefab";
 
     private static readonly Dictionary<LevelMechanic, string> MechanicSceneNames = new Dictionary<LevelMechanic, string>
     {
@@ -606,7 +608,7 @@ public static class TimedCampaignValidation
             RequireReference(defeat, "_defeatClip");
             RequireReference(defeat, "_outputAudioMixerGroup");
             ValidateCampaignHud(sceneName, timerView);
-            ValidateResultWindowPrefab(sceneName, result);
+            ValidatePrefabInstance(sceneName, result.gameObject, LevelResultWindowPath);
             ValidateResultLayout(sceneName, result);
             ValidateShelfFilterScene(sceneName, scene, catalog.Levels.Where(level => level.SceneName == sceneName && level.Definition.HasShelfFilters));
         }
@@ -650,6 +652,15 @@ public static class TimedCampaignValidation
             throw new InvalidOperationException("Endless countdown timer");
 
         RequireReference(timer, "_countdownTimer");
+
+        EndlessTimerView timerView = FindInScene<EndlessTimerView>(scene);
+        RequireReference(timerView, "_timer");
+        RequireReference(timerView, "_secondsText");
+        RequireReference(timerView, "_addedTimeText");
+        RequireReference(timerView, "_progressImage");
+        RequireReference(timerView, "_frameImage");
+        RequireReference(timerView, "_vignetteImage");
+        ValidatePrefabInstance("EndlessLevel", timerView.gameObject, EndlessTimerPrefabPath);
     }
 
     private static void ValidateSwapHoverViews()
@@ -722,6 +733,22 @@ public static class TimedCampaignValidation
     {
         if (FindAllInScene<CampaignTimerView>(timerView.gameObject.scene).Count() != 1)
             throw new InvalidOperationException($"{sceneName}: duplicate campaign timers.");
+
+        ValidatePrefabInstance(sceneName, timerView.gameObject, CampaignTimerPrefabPath);
+    }
+
+    private static void ValidatePrefabInstance(string sceneName, GameObject instance, string prefabPath)
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+
+        if (prefab == null)
+            throw new InvalidOperationException($"Prefab not found: {prefabPath}");
+
+        if (PrefabUtility.GetNearestPrefabInstanceRoot(instance) != instance
+            || PrefabUtility.GetCorrespondingObjectFromSource(instance) != prefab)
+        {
+            throw new InvalidOperationException($"{sceneName}: {instance.name} is not a {prefabPath} instance.");
+        }
     }
 
     private static void ValidateResultLayout(string sceneName, LevelResultView result)
@@ -757,18 +784,6 @@ public static class TimedCampaignValidation
 
         if (defeatPanel == null || defeatPanel.GetComponent<DefeatResultView>() == null)
             throw new InvalidOperationException($"{sceneName}: defeat panel layout.");
-    }
-
-    private static void ValidateResultWindowPrefab(string sceneName, LevelResultView result)
-    {
-        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(LevelResultWindowPath);
-
-        if (prefab == null
-            || PrefabUtility.GetNearestPrefabInstanceRoot(result.gameObject) != result.gameObject
-            || PrefabUtility.GetCorrespondingObjectFromSource(result.gameObject) != prefab)
-        {
-            throw new InvalidOperationException($"{sceneName}: result window is not a {LevelResultWindowPath} instance.");
-        }
     }
 
     private static bool IsStackedInside(RectTransform background, RectTransform upper, RectTransform lower)

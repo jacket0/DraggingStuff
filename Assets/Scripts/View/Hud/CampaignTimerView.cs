@@ -11,7 +11,6 @@ public sealed class CampaignTimerView : MonoBehaviour
     [SerializeField] private StarRatingView _availableStars;
     [SerializeField] private Image _frameImage;
     [SerializeField] private Image _clockImage;
-    [SerializeField] private Color _normalColor = Color.white;
     [SerializeField] private Color _criticalColor = new Color(1f, 0.35f, 0.05f);
     [SerializeField, Range(0f, 1f)] private float _criticalTimeRatio = 0.2f;
     [SerializeField, Min(0.01f)] private float _pulseDuration = 0.55f;
@@ -20,11 +19,18 @@ public sealed class CampaignTimerView : MonoBehaviour
     private Tween _pulseTween;
     private TimedLevelDefinition _definition;
     private bool _isCritical;
+    private Color _frameNormalColor;
+    private Color _clockNormalColor;
+    private Color _timeNormalColor;
 
     private void Awake()
     {
         if (_levelSession == null || _timeText == null || _startHint == null || _availableStars == null || _frameImage == null || _clockImage == null)
             throw new System.InvalidOperationException(nameof(CampaignTimerView));
+
+        _frameNormalColor = _frameImage.color;
+        _clockNormalColor = _clockImage.color;
+        _timeNormalColor = _timeText.color;
     }
 
     private void OnEnable()
@@ -75,10 +81,9 @@ public sealed class CampaignTimerView : MonoBehaviour
             return;
 
         _isCritical = isCritical;
-        Color color = isCritical ? _criticalColor : _normalColor;
-        _frameImage.color = color;
-        _clockImage.color = color;
-        _timeText.color = color;
+        _frameImage.color = isCritical ? _criticalColor : _frameNormalColor;
+        _clockImage.color = isCritical ? _criticalColor : _clockNormalColor;
+        _timeText.color = isCritical ? _criticalColor : _timeNormalColor;
 
         StopPulse();
 

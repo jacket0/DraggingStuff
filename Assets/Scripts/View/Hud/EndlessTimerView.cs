@@ -30,6 +30,12 @@ public sealed class EndlessTimerView : MonoBehaviour
     private float _visualPressure;
     private float _pressureVelocity;
 
+    private void Awake()
+    {
+        if (_timer == null || _secondsText == null || _progressImage == null || _frameImage == null || _vignetteImage == null)
+            throw new System.InvalidOperationException(nameof(EndlessTimerView));
+    }
+
     private void OnEnable()
     {
         _timer.StateChanged += ApplyState;
