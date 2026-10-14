@@ -84,7 +84,7 @@ public sealed class EndlessTimerView : MonoBehaviour
     {
         _targetPressure = GetPressure(state);
         _secondsText.SetText(state.RemainingTime.ToString("0.0", CultureInfo.InvariantCulture));
-        _progressImage.fillAmount = state.NormalizedTime;
+        _progressImage.rectTransform.anchorMax = new Vector2(Mathf.Clamp01(state.NormalizedTime), 1f);
     }
 
     private float GetPressure(EndlessTimerState state)
