@@ -118,6 +118,32 @@ public static class TimedLevelVariantGenerator
         }
     }
 
+    [MenuItem("Tools/Timed Levels/Generate Cyclic Shelf Levels")]
+    public static void GenerateCyclicShelfLevels()
+    {
+        LevelCatalog catalog = AssetDatabase.LoadAssetAtPath<LevelCatalog>(CatalogPath);
+
+        if (catalog == null)
+            throw new InvalidOperationException($"Level catalog was not found at {CatalogPath}.");
+
+        SceneSetup[] sceneSetup = EditorSceneManager.GetSceneManagerSetup();
+
+        try
+        {
+            LevelEntry[] levels = catalog.Levels.Where(level => level != null && level.Definition != null && level.Definition.HasCyclicShelves).ToArray();
+
+            foreach (LevelEntry level in levels)
+                Generate(level);
+
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Generated {RequiredVariantCount} verified variants for {levels.Length} cyclic shelf levels.");
+        }
+        finally
+        {
+            EditorSceneManager.RestoreSceneManagerSetup(sceneSetup);
+        }
+    }
+
     [MenuItem("Tools/Timed Levels/Generate Key Lock Levels")]
     public static void GenerateKeyLockLevels()
     {
@@ -247,11 +273,22 @@ public static class TimedLevelVariantGenerator
                 }
             }
 
+            if (definition.HasCyclicShelves)
+            {
+                CandidateRejection? cycleRejection = CheckCycles(definition, generation);
+
+                if (cycleRejection.HasValue)
+                {
+                    CountRejection(rejections, cycleRejection.Value);
+                    continue;
+                }
+            }
+
             TimedLevelSolver solver = new TimedLevelSolver(
                 generation.SolutionMoves.Count,
                 generation.SolutionMoves.Count + 1,
                 TimeSpan.FromSeconds(5));
-            TimedLevelSolveResult solveResult = solver.Solve(generation.State, generation.SolutionMoves);
+            TimedLevelSolveResult solveResult = solver.Solve(definition.AddCyclicShelves(generation.State), generation.SolutionMoves);
 
             if (solveResult.Status != TimedLevelSolveStatus.Solved)
             {
@@ -304,6 +341,25 @@ public static class TimedLevelVariantGenerator
             return CandidateRejection.KeyAccessUnknown;
 
         generation = new TimedLevelGenerationResult(keyedLayout, generation.SolutionMoves);
+        return null;
+    }
+
+    private static CandidateRejection? CheckCycles(TimedLevelDefinition definition, TimedLevelGenerationResult generation)
+    {
+        CyclicShelfLayoutMetrics metrics = CyclicShelfLayoutMetrics.Measure(definition.AddCyclicShelves(generation.State), generation.SolutionMoves);
+
+        if (!metrics.IsReplayed)
+            return CandidateRejection.CycleReplayMismatch;
+
+        if (metrics.HasDeadlockOnPath)
+            return CandidateRejection.CycleDeadlockOnPath;
+
+        if (metrics.ItemsAtClosings.Any(itemCount => itemCount > 0 && itemCount < definition.MinimumItemsBehindShutter))
+            return CandidateRejection.ShutterTooEmpty;
+
+        if (metrics.PreparationMoveCount < definition.MinimumPreparationMoves)
+            return CandidateRejection.NoPreparationChoice;
+
         return null;
     }
 
@@ -466,6 +522,10 @@ public static class TimedLevelVariantGenerator
         LockedShelfNotFilled,
         KeyPlacementFailed,
         EarlyKeyAccess,
-        KeyAccessUnknown
+        KeyAccessUnknown,
+        CycleReplayMismatch,
+        CycleDeadlockOnPath,
+        ShutterTooEmpty,
+        NoPreparationChoice
     }
 }
