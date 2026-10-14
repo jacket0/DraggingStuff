@@ -507,6 +507,7 @@ public static class TimedCampaignPlayModeValidation
         Bounds[] items = _board.Shelves
             .SelectMany(shelf => shelf.ColumnViews)
             .SelectMany(column => column.ItemAnchor.GetComponentsInChildren<Renderer>())
+            .Where(renderer => !(renderer is ParticleSystemRenderer))
             .Select(renderer => renderer.bounds)
             .ToArray();
 
