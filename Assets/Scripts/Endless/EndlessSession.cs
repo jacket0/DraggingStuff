@@ -5,10 +5,17 @@ public sealed class EndlessSession : GameSession
 {
     [SerializeField] private EndlessBoardRefiller _boardRefiller;
     [SerializeField] private EndlessTimer _timer;
+    [SerializeField, Min(1f)] private float _continueTime = 15f;
+
+    private bool _hasContinued;
+    private bool _isContinueOffered;
 
     public int Seed { get; private set; }
     public int MatchCount { get; private set; }
+    public bool HasContinued => _hasContinued;
+    public bool IsContinueOffered => _isContinueOffered;
 
+    public event Action ContinueOffered;
     public event Action RunEnded;
 
     private void OnEnable()
@@ -40,11 +47,13 @@ public sealed class EndlessSession : GameSession
 
     protected override void HandleMatchRegistered(MatchResolution match)
     {
-        if (State != LevelState.Playing)
+        if (State != LevelState.Playing && State != LevelState.Ending)
             return;
 
         MatchCount++;
-        _timer.RegisterMatch(MatchCount, match.Items.Count);
+
+        if (State == LevelState.Playing)
+            _timer.RegisterMatch(MatchCount, match.Items.Count);
     }
 
     protected override void PrepareBoardAfterMove(Action completed)
@@ -58,7 +67,7 @@ public sealed class EndlessSession : GameSession
     protected override void HandleBoardSettled(bool isBoardCleared)
     {
         if (State == LevelState.Ending)
-            FinishRun();
+            OfferContinueOrFinish();
     }
 
     private void HandleTimerExpired()
@@ -69,7 +78,43 @@ public sealed class EndlessSession : GameSession
         BeginEnding();
 
         if (!IsResolvingMove)
+            OfferContinueOrFinish();
+    }
+
+    public void Continue()
+    {
+        if (!_isContinueOffered)
+            return;
+
+        _isContinueOffered = false;
+        _hasContinued = true;
+        _boardRefiller.RefillIfNeeded(MatchCount);
+        _timer.Continue(_continueTime);
+        ContinuePlaying();
+    }
+
+    public void DeclineContinue()
+    {
+        if (!_isContinueOffered)
+            return;
+
+        _isContinueOffered = false;
+        FinishRun();
+    }
+
+    private void OfferContinueOrFinish()
+    {
+        if (_isContinueOffered)
+            return;
+
+        if (_hasContinued)
+        {
             FinishRun();
+            return;
+        }
+
+        _isContinueOffered = true;
+        ContinueOffered?.Invoke();
     }
 
     private void FinishRun()

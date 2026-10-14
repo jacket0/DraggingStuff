@@ -112,6 +112,20 @@ public sealed class CountdownTimer : MonoBehaviour
         PublishState();
     }
 
+    public void ResumeAfterExpiry(float seconds)
+    {
+        if (seconds <= 0f || float.IsNaN(seconds) || float.IsInfinity(seconds))
+            throw new ArgumentOutOfRangeException(nameof(seconds));
+
+        if (!_hasExpired)
+            throw new InvalidOperationException("The timer has not expired.");
+
+        _remainingTime = Mathf.Min(_totalTime, seconds);
+        _hasExpired = false;
+        _isRunning = true;
+        PublishState();
+    }
+
     public void SetCountdownRate(float countdownRate)
     {
         if (countdownRate < 0f || float.IsNaN(countdownRate) || float.IsInfinity(countdownRate))

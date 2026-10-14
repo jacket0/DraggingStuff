@@ -263,6 +263,7 @@ public abstract class GameSession : MonoBehaviour
         SetState(LevelState.Ending);
     }
     protected void CompleteAsLost() => SetState(LevelState.Lost);
+    protected void ContinuePlaying() => SetState(LevelState.Playing);
 
     private void AdvanceBoardChanges()
     {

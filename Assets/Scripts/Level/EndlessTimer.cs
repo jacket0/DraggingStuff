@@ -118,6 +118,12 @@ public sealed class EndlessTimer : TimerSpeedModifierTarget
             TimeAdded?.Invoke(addedTime);
     }
 
+    public void Continue(float seconds)
+    {
+        _countdownTimer.ResumeAfterExpiry(seconds);
+        TimeAdded?.Invoke(_countdownTimer.RemainingTime);
+    }
+
     private float EvaluateDrainMultiplier(int matchCount)
     {
         if (_drainMultiplierByMatchCount == null || _drainMultiplierByMatchCount.length == 0)
