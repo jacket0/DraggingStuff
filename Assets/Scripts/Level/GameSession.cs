@@ -196,6 +196,10 @@ public abstract class GameSession : MonoBehaviour
                 return;
 
             _isPreparing = false;
+
+            if (_boardChanges.Count > 0)
+                return;
+
             _needsSettlement = false;
             HandleBoardSettled(_shelfBoard.IsCleared);
             BoardSettled?.Invoke();

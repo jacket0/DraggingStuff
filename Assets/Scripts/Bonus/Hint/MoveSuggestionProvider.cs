@@ -13,10 +13,7 @@ public sealed class MoveSuggestionProvider : MonoBehaviour, IMoveSuggestionProvi
         if (_shelfBoard.HasLockedShelves || _shelfBoard.ItemAnimations.HasAnimations)
             return false;
 
-        int bestMatches = -1;
-        int bestOpenedShelves = -1;
-        int bestGroupGain = -1;
-        bool bestBreaksPair = true;
+        SuggestionRank bestRank = default;
 
         foreach (Shelf sourceShelf in _shelfBoard.Shelves)
         {
@@ -45,19 +42,18 @@ public sealed class MoveSuggestionProvider : MonoBehaviour, IMoveSuggestionProvi
                                 .Select(column => column.FrontItem).ToList()
                             : new List<ShelfItem>();
                         int groupGain = sourceShelf == targetShelf ? 0 : matchingItems.Count;
+                        SuggestionRank rank = new SuggestionRank(
+                            CycleDeadlockRule.IsStuckAfterNextClosing(simulation.State),
+                            simulation.MatchCount,
+                            simulation.OpenedShelfCount,
+                            sourceShelf != targetShelf && IsClosingOnNextMatchingMove(sourceShelf),
+                            groupGain,
+                            breaksPair);
 
-                        bool isSameRank = simulation.MatchCount == bestMatches && simulation.OpenedShelfCount == bestOpenedShelves;
-
-                        if (simulation.MatchCount < bestMatches
-                            || simulation.MatchCount == bestMatches && simulation.OpenedShelfCount < bestOpenedShelves
-                            || isSameRank && groupGain < bestGroupGain
-                            || isSameRank && groupGain == bestGroupGain && (!bestBreaksPair || breaksPair))
+                        if (suggestion != null && !rank.IsBetterThan(bestRank))
                             continue;
 
-                        bestMatches = simulation.MatchCount;
-                        bestOpenedShelves = simulation.OpenedShelfCount;
-                        bestGroupGain = groupGain;
-                        bestBreaksPair = breaksPair;
+                        bestRank = rank;
                         suggestion = new MoveSuggestion(source, target, matchingItems);
                     }
                 }
@@ -65,5 +61,51 @@ public sealed class MoveSuggestionProvider : MonoBehaviour, IMoveSuggestionProvi
         }
 
         return suggestion != null;
+    }
+
+    private bool IsClosingOnNextMatchingMove(Shelf shelf)
+    {
+        ShelfCycleSnapshot cycle = _shelfBoard.GetCycle(shelf);
+        return cycle != null && cycle.MovesToSwitch == 1 && _shelfBoard.IsCyclePhaseOpen(shelf);
+    }
+
+    private readonly struct SuggestionRank
+    {
+        private readonly bool _leadsToDeadlock;
+        private readonly int _matchCount;
+        private readonly int _openedShelfCount;
+        private readonly bool _evacuatesClosingShelf;
+        private readonly int _groupGain;
+        private readonly bool _breaksPair;
+
+        public SuggestionRank(bool leadsToDeadlock, int matchCount, int openedShelfCount, bool evacuatesClosingShelf, int groupGain, bool breaksPair)
+        {
+            _leadsToDeadlock = leadsToDeadlock;
+            _matchCount = matchCount;
+            _openedShelfCount = openedShelfCount;
+            _evacuatesClosingShelf = evacuatesClosingShelf;
+            _groupGain = groupGain;
+            _breaksPair = breaksPair;
+        }
+
+        public bool IsBetterThan(SuggestionRank other)
+        {
+            if (_leadsToDeadlock != other._leadsToDeadlock)
+                return !_leadsToDeadlock;
+
+            if (_matchCount != other._matchCount)
+                return _matchCount > other._matchCount;
+
+            if (_openedShelfCount != other._openedShelfCount)
+                return _openedShelfCount > other._openedShelfCount;
+
+            if (_evacuatesClosingShelf != other._evacuatesClosingShelf)
+                return _evacuatesClosingShelf;
+
+            if (_groupGain != other._groupGain)
+                return _groupGain > other._groupGain;
+
+            return other._breaksPair && !_breaksPair;
+        }
     }
 }

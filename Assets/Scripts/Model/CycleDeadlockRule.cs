@@ -12,21 +12,34 @@ public static class CycleDeadlockRule
         if (!board.HasCycles || board.IsCleared)
             return false;
 
-        Dictionary<ItemType, int> openItemCounts = new Dictionary<ItemType, int>();
+        return !HasMatchableType(board.Shelves.Where(shelf => shelf.IsOpen));
+    }
 
-        foreach (ShelfStateSnapshot shelf in board.Shelves.Where(shelf => shelf.IsOpen))
+    public static bool IsStuckAfterNextClosing(BoardStateSnapshot board)
+    {
+        if (board == null)
+            throw new ArgumentNullException(nameof(board));
+
+        if (!board.HasCycles || board.IsCleared)
+            return false;
+
+        return !HasMatchableType(board.Shelves.Where(shelf => shelf.IsOpen && !(shelf.IsCyclic && shelf.Cycle.MovesToSwitch == 1)));
+    }
+
+    private static bool HasMatchableType(IEnumerable<ShelfStateSnapshot> shelves)
+    {
+        Dictionary<ItemType, int> itemCounts = new Dictionary<ItemType, int>();
+
+        foreach (ItemType type in shelves.SelectMany(shelf => shelf.Columns).SelectMany(column => column.Items))
         {
-            foreach (ItemType type in shelf.Columns.SelectMany(column => column.Items))
-            {
-                openItemCounts.TryGetValue(type, out int count);
-                openItemCounts[type] = ++count;
+            itemCounts.TryGetValue(type, out int count);
+            itemCounts[type] = ++count;
 
-                if (count >= ShelfStateSnapshot.MinimumMatchCapacity)
-                    return false;
-            }
+            if (count >= ShelfStateSnapshot.MinimumMatchCapacity)
+                return true;
         }
 
-        return true;
+        return false;
     }
 
     public static BoardStateSnapshot ApplyRescue(BoardStateSnapshot board, bool isRepeated, out IReadOnlyList<int> switchedShelfIndexes)
