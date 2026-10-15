@@ -223,8 +223,9 @@ public static class TimedCampaignPlayModeValidation
 
         BoardStateSnapshot runtimeState = _board.CreateSnapshot();
         TimedLevelVariant variant = _session.CurrentLevel.Definition.Variants[_session.CurrentVariantIndex];
+        string expectedLayoutHash = BoardStateFingerprint.CreateHash(_session.CurrentLevel.Definition.AddCyclicShelves(variant.CreateLayout()));
 
-        if (BoardStateFingerprint.CreateHash(runtimeState) != variant.LayoutHash)
+        if (BoardStateFingerprint.CreateHash(runtimeState) != expectedLayoutHash)
             throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: runtime layout differs from the generated layout.");
 
         if (_session.Timer.HasStarted || Math.Abs(_session.Timer.RemainingTime - _session.CurrentLevel.Definition.TimeLimitSeconds) > 0.01f)
@@ -239,7 +240,7 @@ public static class TimedCampaignPlayModeValidation
         _settledFrameCount = 0;
         _resultFrameCount = 0;
         _swapPhase = _session.CurrentLevel.Number == 1 ? 0 : 3;
-        _initialLayoutHash = variant.LayoutHash;
+        _initialLayoutHash = expectedLayoutHash;
         _swapHoverView = UnityEngine.Object.FindObjectOfType<ShelfItemDragController>()?.GetComponent<ShelfSwapHoverView>();
         Time.timeScale = 6f;
 

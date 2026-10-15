@@ -10,8 +10,8 @@ using UnityEngine.UI;
 public static class TimedCampaignValidation
 {
     private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
-    private const int ExpectedLevelCount = 25;
-    private const int ChapterCount = 5;
+    private const int ExpectedLevelCount = 30;
+    private const int ChapterCount = 6;
     private const int LevelsPerChapter = 5;
     private const string FirstClosedShelfDefinitionPath = "Assets/Levels/Timed/TimedLevel_C3_01.asset";
     private const string LevelResultWindowPath = "Assets/Prefabs/UI/Level/LevelResultWindow.prefab";
@@ -24,7 +24,8 @@ public static class TimedCampaignValidation
         { LevelMechanic.ShelfFilter, "ThirdLevel" },
         { LevelMechanic.ClosedShelves, "FourthLevel" },
         { LevelMechanic.Conveyor, "FifthLevel" },
-        { LevelMechanic.KeyLocks, "SixthLevel" }
+        { LevelMechanic.KeyLocks, "SixthLevel" },
+        { LevelMechanic.CyclicShelves, "SeventhLevel" }
     };
 
     [MenuItem("Tools/Timed Levels/Validate Campaign")]
@@ -97,7 +98,7 @@ public static class TimedCampaignValidation
 
             foreach (TimedLevelVariant variant in level.Definition.Variants)
             {
-                ValidateSolution(level.Number, variant);
+                ValidateSolution(level, variant);
             }
 
             int median = level.Definition.Variants.Select(variant => variant.MoveCount).OrderBy(value => value).ElementAt(level.Definition.Variants.Count / 2);
@@ -107,10 +108,10 @@ public static class TimedCampaignValidation
         }
     }
 
-    private static void ValidateSolution(int levelNumber, TimedLevelVariant variant)
+    private static void ValidateSolution(LevelEntry level, TimedLevelVariant variant)
     {
         BoardMoveSimulator simulator = new BoardMoveSimulator();
-        BoardStateSnapshot state = variant.CreateLayout();
+        BoardStateSnapshot state = level.Definition.AddCyclicShelves(variant.CreateLayout());
 
         foreach (TimedLevelMove move in variant.CreateSolution())
         {
@@ -118,14 +119,14 @@ public static class TimedCampaignValidation
                 || !simulation.IsAllowed
                 || simulation.MatchCount != (simulation.IsSwap ? 0 : 1))
             {
-                throw new InvalidOperationException($"Level {levelNumber}, seed {variant.Seed}: invalid solution.");
+                throw new InvalidOperationException($"Level {level.Number}, seed {variant.Seed}: invalid solution.");
             }
 
             state = simulation.State;
         }
 
         if (!state.IsCleared)
-            throw new InvalidOperationException($"Level {levelNumber}, seed {variant.Seed}: incomplete solution.");
+            throw new InvalidOperationException($"Level {level.Number}, seed {variant.Seed}: incomplete solution.");
     }
 
     private static void ValidateMoveSimulation()

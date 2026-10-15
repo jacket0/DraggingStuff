@@ -214,7 +214,7 @@ public static class ConveyorModelValidation
         {
             foreach (TimedLevelVariant variant in level.Definition.Variants)
             {
-                BoardStateSnapshot state = variant.CreateLayout();
+                BoardStateSnapshot state = level.Definition.AddCyclicShelves(variant.CreateLayout());
 
                 if (state.HasConveyors)
                     throw new InvalidOperationException($"Conveyor M12: level {level.Number}, seed {variant.Seed} has a conveyor shelf.");

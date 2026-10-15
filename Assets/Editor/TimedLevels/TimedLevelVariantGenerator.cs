@@ -13,6 +13,7 @@ public static class TimedLevelVariantGenerator
     private const int CandidatePoolSize = 24;
     private const int MaximumSeedAttempts = 10000;
     private const int MaximumKeyLockSeedAttempts = 60000;
+    private const int CycleDeadlockProbeMatchCount = 4;
 
     [MenuItem("Tools/Timed Levels/Generate All Variants")]
     public static void GenerateAll()
@@ -360,6 +361,9 @@ public static class TimedLevelVariantGenerator
         if (metrics.PreparationMoveCount < definition.MinimumPreparationMoves)
             return CandidateRejection.NoPreparationChoice;
 
+        if (new CyclicShelfDeadlockProbe().Check(definition.AddCyclicShelves(generation.State), CycleDeadlockProbeMatchCount, out _) == CyclicShelfDeadlockProbe.ProbeStatus.Deadlock)
+            return CandidateRejection.CycleDeadlockProbe;
+
         return null;
     }
 
@@ -526,6 +530,7 @@ public static class TimedLevelVariantGenerator
         CycleReplayMismatch,
         CycleDeadlockOnPath,
         ShutterTooEmpty,
-        NoPreparationChoice
+        NoPreparationChoice,
+        CycleDeadlockProbe
     }
 }

@@ -204,10 +204,12 @@ public static class KeyLockModelValidation
         {
             foreach (TimedLevelVariant variant in level.Definition.Variants)
             {
-                BoardStateSnapshot state = variant.CreateLayout();
+                BoardStateSnapshot layout = variant.CreateLayout();
 
-                if (state.HasKeys || BoardStateFingerprint.CreateHash(state) != variant.LayoutHash)
+                if (layout.HasKeys || BoardStateFingerprint.CreateHash(layout) != variant.LayoutHash)
                     throw new InvalidOperationException($"Key locks M10: level {level.Number}, seed {variant.Seed} changed its layout hash.");
+
+                BoardStateSnapshot state = level.Definition.AddCyclicShelves(layout);
 
                 foreach (TimedLevelMove move in variant.CreateSolution())
                 {
