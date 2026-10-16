@@ -31,6 +31,7 @@ public static class CyclicShelfModelValidation
         ValidateRepeatedDeadlockStopsCycles();
         ValidateFingerprintCycles();
         ValidateLevelsWithoutCycles(catalog);
+        ValidateIntroHintLevels(catalog);
         ValidateMovesWithClosedCellRejected();
         ValidateShelfBoardCycles();
         ValidateShelfBoardRescue();
@@ -319,6 +320,15 @@ public static class CyclicShelfModelValidation
 
         if (BoardStateFingerprint.CreateKey(cyclicBoard) == BoardStateFingerprint.CreateKey(reorderedBoard))
             throw new InvalidOperationException("Cycles C14: shelves of a board with cycles must keep their physical order in the search key.");
+    }
+
+    private static void ValidateIntroHintLevels(LevelCatalog catalog)
+    {
+        int[] chapterStarts = catalog.Levels.Where(level => CyclicShelfIntroHint.IsChapterStart(catalog, level)).Select(level => level.Number).ToArray();
+        int[] queueStarts = catalog.Levels.Where(level => CyclicShelfIntroHint.IsQueueStart(catalog, level)).Select(level => level.Number).ToArray();
+
+        if (!chapterStarts.SequenceEqual(new[] { 26 }) || !queueStarts.SequenceEqual(new[] { 29 }))
+            throw new InvalidOperationException($"Cycles C17: the intro hint must start on levels 26 and 29, found [{string.Join(",", chapterStarts)}] and [{string.Join(",", queueStarts)}].");
     }
 
     private static void ValidateLevelsWithoutCycles(LevelCatalog catalog)

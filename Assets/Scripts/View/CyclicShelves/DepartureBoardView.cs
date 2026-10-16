@@ -29,13 +29,17 @@ public sealed class DepartureBoardView : MonoBehaviour
         }
     }
 
-    public void Refresh(ShelfBoard board)
+    public bool Refresh(ShelfBoard board)
     {
         if (board == null)
             throw new ArgumentNullException(nameof(board));
 
+        bool isChanged = false;
+
         foreach (DepartureBoardSlotView slot in _slots.Where(slot => board.IsCyclic(slot.Shelf)))
-            slot.Show(board.GetCycle(slot.Shelf), board.IsCyclePhaseOpen(slot.Shelf), true);
+            isChanged |= slot.Show(board.GetCycle(slot.Shelf), board.IsCyclePhaseOpen(slot.Shelf), true);
+
+        return isChanged;
     }
 
     public string GetText(Shelf shelf) => _slots.First(slot => slot.Shelf == shelf).Text;

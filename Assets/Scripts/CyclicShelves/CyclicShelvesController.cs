@@ -10,6 +10,7 @@ public sealed class CyclicShelvesController : MonoBehaviour
     [SerializeField] private ShelfItemDragController _dragController;
     [SerializeField] private List<ShelfShutterView> _shutters = new List<ShelfShutterView>();
     [SerializeField] private DepartureBoardView _departureBoard;
+    [SerializeField] private CyclicShelfAudioPlayer _audio;
 
     private bool _wasRescued;
     private bool _hasMatchingMoveSinceRescue;
@@ -34,6 +35,9 @@ public sealed class CyclicShelvesController : MonoBehaviour
 
         if (_departureBoard == null)
             throw new InvalidOperationException(nameof(_departureBoard));
+
+        if (_audio == null)
+            throw new InvalidOperationException(nameof(_audio));
 
         if (_shutters.Contains(null) || _shutters.Select(shutter => shutter.Shelf).Distinct().Count() != _shutters.Count)
             throw new InvalidOperationException($"{name}: every shutter must belong to its own shelf.");
@@ -62,7 +66,7 @@ public sealed class CyclicShelvesController : MonoBehaviour
         IReadOnlyList<Shelf> switchedShelves = _shelfBoard.ApplyCycleRescue(isRepeated);
         _wasRescued = true;
         _hasMatchingMoveSinceRescue = false;
-        _departureBoard.Refresh(_shelfBoard);
+        ShowCycleProgress(switchedShelves);
         RescueApplied?.Invoke(isRepeated);
         RequestSwitch(switchedShelves);
     }
@@ -89,6 +93,7 @@ public sealed class CyclicShelvesController : MonoBehaviour
         }
 
         _departureBoard.ShowLevel(_shelfBoard);
+        RefreshShutterWarnings(Array.Empty<Shelf>());
     }
 
     private void HandleMatchingMoveResolved()
@@ -98,7 +103,7 @@ public sealed class CyclicShelvesController : MonoBehaviour
 
         _hasMatchingMoveSinceRescue = true;
         IReadOnlyList<Shelf> switchedShelves = _shelfBoard.AdvanceCycles();
-        _departureBoard.Refresh(_shelfBoard);
+        ShowCycleProgress(switchedShelves);
         CyclesAdvanced?.Invoke();
         RequestSwitch(switchedShelves);
     }
@@ -107,6 +112,30 @@ public sealed class CyclicShelvesController : MonoBehaviour
     {
         if (shelf != null && _shelfBoard.IsCyclic(shelf) && _shelfBoard.IsShelfClosed(shelf))
             GetShutter(shelf).PlayShudder();
+    }
+
+    private void ShowCycleProgress(IReadOnlyList<Shelf> switchedShelves)
+    {
+        if (_departureBoard.Refresh(_shelfBoard))
+            _audio.PlayFlip();
+
+        if (RefreshShutterWarnings(switchedShelves))
+            _audio.PlayWarning();
+    }
+
+    private bool RefreshShutterWarnings(IReadOnlyList<Shelf> switchingShelves)
+    {
+        bool hasWarning = false;
+
+        foreach (ShelfShutterView shutter in _shutters.Where(shutter => _shelfBoard.IsCyclic(shutter.Shelf) && !switchingShelves.Contains(shutter.Shelf)))
+        {
+            ShelfCycleSnapshot cycle = _shelfBoard.GetCycle(shutter.Shelf);
+            bool isWarning = cycle != null && cycle.MovesToSwitch == 1;
+            shutter.SetWarning(isWarning);
+            hasWarning |= isWarning;
+        }
+
+        return hasWarning;
     }
 
     private void RequestSwitch(IReadOnlyList<Shelf> shelves)
@@ -146,6 +175,7 @@ public sealed class CyclicShelvesController : MonoBehaviour
 
             if (_shelfBoard.IsCyclePhaseOpen(shelf))
             {
+                _audio.PlayShutterUp();
                 shutter.PlayOpen(() =>
                 {
                     _shelfBoard.SetCyclicShelfOpen(shelf, true);
@@ -155,6 +185,7 @@ public sealed class CyclicShelvesController : MonoBehaviour
             else
             {
                 _shelfBoard.SetCyclicShelfOpen(shelf, false);
+                _audio.PlayShutterDown();
                 shutter.PlayClose(CompleteShutter);
             }
         }

@@ -15,10 +15,11 @@ public static class CyclicShelfPlayModeValidation
     private const string FailedKey = "CyclicShelfPlayModeValidation.Failed";
     private const string RunInBackgroundKey = "CyclicShelfPlayModeValidation.RunInBackground";
     private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
+    private const float MinimumClosedFraction = 0.9f;
     private const string SelectionPath = "Assets/Levels/Menu/CurrentLevelSelection.asset";
     private const string ScenePath = "Assets/Scenes/SeventhLevel.unity";
     private const string SceneName = "SeventhLevel";
-    private const string SwingLevelName = "CyclicShelfScenarioLevel_Swing";
+    public const string SwingLevelName = "CyclicShelfScenarioLevel_Swing";
     private const string RotorLevelName = "CyclicShelfScenarioLevel_Rotor";
     private const int ScenarioLevelNumber = 26;
     private const int SwingSeedBase = 2699000;
@@ -36,6 +37,8 @@ public static class CyclicShelfPlayModeValidation
     private const float ExpiringCountdownRate = 100000f;
 
     private static readonly BoardMoveSimulator Simulator = new BoardMoveSimulator();
+    public static readonly ColumnPosition StuckMoveSource = new ColumnPosition(4, 0);
+    public static readonly ColumnPosition StuckMoveTarget = new ColumnPosition(5, 0);
     private static readonly ColumnPosition FirstMatchSource = new ColumnPosition(6, 0);
     private static readonly ColumnPosition FirstMatchTarget = new ColumnPosition(3, 2);
     private static readonly ColumnPosition SecondMatchSource = new ColumnPosition(7, 0);
@@ -76,6 +79,7 @@ public static class CyclicShelfPlayModeValidation
     private static ShelfShutterView[] _shutters;
     private static ShelfItemDragController _drag;
     private static MoveSuggestionProvider _suggestions;
+    private static CycleRescueToastView _rescueToast;
 
     static CyclicShelfPlayModeValidation()
     {
@@ -265,16 +269,21 @@ public static class CyclicShelfPlayModeValidation
     {
         foreach (object step in LoadSwingLevel()) yield return step;
 
-        BoardStateSnapshot expected = Arrange(StuckLayout(Column(ItemType.Ball), Column(ItemType.Ball), Column()));
+        BoardStateSnapshot expected = ArrangeStuckSwing(false);
         List<bool> rescues = new List<bool>();
+        List<string> toastTexts = new List<string>();
 
-        void HandleRescueApplied(bool isRepeated) => rescues.Add(isRepeated);
+        void HandleRescueApplied(bool isRepeated)
+        {
+            rescues.Add(isRepeated);
+            toastTexts.Add(_rescueToast.Text);
+        }
 
         _cyclicShelves.RescueApplied += HandleRescueApplied;
 
         try
         {
-            expected = Move(expected, new ColumnPosition(4, 0), new ColumnPosition(5, 0));
+            expected = Move(expected, StuckMoveSource, StuckMoveTarget);
             expected = Simulator.ApplyCycleRescue(expected, false, out _);
 
             foreach (object step in WaitUntilSettled("P4")) yield return step;
@@ -285,6 +294,7 @@ public static class CyclicShelfPlayModeValidation
         }
 
         Expect(rescues.SequenceEqual(new[] { false }), "P4: a deadlock must trigger exactly one early switch");
+        Expect(_rescueToast.IsVisible && !string.IsNullOrEmpty(toastTexts[0]), "P4: the early switch must show the rescue toast");
         ExpectBoard(expected, "P4");
         Expect(_board.IsShelfClosed(_board.Shelves[OpenCellIndex]) && !_board.IsShelfClosed(_board.Shelves[ClosedCellIndex]), "P4: the early switch must swap the cells");
 
@@ -295,16 +305,21 @@ public static class CyclicShelfPlayModeValidation
     {
         foreach (object step in LoadSwingLevel()) yield return step;
 
-        BoardStateSnapshot expected = Arrange(StuckLayout(Column(ItemType.Lamp), Column(ItemType.Toy), Column()));
+        BoardStateSnapshot expected = ArrangeStuckSwing(true);
         List<bool> rescues = new List<bool>();
+        List<string> toastTexts = new List<string>();
 
-        void HandleRescueApplied(bool isRepeated) => rescues.Add(isRepeated);
+        void HandleRescueApplied(bool isRepeated)
+        {
+            rescues.Add(isRepeated);
+            toastTexts.Add(_rescueToast.Text);
+        }
 
         _cyclicShelves.RescueApplied += HandleRescueApplied;
 
         try
         {
-            expected = Move(expected, new ColumnPosition(4, 0), new ColumnPosition(5, 0));
+            expected = Move(expected, StuckMoveSource, StuckMoveTarget);
             expected = Simulator.ApplyCycleRescue(expected, false, out _);
             expected = Simulator.ApplyCycleRescue(expected, true, out _);
 
@@ -313,6 +328,7 @@ public static class CyclicShelfPlayModeValidation
             ExpectBoard(expected, "P5");
             Expect(rescues.SequenceEqual(new[] { false, true }), "P5: a repeated deadlock must open every cell");
             Expect(!_board.HasCycles && !_board.HasClosedShelves, "P5: after the repeated deadlock every cell stays open without a cycle");
+            Expect(_rescueToast.IsVisible && toastTexts.Count == 2 && !string.IsNullOrEmpty(toastTexts[1]) && toastTexts[0] != toastTexts[1], "P5: the repeated deadlock must show its own rescue toast");
 
             foreach (object step in WaitUntilViewsMatch("P5")) yield return step;
 
@@ -342,14 +358,14 @@ public static class CyclicShelfPlayModeValidation
 
         Expect(_session.TryPause(), "P6: the level must pause during the switch");
         ShelfShutterView closingShutter = GetShutter(OpenCellIndex);
-        Vector3 pausedScale = closingShutter.CurtainScale;
+        float pausedFraction = closingShutter.ClosedFraction;
         string pausedHash = BoardStateFingerprint.CreateHash(_board.CreateSnapshot());
 
         for (int frame = 0; frame < PausedFrameCount; frame++)
         {
             yield return null;
             Expect(_cyclicShelves.IsSwitching, "P6: the switch must stay unfinished while paused");
-            Expect(closingShutter.CurtainScale == pausedScale, "P6: the shutter must not move while paused");
+            Expect(closingShutter.ClosedFraction == pausedFraction, "P6: the shutter must not move while paused");
             Expect(BoardStateFingerprint.CreateHash(_board.CreateSnapshot()) == pausedHash, "P6: the board must not change while paused");
         }
 
@@ -496,6 +512,16 @@ public static class CyclicShelfPlayModeValidation
         };
     }
 
+    public static BoardStateSnapshot ArrangeStuckSwing(bool isRepeatedDeadlock)
+    {
+        CaptureScene();
+
+        if (isRepeatedDeadlock)
+            return Arrange(StuckLayout(Column(ItemType.Lamp), Column(ItemType.Toy), Column()));
+
+        return Arrange(StuckLayout(Column(ItemType.Ball), Column(ItemType.Ball), Column()));
+    }
+
     private static (int ShelfIndex, ColumnStateSnapshot[] Columns)[] StuckLayout(params ColumnStateSnapshot[] closedCellColumns)
     {
         return new[]
@@ -530,9 +556,10 @@ public static class CyclicShelfPlayModeValidation
         _shutters = UnityEngine.Object.FindObjectsOfType<ShelfShutterView>(true);
         _drag = UnityEngine.Object.FindObjectOfType<ShelfItemDragController>();
         _suggestions = UnityEngine.Object.FindObjectOfType<MoveSuggestionProvider>();
+        _rescueToast = UnityEngine.Object.FindObjectOfType<CycleRescueToastView>();
 
-        if (!(_session is CyclicShelfLevelSession) || _board.Shelves.Count != BoardShelfCount || _cyclicShelves == null || _departureBoard == null || _drag == null || _suggestions == null)
-            throw new InvalidOperationException("Cyclic shelf scenarios need the SeventhLevel board, the cyclic shelf session and controller, the departure board, the drag controller and move suggestions.");
+        if (!(_session is CyclicShelfLevelSession) || _board.Shelves.Count != BoardShelfCount || _cyclicShelves == null || _departureBoard == null || _drag == null || _suggestions == null || _rescueToast == null)
+            throw new InvalidOperationException("Cyclic shelf scenarios need the SeventhLevel board, the cyclic shelf session and controller, the departure board, the drag controller, move suggestions and the rescue toast.");
     }
 
     private static BoardStateSnapshot Arrange(params (int ShelfIndex, ColumnStateSnapshot[] Columns)[] shelves)
@@ -609,13 +636,13 @@ public static class CyclicShelfPlayModeValidation
         {
             if (!_board.IsCyclic(shutter.Shelf))
             {
-                if (shutter.IsCurtainDown)
+                if (shutter.ClosedFraction > 0f)
                     return $"{shutter.Shelf.name} has a shutter without a cycle";
 
                 continue;
             }
 
-            if (shutter.IsSwitching || shutter.IsCurtainDown != _board.IsShelfClosed(shutter.Shelf))
+            if (shutter.IsSwitching || shutter.IsClosed != _board.IsShelfClosed(shutter.Shelf) || IsCurtainLowered(shutter) != shutter.IsClosed)
                 return $"{shutter.Shelf.name} shutter";
 
             ShelfCycleSnapshot cycle = _board.GetCycle(shutter.Shelf);
@@ -638,6 +665,8 @@ public static class CyclicShelfPlayModeValidation
             yield return null;
         }
     }
+
+    private static bool IsCurtainLowered(ShelfShutterView shutter) => shutter.ClosedFraction >= MinimumClosedFraction;
 
     private static ShelfShutterView GetShutter(int shelfIndex) => _shutters.First(shutter => shutter.Shelf == _board.Shelves[shelfIndex]);
 
