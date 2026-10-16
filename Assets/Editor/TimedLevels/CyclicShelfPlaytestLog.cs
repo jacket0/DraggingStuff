@@ -14,8 +14,8 @@ public static class CyclicShelfPlaytestLog
     private const string MenuPath = "Tools/Cyclic Shelves/Playtest Log";
     private const string SceneName = "SeventhLevel";
     private const string LogFolder = "LocalOutput/cyclic-shelves";
-    private const string LogFileName = "playtest.csv";
-    private const string Header = "date;prototype;level;variant;seed;solution_moves;won;stars;time_s;moves;matching_moves;switches;early_flips;open_all;carry_outs;items_at_closings";
+    private const string LogFileName = "chapter-playtest.csv";
+    private const string Header = "date;level;variant;seed;solution_moves;won;stars;time_s;moves;matching_moves;switches;early_flips;open_all;carry_outs;items_at_closings";
 
     private static readonly string[] AutomatedRunKeys =
     {
@@ -194,13 +194,11 @@ public static class CyclicShelfPlaytestLog
         if (!AssetDatabase.Contains(definition))
             return;
 
-        int prototypeNumber = CyclicShelfPrototypeLauncher.CurrentPrototypeNumber;
         int solutionMoves = definition.Variants[result.VariantIndex].MoveCount;
         string time = (result.ActiveTimeMilliseconds / 1000f).ToString("F1", CultureInfo.InvariantCulture);
         string closings = string.Join(" ", ItemsAtClosings);
         string line = string.Join(";",
             DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
-            prototypeNumber == 0 ? "-" : prototypeNumber.ToString(CultureInfo.InvariantCulture),
             result.LevelNumber,
             result.VariantIndex + 1,
             result.Seed,
@@ -222,7 +220,7 @@ public static class CyclicShelfPlaytestLog
 
         File.AppendAllText(LogPath, line + Environment.NewLine);
         Debug.Log(
-            $"CYCLIC_PLAYTEST: prototype {prototypeNumber}, variant {result.VariantIndex + 1}, {(result.Won ? "won" : "lost")}, {result.Stars} stars, {time} s, " +
+            $"CYCLIC_PLAYTEST: level {result.LevelNumber}, variant {result.VariantIndex + 1}, {(result.Won ? "won" : "lost")}, {result.Stars} stars, {time} s, " +
             $"{_moveCount} moves ({_matchingMoveCount} matching, solution {solutionMoves}), {_switchCount} switches, " +
             $"early flips {_earlyFlipCount}, open all {_openAllCount}, carry-outs {_carryOutCount}, items at closings: {closings}");
     }
