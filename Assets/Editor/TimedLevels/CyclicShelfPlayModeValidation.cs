@@ -25,7 +25,7 @@ public static class CyclicShelfPlayModeValidation
     private const int SwingSeedBase = 2699000;
     private const int RotorSeedBase = 2699500;
     private const int MaximumScenarioSeeds = 300;
-    private const int BoardShelfCount = 11;
+    private const int BoardShelfCount = 12;
     private const int ShelfCapacity = 3;
     private const int EmptyColumnCount = 3;
     private const int OpenCellIndex = 0;

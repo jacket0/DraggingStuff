@@ -26,6 +26,7 @@ public static class CyclicShelfModelValidation
         ValidateMatchAfterOpeningDoesNotAdvance();
         ValidateSimultaneousSwitch();
         ValidateCarouselRevolution();
+        ValidateMixedWindows();
         ValidateDeadlockWithoutOpenItems();
         ValidateDeadlockWithoutOpenTriple();
         ValidateRepeatedDeadlockStopsCycles();
@@ -222,6 +223,49 @@ public static class CyclicShelfModelValidation
             throw new InvalidOperationException("Cycles C9: a full carousel revolution must return to the starting state.");
     }
 
+    private static void ValidateMixedWindows()
+    {
+        BoardStateSnapshot start = Board(
+            CyclicShelf(true, 2, 2, 2, Column(ItemType.Ball), Column(ItemType.Bear), Column(ItemType.Plant)),
+            CyclicShelf(false, 2, 2, 2, Column(ItemType.Toy), Column(ItemType.MapBall), Column(ItemType.Beauty)),
+            CyclicShelf(true, 3, 3, 3, Column(ItemType.Lamp), Column(ItemType.TrainToy), Column(ItemType.Ball)),
+            CyclicShelf(false, 3, 3, 3, Column(ItemType.Bear), Column(ItemType.Plant), Column(ItemType.Toy)),
+            OpenShelf(Column(), Column(), Column()));
+        BoardMoveSimulator simulator = new BoardMoveSimulator();
+        int[][] expectedSwitches = { new int[0], new[] { 0, 1 }, new[] { 2, 3 }, new[] { 0, 1 }, new int[0], new[] { 0, 1, 2, 3 } };
+        BoardStateSnapshot board = start;
+
+        for (int step = 0; step < expectedSwitches.Length * 2; step++)
+        {
+            board = simulator.AdvanceCycles(board, out IReadOnlyList<int> switchedShelfIndexes);
+            int[] expected = expectedSwitches[step % expectedSwitches.Length];
+
+            if (!switchedShelfIndexes.SequenceEqual(expected) || board.Shelves.Take(4).Count(shelf => shelf.IsOpen) != 2)
+                throw new InvalidOperationException($"Cycles C18: step {step + 1} switched cells {string.Join(",", switchedShelfIndexes)} instead of {string.Join(",", expected)}.");
+        }
+
+        if (BoardStateFingerprint.CreateKey(board) != BoardStateFingerprint.CreateKey(start))
+            throw new InvalidOperationException("Cycles C18: pairs with different windows must return to the start after a common period.");
+
+        BoardStateSnapshot stuckBoard = Board(
+            CyclicShelf(true, 2, 2, 1, Column(), Column(), Column()),
+            CyclicShelf(false, 2, 2, 1, Column(ItemType.Ball), Column(ItemType.Ball), Column(ItemType.Ball)),
+            CyclicShelf(true, 3, 3, 3, Column(), Column(), Column()),
+            CyclicShelf(false, 3, 3, 3, Column(ItemType.Bear), Column(ItemType.Bear), Column(ItemType.Bear)),
+            OpenShelf(Column(), Column(), Column()));
+        BoardStateSnapshot rescuedBoard = CycleDeadlockRule.ApplyRescue(stuckBoard, false, out IReadOnlyList<int> rescuedShelfIndexes);
+
+        if (!CycleDeadlockRule.IsStuck(stuckBoard)
+            || !rescuedShelfIndexes.SequenceEqual(new[] { 0, 1 })
+            || rescuedBoard.Shelves[0].IsOpen
+            || !rescuedBoard.Shelves[1].IsOpen
+            || rescuedBoard.Shelves[2].Cycle.MovesToSwitch != 2
+            || rescuedBoard.Shelves[3].Cycle.MovesToSwitch != 2)
+        {
+            throw new InvalidOperationException("Cycles C18: a rescue must skip the slower pair by the moves to the nearest switch.");
+        }
+    }
+
     private static void ValidateDeadlockWithoutOpenItems()
     {
         BoardStateSnapshot board = Board(
@@ -326,9 +370,13 @@ public static class CyclicShelfModelValidation
     {
         int[] chapterStarts = catalog.Levels.Where(level => CyclicShelfIntroHint.IsChapterStart(catalog, level)).Select(level => level.Number).ToArray();
         int[] queueStarts = catalog.Levels.Where(level => CyclicShelfIntroHint.IsQueueStart(catalog, level)).Select(level => level.Number).ToArray();
+        int[] mixedWindowsStarts = catalog.Levels.Where(level => CyclicShelfIntroHint.IsMixedWindowsStart(catalog, level)).Select(level => level.Number).ToArray();
 
-        if (!chapterStarts.SequenceEqual(new[] { 26 }) || !queueStarts.SequenceEqual(new[] { 29 }))
-            throw new InvalidOperationException($"Cycles C17: the intro hint must start on levels 26 and 29, found [{string.Join(",", chapterStarts)}] and [{string.Join(",", queueStarts)}].");
+        if (!chapterStarts.SequenceEqual(new[] { 26 }) || !queueStarts.SequenceEqual(new[] { 27 }) || !mixedWindowsStarts.SequenceEqual(new[] { 29 }))
+        {
+            throw new InvalidOperationException(
+                $"Cycles C17: the intro hint must start on levels 26, 27 and 29, found [{string.Join(",", chapterStarts)}], [{string.Join(",", queueStarts)}] and [{string.Join(",", mixedWindowsStarts)}].");
+        }
     }
 
     private static void ValidateLevelsWithoutCycles(LevelCatalog catalog)
@@ -540,6 +588,7 @@ public static class CyclicShelfModelValidation
         try
         {
             Validate(CreateDefinition(template, new[] { swingOpen, swingClosed }, noConveyors, 0, layout, definitions));
+            Validate(CreateDefinition(template, new[] { swingOpen, new CyclicShelfDefinitionData(1, false, 2, 4, 3) }, noConveyors, 0, layout, definitions));
 
             ExpectDefinitionFailure(new[] { swingOpen, swingOpen }, noConveyors, 0, layout, "a duplicated cyclic shelf index passed validation.");
             ExpectDefinitionFailure(new[] { swingOpen }, noConveyors, 0, layout, "a single cyclic shelf passed validation.");
@@ -550,12 +599,6 @@ public static class CyclicShelfModelValidation
                 0,
                 layout,
                 "a first switch later than the starting state passed validation.");
-            ExpectDefinitionFailure(
-                new[] { swingOpen, new CyclicShelfDefinitionData(1, false, 2, 4, 3) },
-                noConveyors,
-                0,
-                layout,
-                "cyclic shelves with different durations passed validation.");
             ExpectDefinitionFailure(
                 new[] { swingOpen, new CyclicShelfDefinitionData(1, true, 3, 3, 3) },
                 noConveyors,

@@ -12,6 +12,7 @@ BLEND_PATH = os.path.join(ROOT, "Art", "Blender", "Lockers", "Lockers.blend")
 
 CURTAIN_WIDTH = 0.96
 CURTAIN_HEIGHT = 0.38
+CURTAIN_SHIFT = 0.1
 SLAT_HEIGHT = 0.035
 WINDOW_TOP = -0.07
 WINDOW_BOTTOM = -0.24
@@ -19,9 +20,9 @@ BAR_TOP = -0.345
 FRAME_WIDTH = 0.012
 MULLION_X = 0.155
 MULLION_WIDTH = 0.014
-SLOT_X = (1.15, 0.0, -1.15)
+SLOT_X = (1.68, 0.56, -0.56, -1.68)
 LAMP_X = 0.25
-PANEL_WIDTH = 3.4
+PANEL_WIDTH = 4.46
 PANEL_HEIGHT = 0.22
 WINDOW_WIDTH = 0.292
 WINDOW_HEIGHT = 0.18
@@ -173,15 +174,15 @@ def build_object(name, fill, materials):
 
 
 def fill_housing(bm):
-    add_box(bm, (0, 0.285, 0.06), (1.02, 0.07, 0.1), bevel=0.008)
-    add_box(bm, (0, 0.2535, 0.08), (0.99, 0.006, 0.05), bevel=0.0015)
-    add_box(bm, (0, 0.285, 0.111), (0.98, 0.012, 0.003), bevel=0.001)
+    add_box(bm, (0, 0.285, 0.06 + CURTAIN_SHIFT / 2), (1.02, 0.07, 0.1 + CURTAIN_SHIFT), bevel=0.008)
+    add_box(bm, (0, 0.2535, 0.08 + CURTAIN_SHIFT / 2), (0.99, 0.006, 0.05 + CURTAIN_SHIFT), bevel=0.0015)
+    add_box(bm, (0, 0.285, 0.111 + CURTAIN_SHIFT), (0.98, 0.012, 0.003), bevel=0.001)
 
     for side in (-1, 1):
-        add_box(bm, (side * 0.516, 0.285, 0.06), (0.014, 0.082, 0.108), bevel=0.004)
-        add_cylinder_z(bm, (side * 0.516, 0.285, 0.115), 0.012, 0.004, segments=16)
-        add_box(bm, (side * 0.4875, 0.06, 0.112), (0.034, 0.38, 0.006), bevel=0.0015)
-        add_box(bm, (side * 0.501, 0.06, 0.095), (0.006, 0.38, 0.03), bevel=0.001)
+        add_box(bm, (side * 0.516, 0.285, 0.06 + CURTAIN_SHIFT / 2), (0.014, 0.082, 0.108 + CURTAIN_SHIFT), bevel=0.004)
+        add_cylinder_z(bm, (side * 0.516, 0.285, 0.115 + CURTAIN_SHIFT), 0.012, 0.004, segments=16)
+        add_box(bm, (side * 0.4875, 0.06, 0.112 + CURTAIN_SHIFT), (0.034, 0.38, 0.006), bevel=0.0015)
+        add_box(bm, (side * 0.501, 0.06, 0.095 + CURTAIN_SHIFT / 2), (0.006, 0.38, 0.03 + CURTAIN_SHIFT), bevel=0.001)
 
 
 def fill_curtain(bm):

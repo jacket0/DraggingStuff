@@ -11,7 +11,7 @@ public sealed class CyclicShelfAudioPlayer : MonoBehaviour
     [SerializeField] private AudioClip _shutterUpClip;
 
     [SerializeField, Range(0f, 1f)] private float _flipVolume = 0.35f;
-    [SerializeField, Range(0f, 1f)] private float _warningVolume = 0.2f;
+    [SerializeField, Range(0f, 1f)] private float _warningVolume = 0.05f;
     [SerializeField, Range(0f, 1f)] private float _shutterDownVolume = 0.3f;
     [SerializeField, Range(0f, 1f)] private float _shutterUpVolume = 0.3f;
 

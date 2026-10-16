@@ -24,7 +24,7 @@ public static class CyclicShelfVisualsSetup
     private const string DisplayName = "SplitFlap";
     private const float CurtainHeight = 0.38f;
     private const float ClosingWarningDrop = 0.07f;
-    private static readonly Vector3 CurtainPosition = new Vector3(0f, 0.25f, 0.1f);
+    private static readonly Vector3 CurtainPosition = new Vector3(0f, 0.25f, 0.2f);
     private static readonly Vector3 LampPosition = new Vector3(0.25f, 0f, 0.02f);
     private static readonly Vector3 DisplayPosition = new Vector3(0f, 0f, 0.0215f);
     private static readonly Vector3 IconPosition = new Vector3(0.25f, 0f, 0.044f);

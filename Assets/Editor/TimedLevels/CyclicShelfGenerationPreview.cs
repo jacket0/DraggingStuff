@@ -14,7 +14,7 @@ public static class CyclicShelfGenerationPreview
     private const int RequiredVariantCount = 12;
     private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
     private const string ItemCatalogSceneName = "SixthLevel";
-    private const int BoardShelfCount = 11;
+    private const int BoardShelfCount = 12;
     private const int ShelfCapacity = 3;
     private const int EmptyColumnCount = 3;
     private const int DefaultMinimumItemsBehindShutter = 3;

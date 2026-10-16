@@ -187,9 +187,6 @@ public static class TimedLevelValidator
 
             if (cyclicShelf.MovesToFirstSwitch > cyclicShelf.StartDuration)
                 throw new InvalidOperationException($"{definition.name}: cyclic shelf {cyclicShelf.ShelfIndex} switches after {cyclicShelf.MovesToFirstSwitch} moves, longer than its starting state of {cyclicShelf.StartDuration}.");
-
-            if (cyclicShelf.OpenMoves != cyclicShelves[0].OpenMoves || cyclicShelf.ClosedMoves != cyclicShelves[0].ClosedMoves)
-                throw new InvalidOperationException($"{definition.name}: cyclic shelves of one level must share their open and closed durations.");
         }
     }
 

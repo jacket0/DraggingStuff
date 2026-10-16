@@ -36,6 +36,10 @@ public sealed class CyclicShelfIntroHint : MonoBehaviour
         "Теперь ячейки открываются по очереди",
         "Now the lockers open one after another",
         "Artık dolaplar sırayla açılıyor");
+    [SerializeField] private LocalizedHintText _mixedWindowsText = new LocalizedHintText(
+        "У ячеек разные окна: следи за табло",
+        "The lockers keep different hours: watch the board",
+        "Dolapların süreleri farklı: tabloyu izle");
 
     private Sequence _sequence;
 
@@ -81,7 +85,17 @@ public sealed class CyclicShelfIntroHint : MonoBehaviour
         return HasQueue(level) && !catalog.Levels.TakeWhile(entry => entry != level).Any(HasQueue);
     }
 
+    public static bool IsMixedWindowsStart(LevelCatalog catalog, LevelEntry level)
+    {
+        return HasMixedWindows(level) && !catalog.Levels.TakeWhile(entry => entry != level).Any(HasMixedWindows);
+    }
+
     private static bool HasQueue(LevelEntry level) => level.Definition.CyclicShelves.Count >= QueueCellCount;
+
+    private static bool HasMixedWindows(LevelEntry level)
+    {
+        return level.Definition.CyclicShelves.Select(cyclicShelf => (cyclicShelf.OpenMoves, cyclicShelf.ClosedMoves)).Distinct().Count() > 1;
+    }
 
     private IReadOnlyList<LocalizedHintText> GetSteps(LevelEntry level)
     {
@@ -90,6 +104,9 @@ public sealed class CyclicShelfIntroHint : MonoBehaviour
 
         if (IsQueueStart(_catalog, level))
             return new[] { _queueText };
+
+        if (IsMixedWindowsStart(_catalog, level))
+            return new[] { _mixedWindowsText };
 
         return Array.Empty<LocalizedHintText>();
     }
