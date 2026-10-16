@@ -74,6 +74,9 @@ public sealed class ShelfStateSnapshot
         if (cycle != null && (isConveyor || IsFiltered))
             throw new ArgumentException("Only a regular shelf can be cyclic.", nameof(cycle));
 
+        if (cycle != null && cycle.MovesToSwitch > cycle.GetDuration(isOpen))
+            throw new ArgumentException("A cycle cannot switch later than its current state lasts.", nameof(cycle));
+
         Cycle = cycle;
     }
 

@@ -25,7 +25,6 @@ public static class CyclicShelfPlayModeValidation
     private const int SwingSeedBase = 2699000;
     private const int RotorSeedBase = 2699500;
     private const int MaximumScenarioSeeds = 300;
-    private const int BoardShelfCount = 12;
     private const int ShelfCapacity = 3;
     private const int EmptyColumnCount = 3;
     private const int OpenCellIndex = 0;
@@ -37,14 +36,14 @@ public static class CyclicShelfPlayModeValidation
     private const float ExpiringCountdownRate = 100000f;
 
     private static readonly BoardMoveSimulator Simulator = new BoardMoveSimulator();
-    public static readonly ColumnPosition StuckMoveSource = new ColumnPosition(4, 0);
-    public static readonly ColumnPosition StuckMoveTarget = new ColumnPosition(5, 0);
-    private static readonly ColumnPosition FirstMatchSource = new ColumnPosition(6, 0);
-    private static readonly ColumnPosition FirstMatchTarget = new ColumnPosition(3, 2);
-    private static readonly ColumnPosition SecondMatchSource = new ColumnPosition(7, 0);
-    private static readonly ColumnPosition SecondMatchTarget = new ColumnPosition(4, 2);
-    private static readonly ColumnPosition ThirdMatchSource = new ColumnPosition(8, 0);
-    private static readonly ColumnPosition ThirdMatchTarget = new ColumnPosition(5, 2);
+    public static readonly ColumnPosition StuckMoveSource = new ColumnPosition(5, 0);
+    public static readonly ColumnPosition StuckMoveTarget = new ColumnPosition(6, 0);
+    private static readonly ColumnPosition FirstMatchSource = new ColumnPosition(7, 0);
+    private static readonly ColumnPosition FirstMatchTarget = new ColumnPosition(4, 2);
+    private static readonly ColumnPosition SecondMatchSource = new ColumnPosition(8, 0);
+    private static readonly ColumnPosition SecondMatchTarget = new ColumnPosition(5, 2);
+    private static readonly ColumnPosition ThirdMatchSource = new ColumnPosition(9, 0);
+    private static readonly ColumnPosition ThirdMatchTarget = new ColumnPosition(6, 2);
 
     private static readonly CyclicShelfDefinitionData[] SwingShelves =
     {
@@ -468,12 +467,12 @@ public static class CyclicShelfPlayModeValidation
         BoardStateSnapshot expected = Arrange(
             Shelf(OpenCellIndex, Column(ItemType.Lamp), Column(ItemType.Lamp), Column()),
             Shelf(ClosedCellIndex, Column(ItemType.Lamp), Column(ItemType.Toy), Column()),
-            Shelf(3, Column(ItemType.Ball), Column(ItemType.Ball), Column()),
-            Shelf(4, Column(ItemType.Bear), Column(ItemType.Bear), Column()),
-            Shelf(5, Column(ItemType.Plant), Column(ItemType.Plant), Column()),
-            Shelf(6, Column(ItemType.Ball), Column(), Column()),
-            Shelf(7, Column(ItemType.Bear), Column(), Column()),
-            Shelf(8, Column(ItemType.Plant), Column(), Column()));
+            Shelf(4, Column(ItemType.Ball), Column(ItemType.Ball), Column()),
+            Shelf(5, Column(ItemType.Bear), Column(ItemType.Bear), Column()),
+            Shelf(6, Column(ItemType.Plant), Column(ItemType.Plant), Column()),
+            Shelf(7, Column(ItemType.Ball), Column(), Column()),
+            Shelf(8, Column(ItemType.Bear), Column(), Column()),
+            Shelf(9, Column(ItemType.Plant), Column(), Column()));
 
         foreach (object step in WaitUntilSettled("P10 arrange")) yield return step;
 
@@ -502,13 +501,13 @@ public static class CyclicShelfPlayModeValidation
         {
             Shelf(OpenCellIndex, Column(ItemType.Toy), Column(ItemType.MapBall), Column()),
             Shelf(ClosedCellIndex, Column(ItemType.Beauty), Column(ItemType.Beauty), Column()),
-            Shelf(3, Column(ItemType.Ball), Column(ItemType.Ball), Column()),
-            Shelf(4, Column(ItemType.Bear), Column(ItemType.Bear), Column()),
-            Shelf(5, Column(ItemType.Plant), Column(ItemType.Plant), Column()),
-            Shelf(6, Column(ItemType.Ball), Column(), Column()),
-            Shelf(7, Column(ItemType.Bear), Column(), Column()),
-            Shelf(8, Column(ItemType.Plant), Column(), Column()),
-            Shelf(9, Column(ItemType.Lamp, ItemType.Lamp, ItemType.Lamp), Column(), Column())
+            Shelf(4, Column(ItemType.Ball), Column(ItemType.Ball), Column()),
+            Shelf(5, Column(ItemType.Bear), Column(ItemType.Bear), Column()),
+            Shelf(6, Column(ItemType.Plant), Column(ItemType.Plant), Column()),
+            Shelf(7, Column(ItemType.Ball), Column(), Column()),
+            Shelf(8, Column(ItemType.Bear), Column(), Column()),
+            Shelf(9, Column(ItemType.Plant), Column(), Column()),
+            Shelf(10, Column(ItemType.Lamp, ItemType.Lamp, ItemType.Lamp), Column(), Column())
         };
     }
 
@@ -528,8 +527,8 @@ public static class CyclicShelfPlayModeValidation
         {
             Shelf(OpenCellIndex, Column(ItemType.Lamp), Column(ItemType.Lamp), Column()),
             Shelf(ClosedCellIndex, closedCellColumns),
-            Shelf(3, Column(ItemType.Ball), Column(ItemType.Bear), Column()),
-            Shelf(4, Column(ItemType.Plant), Column(), Column())
+            Shelf(4, Column(ItemType.Ball), Column(ItemType.Bear), Column()),
+            Shelf(5, Column(ItemType.Plant), Column(), Column())
         };
     }
 
@@ -558,7 +557,7 @@ public static class CyclicShelfPlayModeValidation
         _suggestions = UnityEngine.Object.FindObjectOfType<MoveSuggestionProvider>();
         _rescueToast = UnityEngine.Object.FindObjectOfType<CycleRescueToastView>();
 
-        if (!(_session is CyclicShelfLevelSession) || _board.Shelves.Count != BoardShelfCount || _cyclicShelves == null || _departureBoard == null || _drag == null || _suggestions == null || _rescueToast == null)
+        if (!(_session is CyclicShelfLevelSession) || _board.Shelves.Count != CyclicShelfGenerationPreview.BoardShelfCount || _cyclicShelves == null || _departureBoard == null || _drag == null || _suggestions == null || _rescueToast == null)
             throw new InvalidOperationException("Cyclic shelf scenarios need the SeventhLevel board, the cyclic shelf session and controller, the departure board, the drag controller, move suggestions and the rescue toast.");
     }
 
@@ -715,7 +714,7 @@ public static class CyclicShelfPlayModeValidation
     private static TimedLevelVariant GenerateScenarioVariant(TimedLevelDefinition definition, int seedBase)
     {
         TimedLevelLayoutGenerator generator = new TimedLevelLayoutGenerator();
-        BoardStateSnapshot boardShape = new BoardStateSnapshot(Enumerable.Range(0, BoardShelfCount)
+        BoardStateSnapshot boardShape = new BoardStateSnapshot(Enumerable.Range(0, CyclicShelfGenerationPreview.BoardShelfCount)
             .Select(_ => new ShelfStateSnapshot(Enumerable.Range(0, ShelfCapacity).Select(__ => new ColumnStateSnapshot(Array.Empty<ItemType>())).ToArray()))
             .ToArray());
 

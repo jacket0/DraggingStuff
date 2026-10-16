@@ -30,6 +30,7 @@ public static class CyclicShelfModelValidation
         ValidateDeadlockWithoutOpenItems();
         ValidateDeadlockWithoutOpenTriple();
         ValidateRepeatedDeadlockStopsCycles();
+        ValidateRescueSkipsToOpening();
         ValidateFingerprintCycles();
         ValidateLevelsWithoutCycles(catalog);
         ValidateIntroHintLevels(catalog);
@@ -38,6 +39,7 @@ public static class CyclicShelfModelValidation
         ValidateShelfBoardRescue();
         ValidateClearedBoardWithClosedCell();
         ValidateDefinitionErrors(catalog);
+        ValidateCellCountLimit(catalog);
         ValidateVariantRoundTrip(catalog);
     }
 
@@ -55,6 +57,7 @@ public static class CyclicShelfModelValidation
             () => new ShelfStateSnapshot(new[] { Column(), Column(), Column() }, true, false, new[] { ItemType.Ball }, Cycle(3, 3, 1)),
             "Cycles C0: a filtered shelf became cyclic.");
         ExpectFailure<InvalidOperationException>(() => OpenShelf(Column(), Column(), Column()).AdvanceCycle(1, out _), "Cycles C0: a regular shelf advanced a cycle.");
+        ExpectFailure<ArgumentException>(() => CyclicShelf(true, 2, 4, 4, Column(), Column(), Column()), "Cycles C0: an open cell waited longer than its open window.");
 
         ShelfCycleSnapshot cycle = Cycle(2, 4, 1).Advance(true, out bool switched);
         ShelfCycleSnapshot nextCycle = cycle.Advance(false, out bool nextSwitched);
@@ -307,13 +310,34 @@ public static class CyclicShelfModelValidation
 
         BoardStateSnapshot rescuedBoard = CycleDeadlockRule.ApplyRescue(stuckBoard, false, out IReadOnlyList<int> switchedShelfIndexes);
 
-        if (!switchedShelfIndexes.SequenceEqual(new[] { 1 })
-            || rescuedBoard.Shelves[0].IsOpen
-            || rescuedBoard.Shelves[0].Cycle.MovesToSwitch != 1
+        if (!switchedShelfIndexes.SequenceEqual(new[] { 0, 1 })
+            || !rescuedBoard.Shelves[0].IsOpen
+            || rescuedBoard.Shelves[0].Cycle.MovesToSwitch != 3
             || rescuedBoard.Shelves[1].IsOpen
-            || rescuedBoard.Shelves[1].Cycle.MovesToSwitch != 3)
+            || rescuedBoard.Shelves[1].Cycle.MovesToSwitch != 2
+            || CycleDeadlockRule.IsStuck(rescuedBoard))
         {
-            throw new InvalidOperationException("Cycles C11: a rescue must advance every cell by the moves to the nearest switch.");
+            throw new InvalidOperationException("Cycles C11: a rescue must advance every cell by the moves to the nearest opening.");
+        }
+    }
+
+    private static void ValidateRescueSkipsToOpening()
+    {
+        BoardStateSnapshot stuckBoard = Board(
+            CyclicShelf(false, 2, 4, 3, Column(ItemType.Ball), Column(ItemType.Ball), Column(ItemType.Ball)),
+            CyclicShelf(true, 2, 4, 1, Column(ItemType.Bear), Column(), Column()),
+            OpenShelf(Column(ItemType.Bear), Column(), Column()));
+        BoardStateSnapshot rescuedBoard = CycleDeadlockRule.ApplyRescue(stuckBoard, false, out IReadOnlyList<int> switchedShelfIndexes);
+
+        if (!CycleDeadlockRule.IsStuck(stuckBoard)
+            || !switchedShelfIndexes.SequenceEqual(new[] { 0, 1 })
+            || !rescuedBoard.Shelves[0].IsOpen
+            || rescuedBoard.Shelves[0].Cycle.MovesToSwitch != 2
+            || rescuedBoard.Shelves[1].IsOpen
+            || rescuedBoard.Shelves[1].Cycle.MovesToSwitch != 2
+            || CycleDeadlockRule.IsStuck(rescuedBoard))
+        {
+            throw new InvalidOperationException("Cycles C19: a rescue must skip past a closing cell to the nearest opening.");
         }
     }
 
@@ -641,6 +665,40 @@ public static class CyclicShelfModelValidation
         }
     }
 
+    private static void ValidateCellCountLimit(LevelCatalog catalog)
+    {
+        TimedLevelDefinition template = catalog.Levels[0].Definition;
+        BoardStateSnapshot boardShape = Board(Enumerable.Range(0, DefinitionShelfCount + 3).Select(_ => OpenShelf(Column(), Column(), Column())).ToArray());
+        BoardStateSnapshot layout = Board(DefinitionLayout(Column(ItemType.Plant)).Shelves.Concat(Enumerable.Range(0, 3).Select(_ => OpenShelf(Column(), Column(), Column()))).ToArray());
+        int emptyColumnCount = layout.Shelves.Sum(shelf => shelf.Columns.Count(column => column.IsEmpty));
+        CyclicShelfDefinitionData[] fourCells =
+        {
+            new CyclicShelfDefinitionData(0, true, 3, 3, 2),
+            new CyclicShelfDefinitionData(1, false, 3, 3, 3),
+            new CyclicShelfDefinitionData(4, true, 2, 4, 2),
+            new CyclicShelfDefinitionData(5, true, 2, 4, 1)
+        };
+        CyclicShelfDefinitionData[] fiveCells = fourCells.Append(new CyclicShelfDefinitionData(6, true, 2, 4, 2)).ToArray();
+        List<TimedLevelDefinition> definitions = new List<TimedLevelDefinition>();
+
+        try
+        {
+            TimedLevelValidator.ValidateForRuntime(CreateDefinition(template, fourCells, Array.Empty<int>(), 0, layout, definitions, emptyColumnCount), boardShape, TimedLevelLayoutRules.GeneratorVersion);
+
+            if (TimedLevelLayoutRules.MaximumCyclicShelfCount != fourCells.Length)
+                throw new InvalidOperationException("Cycles D3: the chapter is built for four cells at most.");
+
+            ExpectFailure<InvalidOperationException>(
+                () => TimedLevelValidator.ValidateForRuntime(CreateDefinition(template, fiveCells, Array.Empty<int>(), 0, layout, definitions, emptyColumnCount), boardShape, TimedLevelLayoutRules.GeneratorVersion),
+                "Cycles D3: five cells passed validation.");
+        }
+        finally
+        {
+            foreach (TimedLevelDefinition definition in definitions)
+                UnityEngine.Object.DestroyImmediate(definition);
+        }
+    }
+
     private static void ValidateVariantRoundTrip(LevelCatalog catalog)
     {
         BoardStateSnapshot layout = DefinitionLayout(Column(ItemType.Plant));
@@ -692,7 +750,8 @@ public static class CyclicShelfModelValidation
         IReadOnlyList<int> conveyorShelfIndices,
         int minimumPreparationMoves,
         BoardStateSnapshot layout,
-        List<TimedLevelDefinition> definitions)
+        List<TimedLevelDefinition> definitions,
+        int emptyColumnCount = DefinitionEmptyColumnCount)
     {
         TimedLevelDefinition definition = UnityEngine.Object.Instantiate(template);
         definition.hideFlags = HideFlags.HideAndDontSave;
@@ -704,7 +763,7 @@ public static class CyclicShelfModelValidation
         serializedDefinition.FindProperty("_refillSettings").objectReferenceValue = null;
         serializedDefinition.FindProperty("_shelfFilters").arraySize = 0;
         serializedDefinition.FindProperty("_filteredEmptyColumnCount").intValue = 0;
-        serializedDefinition.FindProperty("_emptyColumnCount").intValue = DefinitionEmptyColumnCount;
+        serializedDefinition.FindProperty("_emptyColumnCount").intValue = emptyColumnCount;
         serializedDefinition.FindProperty("_minimumItemsBehindShutter").intValue = 0;
         serializedDefinition.FindProperty("_minimumPreparationMoves").intValue = minimumPreparationMoves;
         CyclicShelfDefinitionData.WriteAll(serializedDefinition.FindProperty("_cyclicShelves"), cyclicShelves);

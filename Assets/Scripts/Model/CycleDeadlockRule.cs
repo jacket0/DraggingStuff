@@ -52,7 +52,7 @@ public static class CycleDeadlockRule
 
         ShelfStateSnapshot[] shelves = board.Shelves.ToArray();
         List<int> switchedIndexes = new List<int>();
-        int movesToNextSwitch = board.Shelves.Where(shelf => shelf.IsCyclic).Min(shelf => shelf.Cycle.MovesToSwitch);
+        int movesToNextOpening = GetMovesToNextOpening(board);
 
         for (int shelfIndex = 0; shelfIndex < shelves.Length; shelfIndex++)
         {
@@ -70,14 +70,35 @@ public static class CycleDeadlockRule
             }
             else
             {
-                shelves[shelfIndex] = shelf.AdvanceCycle(movesToNextSwitch, out bool switched);
+                shelves[shelfIndex] = SkipMoves(shelf, movesToNextOpening);
 
-                if (switched)
+                if (shelves[shelfIndex].IsOpen != shelf.IsOpen)
                     switchedIndexes.Add(shelfIndex);
             }
         }
 
         switchedShelfIndexes = switchedIndexes.AsReadOnly();
         return new BoardStateSnapshot(shelves, board.FilteredTypes);
+    }
+
+    private static int GetMovesToNextOpening(BoardStateSnapshot board)
+    {
+        ShelfStateSnapshot[] cyclicShelves = board.Shelves.Where(shelf => shelf.IsCyclic).ToArray();
+        ShelfStateSnapshot[] closedShelves = cyclicShelves.Where(shelf => !shelf.IsOpen).ToArray();
+        return (closedShelves.Length > 0 ? closedShelves : cyclicShelves).Min(shelf => shelf.Cycle.MovesToSwitch);
+    }
+
+    private static ShelfStateSnapshot SkipMoves(ShelfStateSnapshot shelf, int moves)
+    {
+        ShelfStateSnapshot result = shelf;
+
+        while (moves > 0)
+        {
+            int step = Math.Min(moves, result.Cycle.MovesToSwitch);
+            result = result.AdvanceCycle(step, out _);
+            moves -= step;
+        }
+
+        return result;
     }
 }

@@ -125,17 +125,17 @@ public sealed class CyclicShelvesController : MonoBehaviour
 
     private bool RefreshShutterWarnings(IReadOnlyList<Shelf> switchingShelves)
     {
-        bool hasWarning = false;
+        bool hasNewClosingWarning = false;
 
         foreach (ShelfShutterView shutter in _shutters.Where(shutter => _shelfBoard.IsCyclic(shutter.Shelf) && !switchingShelves.Contains(shutter.Shelf)))
         {
             ShelfCycleSnapshot cycle = _shelfBoard.GetCycle(shutter.Shelf);
             bool isWarning = cycle != null && cycle.MovesToSwitch == 1;
+            hasNewClosingWarning |= isWarning && !shutter.IsWarning && _shelfBoard.IsCyclePhaseOpen(shutter.Shelf);
             shutter.SetWarning(isWarning);
-            hasWarning |= isWarning;
         }
 
-        return hasWarning;
+        return hasNewClosingWarning;
     }
 
     private void RequestSwitch(IReadOnlyList<Shelf> shelves)

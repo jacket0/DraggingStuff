@@ -30,6 +30,7 @@ public sealed class ShelfShutterView : MonoBehaviour
     public Shelf Shelf => _shelf;
     public bool IsSwitching => _switch != null;
     public bool IsClosed => _isClosed;
+    public bool IsWarning => _isWarning;
     public float ClosedFraction => _curtain.gameObject.activeSelf ? 1f - _lift / _curtainHeight : 0f;
 
     private void Awake()
