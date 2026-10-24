@@ -17,6 +17,7 @@ public static class SlimeGenerationPreview
     private const int ShelfCapacity = 3;
     private const int EmptyColumnCount = 3;
     private const int GrowthPeriod = 2;
+    private const int BotRunsPerPolicy = 10;
 
     private static readonly ColumnPosition[] StartStickyColumns = { new ColumnPosition(5, 1) };
     private static readonly ColumnPosition[] SpreadStickyColumns = { new ColumnPosition(1, 0), new ColumnPosition(6, 2), new ColumnPosition(8, 1) };
@@ -81,6 +82,7 @@ public static class SlimeGenerationPreview
             {
                 TimedLevelVariantGenerator.WriteVariants(definition, accepted.Take(RequiredVariantCount).ToArray());
                 TimedLevelValidator.ValidateForRuntime(definition, shape, TimedLevelLayoutRules.GeneratorVersion);
+                Debug.Log(SlimeBalanceBot.Run(definition, settings, BotRunsPerPolicy));
             }
 
             Debug.Log(
