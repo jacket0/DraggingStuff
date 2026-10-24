@@ -96,7 +96,7 @@ public sealed class CyclicShelvesController : MonoBehaviour
         RefreshShutterWarnings(Array.Empty<Shelf>());
     }
 
-    private void HandleMatchingMoveResolved()
+    private void HandleMatchingMoveResolved(IReadOnlyList<Shelf> matchedShelves)
     {
         if (!_shelfBoard.HasCycles)
             return;

@@ -241,6 +241,38 @@ public sealed class ShelfBoard : MonoBehaviour
         _slime = slime;
     }
 
+    public IReadOnlyList<ColumnPosition> CleanSlime(IEnumerable<Shelf> matchedShelves)
+    {
+        if (matchedShelves == null)
+            throw new ArgumentNullException(nameof(matchedShelves));
+
+        if (!HasSlime)
+            return Array.Empty<ColumnPosition>();
+
+        BoardStateSnapshot cleanedBoard = SlimeRule.Clean(CreateSnapshot(), matchedShelves.Select(GetShelfIndex), out IReadOnlyList<ColumnPosition> cleanedColumns);
+        _slime = cleanedBoard.Slime;
+        return cleanedColumns;
+    }
+
+    public ColumnPosition? AdvanceSlimeGrowth(bool hasCleaned)
+    {
+        if (!HasSlime)
+            return null;
+
+        BoardStateSnapshot grownBoard = SlimeRule.AdvanceGrowth(CreateSnapshot(), hasCleaned, out ColumnPosition? grownColumn);
+        _slime = grownBoard.Slime;
+        return grownColumn;
+    }
+
+    public bool IsStuckInSlime() => HasSlime && SlimeRule.IsStuck(CreateSnapshot(), _simulator);
+
+    public ColumnPosition ApplySlimeRescue()
+    {
+        BoardStateSnapshot rescuedBoard = SlimeRule.ApplyRescue(CreateSnapshot(), out ColumnPosition cleanedColumn);
+        _slime = rescuedBoard.Slime;
+        return cleanedColumn;
+    }
+
     public ShelfColumn GetColumn(ColumnPosition position)
     {
         Initialize();

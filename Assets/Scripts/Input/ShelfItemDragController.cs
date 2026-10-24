@@ -17,6 +17,7 @@ public class ShelfItemDragController : MonoBehaviour
     public event Action<Shelf> HoveredShelfChanged;
     public event Action InteractionOccurred;
     public event Action<Vector2> DropRejected;
+    public event Action<ShelfItem> PickUpRejected;
 
     public bool IsDragging => _isDragging;
 
@@ -73,6 +74,15 @@ public class ShelfItemDragController : MonoBehaviour
         InteractionOccurred?.Invoke();
 
         return true;
+    }
+
+    public void RejectPickUp(ShelfItem item)
+    {
+        if (item == null)
+            throw new ArgumentNullException(nameof(item));
+
+        if (_levelSession.CanInteract && !_isDragging)
+            PickUpRejected?.Invoke(item);
     }
 
     public void UpdateDrag(Vector2 pointerPosition)

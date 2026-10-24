@@ -19,6 +19,7 @@ public sealed class ShelfPointerInput : MonoBehaviour
 
     private ShelfItemTargetResolver _targetResolver;
     private ShelfItem _pressedItem;
+    private ShelfItem _pressedStickyItem;
     private ShelfItem _hoveredItem;
     private Vector2 _pressPosition;
     private int _activePointerId = NoPointer;
@@ -132,7 +133,10 @@ public sealed class ShelfPointerInput : MonoBehaviour
 
         _activePointerId = pointerId;
         _pressPosition = pointerPosition;
-        _targetResolver.TryResolve(pointerPosition, out _pressedItem);
+
+        if (!_targetResolver.TryResolve(pointerPosition, out _pressedItem))
+            _targetResolver.TryResolveSticky(pointerPosition, out _pressedStickyItem);
+
         Interacted?.Invoke();
     }
 
@@ -148,13 +152,19 @@ public sealed class ShelfPointerInput : MonoBehaviour
             return;
         }
 
-        if (_pressedItem == null || _dragController.IsDragging)
+        if (_pressedItem == null && _pressedStickyItem == null || _dragController.IsDragging)
             return;
 
         float dragThreshold = EventSystem.current != null ? EventSystem.current.pixelDragThreshold : 10f;
 
         if (Vector2.SqrMagnitude(pointerPosition - _pressPosition) < dragThreshold * dragThreshold)
             return;
+
+        if (_pressedItem == null)
+        {
+            RejectStickyPickUp();
+            return;
+        }
 
         _ownsDrag = _dragController.TryBeginDrag(_pressedItem, _pressPosition);
 
@@ -172,6 +182,8 @@ public sealed class ShelfPointerInput : MonoBehaviour
 
         if (_ownsDrag)
             _dragController.EndDrag(pointerPosition);
+        else if (_pressedStickyItem != null)
+            RejectStickyPickUp();
 
         Interacted?.Invoke();
         ClearPress();
@@ -205,9 +217,16 @@ public sealed class ShelfPointerInput : MonoBehaviour
         _hoveredItem = null;
     }
 
+    private void RejectStickyPickUp()
+    {
+        _dragController.RejectPickUp(_pressedStickyItem);
+        _pressedStickyItem = null;
+    }
+
     private void ClearPress()
     {
         _pressedItem = null;
+        _pressedStickyItem = null;
         _activePointerId = NoPointer;
         _ownsDrag = false;
     }

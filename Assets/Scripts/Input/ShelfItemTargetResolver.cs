@@ -14,7 +14,14 @@ public sealed class ShelfItemTargetResolver
         _selectionPaddingPixels = Mathf.Max(0f, selectionPaddingPixels);
     }
 
-    public bool TryResolve(Vector2 pointerPosition, out ShelfItem item)
+    public bool TryResolve(Vector2 pointerPosition, out ShelfItem item) => TryResolve(pointerPosition, _shelfBoard.CanPickUp, out item);
+
+    public bool TryResolveSticky(Vector2 pointerPosition, out ShelfItem item)
+    {
+        return TryResolve(pointerPosition, column => column.FrontItem != null && _shelfBoard.IsSticky(column), out item);
+    }
+
+    private bool TryResolve(Vector2 pointerPosition, Func<ShelfColumn, bool> canTarget, out ShelfItem item)
     {
         item = null;
         float bestBoundsDistance = float.PositiveInfinity;
@@ -27,7 +34,7 @@ public sealed class ShelfItemTargetResolver
 
             foreach (ShelfColumnView columnView in shelf.ColumnViews)
             {
-                if (!_shelfBoard.CanPickUp(columnView.Column) || !columnView.FrontItem.gameObject.activeInHierarchy || !TryGetScreenRect(columnView.FrontItem, out Rect screenRect, out float depth))
+                if (!canTarget(columnView.Column) || !columnView.FrontItem.gameObject.activeInHierarchy || !TryGetScreenRect(columnView.FrontItem, out Rect screenRect, out float depth))
                     continue;
 
                 Vector2 nearestPoint = new Vector2(

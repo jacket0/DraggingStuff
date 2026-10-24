@@ -161,7 +161,7 @@ public static class CyclicShelfPlaytestLog
         _isDragFromClosingShelf = false;
     }
 
-    private static void HandleMatchingMoveResolved() => _matchingMoveCount++;
+    private static void HandleMatchingMoveResolved(IReadOnlyList<Shelf> matchedShelves) => _matchingMoveCount++;
 
     private static void HandleShelvesSwitched(IReadOnlyList<Shelf> shelves)
     {

@@ -30,16 +30,16 @@ public sealed class ConveyorController : MonoBehaviour
     private void OnEnable()
     {
         _session.SessionStarted += HandleSessionStarted;
-        _session.MatchingMoveResolved += RequestShift;
+        _session.MatchingMoveResolved += HandleMatchingMoveResolved;
     }
 
     private void OnDisable()
     {
         _session.SessionStarted -= HandleSessionStarted;
-        _session.MatchingMoveResolved -= RequestShift;
+        _session.MatchingMoveResolved -= HandleMatchingMoveResolved;
     }
 
-    public void RequestShift()
+    private void HandleMatchingMoveResolved(IReadOnlyList<Shelf> matchedShelves)
     {
         if (_shelfBoard.HasConveyors)
             _session.RequestBoardChange(_shelfBoard.ConveyorShelves, PlayShift);

@@ -106,7 +106,7 @@ public static class SlimeGenerationPreview
         }
     }
 
-    private static TimedLevelDefinition CreatePreviewDefinition(string formName, IReadOnlyList<ColumnPosition> stickyColumns, List<UnityEngine.Object> temporaryAssets)
+    public static TimedLevelDefinition CreatePreviewDefinition(string formName, IReadOnlyList<ColumnPosition> stickyColumns, List<UnityEngine.Object> temporaryAssets)
     {
         LevelCatalog catalog = AssetDatabase.LoadAssetAtPath<LevelCatalog>(CatalogPath);
         ShelfItemCatalog itemCatalog = catalog.Levels.First(level => level.SceneName == ItemCatalogSceneName).Definition.ItemCatalog;
@@ -156,7 +156,7 @@ public static class SlimeGenerationPreview
         property.FindPropertyRelative("_columnIndex").intValue = position.ColumnIndex;
     }
 
-    private static BoardStateSnapshot CreateBoardShape()
+    public static BoardStateSnapshot CreateBoardShape()
     {
         return new BoardStateSnapshot(Enumerable.Range(0, BoardShelfCount)
             .Select(_ => new ShelfStateSnapshot(Enumerable.Range(0, ShelfCapacity).Select(__ => new ColumnStateSnapshot(Array.Empty<ItemType>())).ToArray()))

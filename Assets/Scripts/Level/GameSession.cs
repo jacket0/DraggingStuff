@@ -32,7 +32,8 @@ public abstract class GameSession : MonoBehaviour
 
     public event Action<MatchResolution> MatchSucceeded;
     public event Action<LevelState> StateChanged;
-    public event Action MatchingMoveResolved;
+    public event Action<IReadOnlyList<Shelf>> MatchingMoveResolved;
+    public event Action<IReadOnlyList<Shelf>> CascadeMatchesResolved;
     public event Action<Shelf> ShelfReserved;
     public event Action<Shelf> ShelfResolved;
     public event Action BoardSettled;
@@ -148,7 +149,9 @@ public abstract class GameSession : MonoBehaviour
                 _waves.Remove(wave);
 
                 if (wave.IsMove && wave.HasMatch)
-                    MatchingMoveResolved?.Invoke();
+                    MatchingMoveResolved?.Invoke(wave.MatchedShelves);
+                else if (wave.HasMatch)
+                    CascadeMatchesResolved?.Invoke(wave.MatchedShelves);
             }
         }
 
@@ -351,7 +354,7 @@ public abstract class GameSession : MonoBehaviour
     private void PlayMatch(ShelfOperation operation, MatchResolution match)
     {
         operation.IsReady = false;
-        operation.Wave.HasMatch = true;
+        operation.Wave.AddMatchedShelf(operation.Shelf);
         _needsPreparation = true;
         MatchSucceeded?.Invoke(match);
         HandleMatchRegistered(match);
@@ -436,10 +439,17 @@ public abstract class GameSession : MonoBehaviour
     {
         public List<ShelfOperation> Operations { get; } = new List<ShelfOperation>();
         public int PendingInitialAnimations { get; set; }
+        public List<Shelf> MatchedShelves { get; } = new List<Shelf>();
         public bool IsMove { get; }
-        public bool HasMatch { get; set; }
+        public bool HasMatch => MatchedShelves.Count > 0;
 
         public ResolutionWave(bool isMove) => IsMove = isMove;
+
+        public void AddMatchedShelf(Shelf shelf)
+        {
+            if (!MatchedShelves.Contains(shelf))
+                MatchedShelves.Add(shelf);
+        }
     }
 
     private sealed class BoardChangeRequest
