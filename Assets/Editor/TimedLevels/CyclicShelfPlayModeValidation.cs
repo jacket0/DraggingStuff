@@ -21,7 +21,7 @@ public static class CyclicShelfPlayModeValidation
     private const string SceneName = "SeventhLevel";
     public const string SwingLevelName = "CyclicShelfScenarioLevel_Swing";
     private const string RotorLevelName = "CyclicShelfScenarioLevel_Rotor";
-    private const int ScenarioLevelNumber = 26;
+    private const int ScenarioLevelNumber = 21;
     private const int SwingSeedBase = 2699000;
     private const int RotorSeedBase = 2699500;
     private const int MaximumScenarioSeeds = 300;

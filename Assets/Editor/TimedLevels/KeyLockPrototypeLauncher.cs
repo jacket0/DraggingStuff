@@ -12,7 +12,7 @@ public static class KeyLockPrototypeLauncher
     private const string ScenePath = "Assets/Scenes/SixthLevel.unity";
     private const string SceneName = "SixthLevel";
     private const string PrototypeDefinitionPathFormat = "Assets/Levels/Prototype/TimedLevel_KeyPrototype_{0}.asset";
-    private const int DisplayedLevelNumber = 21;
+    private const int DisplayedLevelNumber = 26;
     private const int SeedLevelNumberBase = 90;
 
     private static LevelEntry _prototypeLevel;

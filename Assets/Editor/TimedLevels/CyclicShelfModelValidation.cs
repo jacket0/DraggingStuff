@@ -396,10 +396,10 @@ public static class CyclicShelfModelValidation
         int[] queueStarts = catalog.Levels.Where(level => CyclicShelfIntroHint.IsQueueStart(catalog, level)).Select(level => level.Number).ToArray();
         int[] mixedWindowsStarts = catalog.Levels.Where(level => CyclicShelfIntroHint.IsMixedWindowsStart(catalog, level)).Select(level => level.Number).ToArray();
 
-        if (!chapterStarts.SequenceEqual(new[] { 26 }) || !queueStarts.SequenceEqual(new[] { 27 }) || !mixedWindowsStarts.SequenceEqual(new[] { 29 }))
+        if (!chapterStarts.SequenceEqual(new[] { 21 }) || !queueStarts.SequenceEqual(new[] { 22 }) || !mixedWindowsStarts.SequenceEqual(new[] { 24 }))
         {
             throw new InvalidOperationException(
-                $"Cycles C17: the intro hint must start on levels 26, 27 and 29, found [{string.Join(",", chapterStarts)}], [{string.Join(",", queueStarts)}] and [{string.Join(",", mixedWindowsStarts)}].");
+                $"Cycles C17: the intro hint must start on levels 21, 22 and 24, found [{string.Join(",", chapterStarts)}], [{string.Join(",", queueStarts)}] and [{string.Join(",", mixedWindowsStarts)}].");
         }
     }
 

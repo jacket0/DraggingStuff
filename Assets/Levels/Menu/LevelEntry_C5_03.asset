@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f80df5257d8242488c4177547dae175, type: 3}
   m_Name: LevelEntry_C5_03
   m_EditorClassIdentifier: 
-  _number: 23
+  _number: 28
   _sceneName: SixthLevel
   _definition: {fileID: 11400000, guid: 26aa4498a106e0440a98a5c94a66fe15, type: 2}
   _available: 1

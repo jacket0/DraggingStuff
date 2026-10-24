@@ -19,7 +19,7 @@ public static class KeyLockPlayModeValidation
     private const string KeyPrefabPath = "Assets/Prefabs/Keys/ShelfKey.prefab";
     private const string ScenePath = "Assets/Scenes/SixthLevel.unity";
     private const string SceneName = "SixthLevel";
-    private const int ScenarioLevelNumber = 21;
+    private const int ScenarioLevelNumber = 26;
     private const int ScenarioSeedBase = 2199000;
     private const int MaximumScenarioSeeds = 2000;
     private const int BoardShelfCount = 10;
