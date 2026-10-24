@@ -14,7 +14,6 @@ public static class SlimeGenerationPreview
     private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
     private const string ItemCatalogSceneName = "SixthLevel";
     public const int BoardShelfCount = 10;
-    private const int TierShelfCount = 4;
     private const int ShelfCapacity = 3;
     private const int EmptyColumnCount = 3;
     private const int GrowthPeriod = 2;
@@ -32,27 +31,6 @@ public static class SlimeGenerationPreview
 
     [MenuItem("Tools/Timed Levels/Slime Generation Preview/Spread")]
     public static void RunSpread() => Run("spread", SpreadSeedLevelNumber, SpreadStickyColumns);
-
-    public static IReadOnlyList<ColumnPosition[]> CreatePreviewLinks()
-    {
-        List<ColumnPosition[]> links = new List<ColumnPosition[]>();
-
-        for (int tierStart = 0; tierStart < TierShelfCount * 2; tierStart += TierShelfCount)
-        {
-            for (int shelfIndex = tierStart; shelfIndex < tierStart + TierShelfCount - 1; shelfIndex++)
-                links.Add(new[] { new ColumnPosition(shelfIndex, ShelfCapacity - 1), new ColumnPosition(shelfIndex + 1, 0) });
-        }
-
-        for (int shelfIndex = 0; shelfIndex < TierShelfCount; shelfIndex++)
-        {
-            for (int columnIndex = 0; columnIndex < ShelfCapacity; columnIndex++)
-                links.Add(new[] { new ColumnPosition(shelfIndex, columnIndex), new ColumnPosition(shelfIndex + TierShelfCount, columnIndex) });
-        }
-
-        links.Add(new[] { new ColumnPosition(8, 1), new ColumnPosition(1, 1) });
-        links.Add(new[] { new ColumnPosition(9, 1), new ColumnPosition(2, 1) });
-        return links;
-    }
 
     private static void Run(string formName, int seedLevelNumber, IReadOnlyList<ColumnPosition> stickyColumns)
     {
@@ -152,7 +130,7 @@ public static class SlimeGenerationPreview
         }
 
         SerializedProperty slime = serializedDefinition.FindProperty("_slime");
-        slime.FindPropertyRelative("_neighborhood").objectReferenceValue = CreateNeighborhood(CreatePreviewLinks(), temporaryAssets);
+        slime.FindPropertyRelative("_neighborhood").objectReferenceValue = LoadNeighborhood();
         slime.FindPropertyRelative("_growthPeriod").intValue = GrowthPeriod;
         SerializedProperty stickyProperty = slime.FindPropertyRelative("_stickyColumns");
         stickyProperty.arraySize = stickyColumns.Count;
@@ -164,24 +142,10 @@ public static class SlimeGenerationPreview
         return definition;
     }
 
-    private static SlimeNeighborhood CreateNeighborhood(IReadOnlyList<ColumnPosition[]> links, List<UnityEngine.Object> temporaryAssets)
+    private static SlimeNeighborhood LoadNeighborhood()
     {
-        SlimeNeighborhood neighborhood = ScriptableObject.CreateInstance<SlimeNeighborhood>();
-        neighborhood.name = "SlimePreviewNeighborhood";
-        neighborhood.hideFlags = HideFlags.HideAndDontSave;
-        temporaryAssets.Add(neighborhood);
-        SerializedObject serializedNeighborhood = new SerializedObject(neighborhood);
-        SerializedProperty linksProperty = serializedNeighborhood.FindProperty("_links");
-        linksProperty.arraySize = links.Count;
-
-        for (int index = 0; index < links.Count; index++)
-        {
-            WriteColumn(linksProperty.GetArrayElementAtIndex(index).FindPropertyRelative("_first"), links[index][0]);
-            WriteColumn(linksProperty.GetArrayElementAtIndex(index).FindPropertyRelative("_second"), links[index][1]);
-        }
-
-        serializedNeighborhood.ApplyModifiedPropertiesWithoutUndo();
-        return neighborhood;
+        SlimeNeighborhood neighborhood = AssetDatabase.LoadAssetAtPath<SlimeNeighborhood>(SlimeNeighborhoodGeometry.NeighborhoodPath);
+        return neighborhood != null ? neighborhood : throw new InvalidOperationException($"Slime neighborhood was not found at {SlimeNeighborhoodGeometry.NeighborhoodPath}.");
     }
 
     private static void WriteColumn(SerializedProperty property, ColumnPosition position)
