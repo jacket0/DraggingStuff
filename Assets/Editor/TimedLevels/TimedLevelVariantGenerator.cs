@@ -14,6 +14,8 @@ public static class TimedLevelVariantGenerator
     private const int MaximumSeedAttempts = 10000;
     private const int MaximumKeyLockSeedAttempts = 60000;
     private const int CycleDeadlockProbeMatchCount = 4;
+    private const int SlimeSolverNodeLimit = 20000;
+    private const int MinimumSlimeCleanCount = 1;
 
     [MenuItem("Tools/Timed Levels/Generate All Variants")]
     public static void GenerateAll()
@@ -138,6 +140,32 @@ public static class TimedLevelVariantGenerator
 
             AssetDatabase.SaveAssets();
             Debug.Log($"Generated {RequiredVariantCount} verified variants for {levels.Length} cyclic shelf levels.");
+        }
+        finally
+        {
+            EditorSceneManager.RestoreSceneManagerSetup(sceneSetup);
+        }
+    }
+
+    [MenuItem("Tools/Timed Levels/Generate Slime Levels")]
+    public static void GenerateSlimeLevels()
+    {
+        LevelCatalog catalog = AssetDatabase.LoadAssetAtPath<LevelCatalog>(CatalogPath);
+
+        if (catalog == null)
+            throw new InvalidOperationException($"Level catalog was not found at {CatalogPath}.");
+
+        SceneSetup[] sceneSetup = EditorSceneManager.GetSceneManagerSetup();
+
+        try
+        {
+            LevelEntry[] levels = catalog.Levels.Where(level => level != null && level.Definition != null && level.Definition.HasSlime).ToArray();
+
+            foreach (LevelEntry level in levels)
+                Generate(level);
+
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Generated {RequiredVariantCount} verified variants for {levels.Length} slime levels.");
         }
         finally
         {
@@ -285,11 +313,22 @@ public static class TimedLevelVariantGenerator
                 }
             }
 
+            if (definition.HasSlime)
+            {
+                CandidateRejection? slimeRejection = CheckSlime(definition, ref generation);
+
+                if (slimeRejection.HasValue)
+                {
+                    CountRejection(rejections, slimeRejection.Value);
+                    continue;
+                }
+            }
+
             TimedLevelSolver solver = new TimedLevelSolver(
                 generation.SolutionMoves.Count,
                 generation.SolutionMoves.Count + 1,
                 TimeSpan.FromSeconds(5));
-            TimedLevelSolveResult solveResult = solver.Solve(definition.AddCyclicShelves(generation.State), generation.SolutionMoves);
+            TimedLevelSolveResult solveResult = solver.Solve(definition.AddSlime(definition.AddCyclicShelves(generation.State)), generation.SolutionMoves);
 
             if (solveResult.Status != TimedLevelSolveStatus.Solved)
             {
@@ -363,6 +402,35 @@ public static class TimedLevelVariantGenerator
 
         if (new CyclicShelfDeadlockProbe().Check(definition.AddCyclicShelves(generation.State), CycleDeadlockProbeMatchCount, out _) == CyclicShelfDeadlockProbe.ProbeStatus.Deadlock)
             return CandidateRejection.CycleDeadlockProbe;
+
+        return null;
+    }
+
+    private static CandidateRejection? CheckSlime(TimedLevelDefinition definition, ref TimedLevelGenerationResult generation)
+    {
+        BoardStateSnapshot layout = definition.AddSlime(generation.State);
+        SlimeLayoutMetrics metrics = SlimeLayoutMetrics.Measure(layout, generation.SolutionMoves);
+
+        if (!metrics.IsReplayed)
+        {
+            TimedLevelSolver solver = new TimedLevelSolver(generation.SolutionMoves.Count, SlimeSolverNodeLimit, TimeSpan.FromSeconds(2));
+            TimedLevelSolveResult solveResult = solver.Solve(layout);
+
+            if (solveResult.Status != TimedLevelSolveStatus.Solved)
+                return CandidateRejection.SlimeNotSolved;
+
+            generation = new TimedLevelGenerationResult(generation.State, solveResult.Moves);
+            metrics = SlimeLayoutMetrics.Measure(layout, generation.SolutionMoves);
+        }
+
+        if (!metrics.IsReplayed)
+            return CandidateRejection.SlimeNotSolved;
+
+        if (metrics.HasDeadlockOnPath)
+            return CandidateRejection.SlimeDeadlockOnPath;
+
+        if (metrics.CleanedColumnCount < MinimumSlimeCleanCount)
+            return CandidateRejection.SlimeNeverCleaned;
 
         return null;
     }
@@ -531,6 +599,9 @@ public static class TimedLevelVariantGenerator
         CycleDeadlockOnPath,
         ShutterTooEmpty,
         NoPreparationChoice,
-        CycleDeadlockProbe
+        CycleDeadlockProbe,
+        SlimeNotSolved,
+        SlimeDeadlockOnPath,
+        SlimeNeverCleaned
     }
 }

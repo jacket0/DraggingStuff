@@ -24,6 +24,7 @@ public sealed class TimedLevelDefinition : ScriptableObject
     [SerializeField] private List<CyclicShelfDefinition> _cyclicShelves = new List<CyclicShelfDefinition>();
     [SerializeField, Min(0)] private int _minimumItemsBehindShutter;
     [SerializeField, Min(0)] private int _minimumPreparationMoves;
+    [SerializeField] private SlimeDefinition _slime = new SlimeDefinition();
 
     public int TimeLimitSeconds => _timeLimitSeconds;
     public int TwoStarTimeSeconds => _twoStarTimeSeconds;
@@ -49,6 +50,8 @@ public sealed class TimedLevelDefinition : ScriptableObject
     public bool HasCyclicShelves => _cyclicShelves.Count > 0;
     public int MinimumItemsBehindShutter => _minimumItemsBehindShutter;
     public int MinimumPreparationMoves => _minimumPreparationMoves;
+    public SlimeDefinition Slime => _slime;
+    public bool HasSlime => _slime != null && _slime.IsConfigured;
 
     public int GetMechanicElementCount(LevelMechanic mechanic) => mechanic switch
     {
@@ -58,8 +61,11 @@ public sealed class TimedLevelDefinition : ScriptableObject
         LevelMechanic.Conveyor => _conveyorShelfIndices.Count,
         LevelMechanic.KeyLocks => _keyLockedShelfIndices.Count,
         LevelMechanic.CyclicShelves => _cyclicShelves.Count,
+        LevelMechanic.Slime => HasSlime ? _slime.StickyColumns.Count : 0,
         _ => throw new ArgumentOutOfRangeException(nameof(mechanic))
     };
 
     public BoardStateSnapshot AddCyclicShelves(BoardStateSnapshot layout) => CyclicShelfDefinition.AddCycles(layout, _cyclicShelves);
+
+    public BoardStateSnapshot AddSlime(BoardStateSnapshot layout) => HasSlime ? _slime.AddSlime(layout) : layout;
 }

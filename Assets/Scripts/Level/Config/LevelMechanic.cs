@@ -5,5 +5,6 @@ public enum LevelMechanic
     ClosedShelves,
     Conveyor,
     KeyLocks,
-    CyclicShelves
+    CyclicShelves,
+    Slime
 }

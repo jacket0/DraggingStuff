@@ -151,6 +151,33 @@ public static class TimedLevelValidator
         ValidateShelfFilterDefinition(definition, types);
         ValidateKeyLockDefinition(definition);
         ValidateCyclicShelfDefinition(definition);
+        ValidateSlimeDefinition(definition);
+    }
+
+    private static void ValidateSlimeDefinition(TimedLevelDefinition definition)
+    {
+        if (!definition.HasSlime)
+            return;
+
+        SlimeDefinition slime = definition.Slime;
+
+        if (slime.Neighborhood == null)
+            throw new InvalidOperationException($"{definition.name}: slime requires a neighborhood.");
+
+        if (slime.StickyColumns.Any(column => column == null))
+            throw new InvalidOperationException($"{definition.name}: a sticky column is missing.");
+
+        if (slime.StickyColumns.Count < TimedLevelLayoutRules.MinimumStickyColumnCount || slime.StickyColumns.Count > TimedLevelLayoutRules.MaximumStickyColumnCount)
+            throw new InvalidOperationException($"{definition.name}: a level needs {TimedLevelLayoutRules.MinimumStickyColumnCount} to {TimedLevelLayoutRules.MaximumStickyColumnCount} sticky columns.");
+
+        if (slime.StickyColumns.Select(column => column.ToPosition()).Distinct().Count() != slime.StickyColumns.Count)
+            throw new InvalidOperationException($"{definition.name}: a sticky column is duplicated.");
+
+        if (slime.GrowthPeriod < 1)
+            throw new InvalidOperationException($"{definition.name}: the slime growth period must be positive.");
+
+        if (definition.HasClosedShelves || definition.HasConveyors || definition.HasShelfFilters || definition.HasKeyLocks || definition.HasCyclicShelves)
+            throw new InvalidOperationException($"{definition.name}: slime cannot share a level with closed shelves, conveyors, shelf filters, key locks or cyclic shelves.");
     }
 
     private static void ValidateCyclicShelfDefinition(TimedLevelDefinition definition)
@@ -338,6 +365,26 @@ public static class TimedLevelValidator
 
         if (definition.HasCyclicShelves)
             ValidateCyclicShelfBoard(definition, board);
+
+        if (definition.HasSlime)
+            ValidateSlimeBoard(definition, board);
+    }
+
+    private static void ValidateSlimeBoard(TimedLevelDefinition definition, BoardStateSnapshot board)
+    {
+        try
+        {
+            board.WithSlime(definition.Slime.CreateSlime());
+        }
+        catch (ArgumentException exception)
+        {
+            throw new InvalidOperationException($"{definition.name}: slime does not fit the scene board. {exception.Message}");
+        }
+
+        int columnCount = board.Shelves.Sum(shelf => shelf.Capacity);
+
+        if (definition.Slime.StickyColumns.Count + definition.EmptyColumnCount >= columnCount)
+            throw new InvalidOperationException($"{definition.name}: sticky and empty columns leave no free column with items.");
     }
 
     private static void ValidateCyclicShelfBoard(TimedLevelDefinition definition, BoardStateSnapshot board)
@@ -479,6 +526,9 @@ public static class TimedLevelValidator
 
         ValidateShelfFilterVariant(definition, variant, layout, variantIndex);
         ValidateKeyLockVariant(definition, layout, variantIndex);
+
+        if (layout.HasSlime)
+            throw new InvalidOperationException($"{definition.name}: variant {variantIndex + 1} stores slime in its layout instead of the definition.");
     }
 
     private static void ValidateKeyLockVariant(TimedLevelDefinition definition, BoardStateSnapshot layout, int variantIndex)

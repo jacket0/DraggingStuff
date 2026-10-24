@@ -6,6 +6,7 @@ public sealed class TimedLevelSolver
 {
     private readonly BoardMoveSimulator _moveSimulator = new BoardMoveSimulator();
     private readonly Dictionary<string, int> _visitedDepths = new Dictionary<string, int>();
+    private readonly List<TimedLevelMove> _path = new List<TimedLevelMove>();
     private readonly int _maximumDepth;
     private readonly int _maximumNodeCount;
     private readonly TimeSpan _timeLimit;
@@ -36,6 +37,7 @@ public sealed class TimedLevelSolver
             throw new ArgumentNullException(nameof(board));
 
         _visitedDepths.Clear();
+        _path.Clear();
         _visitedNodeCount = 0;
         _limitReached = false;
         _stopwatch = Stopwatch.StartNew();
@@ -46,7 +48,8 @@ public sealed class TimedLevelSolver
             ? TimedLevelSolveStatus.Solved
             : _limitReached ? TimedLevelSolveStatus.LimitReached : TimedLevelSolveStatus.Unsolvable;
 
-        return new TimedLevelSolveResult(status, Math.Max(0, moveCount), _visitedNodeCount, _stopwatch.Elapsed);
+        TimedLevelMove[] moves = moveCount >= 0 ? _path.ToArray() : Array.Empty<TimedLevelMove>();
+        return new TimedLevelSolveResult(status, Math.Max(0, moveCount), _visitedNodeCount, _stopwatch.Elapsed, moves);
     }
 
     public TimedLevelSolveResult Solve(BoardStateSnapshot board, IReadOnlyList<TimedLevelMove> solutionMoves)
@@ -101,14 +104,17 @@ public sealed class TimedLevelSolver
 
         _visitedDepths[key] = depth;
         _visitedNodeCount++;
-        List<BoardMoveSimulation> moves = CreateMoves(board);
+        List<(TimedLevelMove Move, BoardMoveSimulation Simulation)> moves = CreateMoves(board);
 
-        foreach (BoardMoveSimulation move in moves)
+        foreach ((TimedLevelMove move, BoardMoveSimulation simulation) in moves)
         {
-            int result = Search(move.State, depth + 1);
+            _path.Add(move);
+            int result = Search(simulation.State, depth + 1);
 
             if (result >= 0)
                 return result;
+
+            _path.RemoveAt(_path.Count - 1);
 
             if (_limitReached)
                 return -1;
@@ -117,9 +123,9 @@ public sealed class TimedLevelSolver
         return -1;
     }
 
-    private List<BoardMoveSimulation> CreateMoves(BoardStateSnapshot board)
+    private List<(TimedLevelMove Move, BoardMoveSimulation Simulation)> CreateMoves(BoardStateSnapshot board)
     {
-        List<BoardMoveSimulation> matchingMoves = new List<BoardMoveSimulation>();
+        List<(TimedLevelMove Move, BoardMoveSimulation Simulation)> matchingMoves = new List<(TimedLevelMove Move, BoardMoveSimulation Simulation)>();
         HashSet<string> resultingStates = new HashSet<string>();
 
         for (int sourceShelfIndex = 0; sourceShelfIndex < board.Shelves.Count; sourceShelfIndex++)
@@ -151,13 +157,13 @@ public sealed class TimedLevelSolver
                             continue;
 
                         if (simulation.MatchCount > 0)
-                            matchingMoves.Add(simulation);
+                            matchingMoves.Add((new TimedLevelMove(source, target), simulation));
                     }
                 }
             }
         }
 
-        matchingMoves.Sort(CompareMoves);
+        matchingMoves.Sort((first, second) => CompareMoves(first.Simulation, second.Simulation));
         return matchingMoves;
     }
 

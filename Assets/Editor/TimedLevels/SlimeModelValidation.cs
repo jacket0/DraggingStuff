@@ -1,12 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 
 public static class SlimeModelValidation
 {
     private const int ShelfCapacity = 3;
     private const int GrowthPeriod = 2;
+    private const int DefinitionShelfCount = 4;
+    private const int DefinitionEmptyColumnCount = 3;
+    private static readonly ItemType[] DefinitionTypes = { ItemType.Ball, ItemType.Bear, ItemType.Plant, ItemType.Lamp };
 
     public static void Run(LevelCatalog catalog)
     {
@@ -28,6 +32,8 @@ public static class SlimeModelValidation
         ValidateFingerprintSlime();
         ValidateShelfBoardSlime();
         ValidateLevelsWithoutSlime(catalog);
+        ValidateDefinitionErrors(catalog);
+        ValidateVariantRoundTrip(catalog);
     }
 
     private static void ValidateSnapshotErrors()
@@ -335,6 +341,186 @@ public static class SlimeModelValidation
             if (level.Definition != null && level.Definition.Variants.Any(variant => variant.CreateLayout().HasSlime))
                 throw new InvalidOperationException($"Slime S14: level {level.Number} stores slime in its layout.");
         }
+    }
+
+    private static void ValidateDefinitionErrors(LevelCatalog catalog)
+    {
+        TimedLevelDefinition template = catalog.Levels[0].Definition;
+        BoardStateSnapshot boardShape = new BoardStateSnapshot(Enumerable.Range(0, DefinitionShelfCount).Select(_ => OpenShelf(Column(), Column(), Column())).ToArray());
+        ColumnPosition[] oneSticky = { Position(0, 0) };
+        ColumnPosition[][] validLinks = { new[] { Position(0, 2), Position(1, 0) } };
+        List<UnityEngine.Object> temporaryAssets = new List<UnityEngine.Object>();
+
+        try
+        {
+            Validate(CreateDefinition(template, oneSticky, validLinks, GrowthPeriod, Array.Empty<int>(), true, temporaryAssets));
+
+            ExpectDefinitionFailure(new[] { Position(0, 0), Position(0, 0) }, validLinks, Array.Empty<int>(), true, "a duplicated sticky column passed validation.");
+            ExpectDefinitionFailure(
+                new[] { Position(0, 0), Position(0, 1), Position(0, 2), Position(1, 0), Position(1, 1) },
+                validLinks,
+                Array.Empty<int>(),
+                true,
+                "five sticky columns passed validation.");
+            ExpectDefinitionFailure(new[] { Position(7, 0) }, validLinks, Array.Empty<int>(), true, "a sticky column outside the board passed validation.");
+            ExpectDefinitionFailure(oneSticky, new[] { new[] { Position(0, 2), Position(9, 0) } }, Array.Empty<int>(), true, "a slime link outside the board passed validation.");
+            ExpectDefinitionFailure(oneSticky, validLinks, Array.Empty<int>(), false, "slime without a neighborhood passed validation.");
+            ExpectDefinitionFailure(oneSticky, validLinks, new[] { 2 }, true, "slime combined with a conveyor passed validation.");
+        }
+        finally
+        {
+            foreach (UnityEngine.Object temporaryAsset in temporaryAssets)
+                UnityEngine.Object.DestroyImmediate(temporaryAsset);
+        }
+
+        void Validate(TimedLevelDefinition definition) => TimedLevelValidator.ValidateForRuntime(definition, boardShape, TimedLevelLayoutRules.GeneratorVersion);
+
+        void ExpectDefinitionFailure(
+            IReadOnlyList<ColumnPosition> stickyColumns,
+            IReadOnlyList<ColumnPosition[]> links,
+            IReadOnlyList<int> conveyorShelfIndices,
+            bool hasNeighborhood,
+            string message)
+        {
+            ExpectFailure<InvalidOperationException>(
+                () => Validate(CreateDefinition(template, stickyColumns, links, GrowthPeriod, conveyorShelfIndices, hasNeighborhood, temporaryAssets)),
+                $"Slime D1: {message}");
+        }
+    }
+
+    private static void ValidateVariantRoundTrip(LevelCatalog catalog)
+    {
+        List<UnityEngine.Object> temporaryAssets = new List<UnityEngine.Object>();
+
+        try
+        {
+            TimedLevelDefinition definition = CreateDefinition(
+                catalog.Levels[0].Definition,
+                new[] { Position(0, 0), Position(2, 1) },
+                new[] { new[] { Position(0, 2), Position(1, 0) } },
+                3,
+                Array.Empty<int>(),
+                true,
+                temporaryAssets);
+            BoardStateSnapshot restored = definition.Variants[0].CreateLayout();
+            BoardStateSnapshot playable = definition.AddSlime(restored);
+
+            if (BoardStateFingerprint.CreateHash(restored) != definition.Variants[0].LayoutHash
+                || restored.HasSlime
+                || !definition.HasSlime
+                || !playable.Slime.StickyColumns.SequenceEqual(new[] { Position(0, 0), Position(2, 1) })
+                || !playable.Slime.Links.SequenceEqual(new[] { new SlimeColumnLink(Position(0, 2), Position(1, 0)) })
+                || playable.Slime.GrowthPeriod != 3
+                || playable.Slime.MovesToGrowth != 3
+                || BoardStateFingerprint.CreateKey(playable.WithSlime(null)) != BoardStateFingerprint.CreateKey(DefinitionLayout())
+                || definition.GetMechanicElementCount(LevelMechanic.Slime) != 2
+                || catalog.Levels[0].Definition.HasSlime)
+            {
+                throw new InvalidOperationException("Slime D2: slime from the definition does not survive the variant round trip.");
+            }
+        }
+        finally
+        {
+            foreach (UnityEngine.Object temporaryAsset in temporaryAssets)
+                UnityEngine.Object.DestroyImmediate(temporaryAsset);
+        }
+    }
+
+    private static TimedLevelDefinition CreateDefinition(
+        TimedLevelDefinition template,
+        IReadOnlyList<ColumnPosition> stickyColumns,
+        IReadOnlyList<ColumnPosition[]> links,
+        int growthPeriod,
+        IReadOnlyList<int> conveyorShelfIndices,
+        bool hasNeighborhood,
+        List<UnityEngine.Object> temporaryAssets)
+    {
+        TimedLevelDefinition definition = UnityEngine.Object.Instantiate(template);
+        definition.hideFlags = HideFlags.HideAndDontSave;
+        temporaryAssets.Add(definition);
+        SerializedObject serializedDefinition = new SerializedObject(definition);
+        WriteIntegers(serializedDefinition.FindProperty("_conveyorShelfIndices"), conveyorShelfIndices);
+        WriteIntegers(serializedDefinition.FindProperty("_keyLockedShelfIndices"), Array.Empty<int>());
+        serializedDefinition.FindProperty("_closedShelves").arraySize = 0;
+        serializedDefinition.FindProperty("_refillSettings").objectReferenceValue = null;
+        serializedDefinition.FindProperty("_shelfFilters").arraySize = 0;
+        serializedDefinition.FindProperty("_filteredEmptyColumnCount").intValue = 0;
+        serializedDefinition.FindProperty("_cyclicShelves").arraySize = 0;
+        serializedDefinition.FindProperty("_minimumItemsBehindShutter").intValue = 0;
+        serializedDefinition.FindProperty("_minimumPreparationMoves").intValue = 0;
+        serializedDefinition.FindProperty("_emptyColumnCount").intValue = DefinitionEmptyColumnCount;
+
+        SerializedProperty itemGroups = serializedDefinition.FindProperty("_itemGroups");
+        itemGroups.arraySize = DefinitionTypes.Length;
+
+        for (int index = 0; index < DefinitionTypes.Length; index++)
+        {
+            itemGroups.GetArrayElementAtIndex(index).FindPropertyRelative("_type").enumValueIndex = (int)DefinitionTypes[index];
+            itemGroups.GetArrayElementAtIndex(index).FindPropertyRelative("_groupCount").intValue = 1;
+        }
+
+        SerializedProperty slime = serializedDefinition.FindProperty("_slime");
+        slime.FindPropertyRelative("_neighborhood").objectReferenceValue = hasNeighborhood ? CreateNeighborhood(links, temporaryAssets) : null;
+        slime.FindPropertyRelative("_growthPeriod").intValue = growthPeriod;
+        SerializedProperty stickyProperty = slime.FindPropertyRelative("_stickyColumns");
+        stickyProperty.arraySize = stickyColumns.Count;
+
+        for (int index = 0; index < stickyColumns.Count; index++)
+            WriteColumn(stickyProperty.GetArrayElementAtIndex(index), stickyColumns[index]);
+
+        serializedDefinition.ApplyModifiedPropertiesWithoutUndo();
+        TimedLevelVariantGenerator.WriteVariants(definition, new[] { CreateVariant(DefinitionLayout()) });
+        return definition;
+    }
+
+    private static SlimeNeighborhood CreateNeighborhood(IReadOnlyList<ColumnPosition[]> links, List<UnityEngine.Object> temporaryAssets)
+    {
+        SlimeNeighborhood neighborhood = ScriptableObject.CreateInstance<SlimeNeighborhood>();
+        neighborhood.hideFlags = HideFlags.HideAndDontSave;
+        temporaryAssets.Add(neighborhood);
+        SerializedObject serializedNeighborhood = new SerializedObject(neighborhood);
+        SerializedProperty linksProperty = serializedNeighborhood.FindProperty("_links");
+        linksProperty.arraySize = links.Count;
+
+        for (int index = 0; index < links.Count; index++)
+        {
+            WriteColumn(linksProperty.GetArrayElementAtIndex(index).FindPropertyRelative("_first"), links[index][0]);
+            WriteColumn(linksProperty.GetArrayElementAtIndex(index).FindPropertyRelative("_second"), links[index][1]);
+        }
+
+        serializedNeighborhood.ApplyModifiedPropertiesWithoutUndo();
+        return neighborhood;
+    }
+
+    private static void WriteColumn(SerializedProperty property, ColumnPosition position)
+    {
+        property.FindPropertyRelative("_shelfIndex").intValue = position.ShelfIndex;
+        property.FindPropertyRelative("_columnIndex").intValue = position.ColumnIndex;
+    }
+
+    private static void WriteIntegers(SerializedProperty property, IReadOnlyList<int> values)
+    {
+        property.arraySize = values.Count;
+
+        for (int index = 0; index < values.Count; index++)
+            property.GetArrayElementAtIndex(index).intValue = values[index];
+    }
+
+    private static TimedLevelVariant CreateVariant(BoardStateSnapshot layout)
+    {
+        TimedLevelMove[] solution = { new TimedLevelMove(Position(2, 2), Position(3, 0)) };
+        return new TimedLevelVariant(1, TimedLevelLayoutRules.GeneratorVersion, solution.Length, BoardStateFingerprint.CreateHash(layout), layout, solution);
+    }
+
+    private static BoardStateSnapshot DefinitionLayout()
+    {
+        return new BoardStateSnapshot(new[]
+        {
+            OpenShelf(Column(ItemType.Lamp, ItemType.Ball), Column(ItemType.Bear, ItemType.Lamp), Column(ItemType.Plant)),
+            OpenShelf(Column(ItemType.Ball), Column(ItemType.Bear), Column(ItemType.Plant)),
+            OpenShelf(Column(ItemType.Ball, ItemType.Bear), Column(ItemType.Lamp), Column(ItemType.Plant)),
+            OpenShelf(Column(), Column(), Column())
+        });
     }
 
     private static Shelf CreateShelf(string name, List<GameObject> temporaryObjects, params ItemType[] frontItems)

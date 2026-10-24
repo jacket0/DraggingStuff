@@ -89,6 +89,9 @@ public sealed class TimedLevelBuilder : MonoBehaviour
             if (layout.Shelves[shelfIndex].IsFiltered)
                 _shelfBoard.SetFilter(shelf, layout.Shelves[shelfIndex].AcceptedTypes);
         }
+
+        if (definition.HasSlime)
+            _shelfBoard.MarkSlime(definition.Slime.CreateSlime());
     }
 
     private ShelfKey CreateKey(int lockedShelfIndex)
