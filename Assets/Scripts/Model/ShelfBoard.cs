@@ -17,6 +17,7 @@ public sealed class ShelfBoard : MonoBehaviour
     private IReadOnlyCollection<ItemType> _filteredTypes = Array.Empty<ItemType>();
     private readonly Dictionary<ShelfColumn, ColumnPosition> _positions = new Dictionary<ShelfColumn, ColumnPosition>();
     private readonly BoardMoveSimulator _simulator = new BoardMoveSimulator();
+    private SlimeSnapshot _slime;
     private bool _initialized;
 
     public IReadOnlyList<Shelf> Shelves => _shelves;
@@ -28,6 +29,8 @@ public sealed class ShelfBoard : MonoBehaviour
     public bool HasFilters => _shelfFilters.Count > 0;
     public bool HasKeyLocks => _keyLockedShelves.Count > 0;
     public bool HasCycles => _shelfCycles.Count > 0;
+    public bool HasSlime => _slime != null;
+    public SlimeSnapshot Slime => _slime;
     public ShelfItemPlacementAnimator ItemAnimations { get; } = new ShelfItemPlacementAnimator();
 
     public void Initialize()
@@ -74,7 +77,7 @@ public sealed class ShelfBoard : MonoBehaviour
 
     public void CloseShelf(Shelf shelf)
     {
-        if (shelf == null || !_shelves.Contains(shelf) || !shelf.IsCleared || IsConveyor(shelf) || IsFiltered(shelf) || IsCyclic(shelf) || !_closedShelves.Add(shelf))
+        if (shelf == null || !_shelves.Contains(shelf) || !shelf.IsCleared || IsConveyor(shelf) || IsFiltered(shelf) || IsCyclic(shelf) || HasSlime || !_closedShelves.Add(shelf))
             throw new InvalidOperationException("Only an empty shelf on this board can be closed.");
     }
 
@@ -84,7 +87,7 @@ public sealed class ShelfBoard : MonoBehaviour
 
     public void CloseKeyLockedShelf(Shelf shelf)
     {
-        if (shelf == null || !_shelves.Contains(shelf) || shelf.IsCleared || IsConveyor(shelf) || IsFiltered(shelf) || IsCyclic(shelf) || IsShelfClosed(shelf))
+        if (shelf == null || !_shelves.Contains(shelf) || shelf.IsCleared || IsConveyor(shelf) || IsFiltered(shelf) || IsCyclic(shelf) || IsShelfClosed(shelf) || HasSlime)
             throw new InvalidOperationException("Only a filled regular open shelf on this board can be locked by a key.");
 
         _closedShelves.Add(shelf);
@@ -103,7 +106,7 @@ public sealed class ShelfBoard : MonoBehaviour
 
     public void MarkConveyor(Shelf shelf)
     {
-        if (shelf == null || !_shelves.Contains(shelf) || IsShelfClosed(shelf) || IsFiltered(shelf) || IsCyclic(shelf) || !_conveyorShelves.Add(shelf))
+        if (shelf == null || !_shelves.Contains(shelf) || IsShelfClosed(shelf) || IsFiltered(shelf) || IsCyclic(shelf) || HasSlime || !_conveyorShelves.Add(shelf))
             throw new InvalidOperationException("Only an open shelf on this board can be marked as a conveyor once.");
     }
 
@@ -118,7 +121,7 @@ public sealed class ShelfBoard : MonoBehaviour
 
     public void SetFilter(Shelf shelf, IReadOnlyList<ItemType> acceptedTypes)
     {
-        if (shelf == null || !_shelves.Contains(shelf) || IsShelfClosed(shelf) || IsConveyor(shelf) || IsFiltered(shelf) || IsCyclic(shelf))
+        if (shelf == null || !_shelves.Contains(shelf) || IsShelfClosed(shelf) || IsConveyor(shelf) || IsFiltered(shelf) || IsCyclic(shelf) || HasSlime)
             throw new InvalidOperationException("Only an open regular shelf on this board can be filtered once.");
 
         ItemType[] normalizedTypes = acceptedTypes?.Distinct().OrderBy(type => type).ToArray() ?? Array.Empty<ItemType>();
@@ -144,7 +147,7 @@ public sealed class ShelfBoard : MonoBehaviour
         if (cycle == null)
             throw new ArgumentNullException(nameof(cycle));
 
-        if (shelf == null || !_shelves.Contains(shelf) || IsShelfClosed(shelf) || IsConveyor(shelf) || IsFiltered(shelf) || IsCyclic(shelf))
+        if (shelf == null || !_shelves.Contains(shelf) || IsShelfClosed(shelf) || IsConveyor(shelf) || IsFiltered(shelf) || IsCyclic(shelf) || HasSlime)
             throw new InvalidOperationException("Only an open regular shelf on this board can be marked as cyclic once.");
 
         if (cycle.MovesToSwitch > cycle.GetDuration(isOpen))
@@ -208,6 +211,46 @@ public sealed class ShelfBoard : MonoBehaviour
         return switchedShelfIndexes.Select(shelfIndex => _shelves[shelfIndex]).ToArray();
     }
 
+    public bool IsSticky(ShelfColumn column)
+    {
+        Initialize();
+        return HasSlime && column != null && _positions.TryGetValue(column, out ColumnPosition position) && _slime.IsSticky(position);
+    }
+
+    public void MarkSlime(SlimeSnapshot slime)
+    {
+        if (slime == null)
+            throw new ArgumentNullException(nameof(slime));
+
+        if (HasSlime || HasClosedShelves || HasConveyors || HasFilters || HasCycles)
+            throw new InvalidOperationException("Slime can be added once to a board without other shelf mechanics.");
+
+        CreateSnapshot().WithSlime(slime);
+        _slime = slime;
+    }
+
+    public void SetSlime(SlimeSnapshot slime)
+    {
+        if (slime == null)
+            throw new ArgumentNullException(nameof(slime));
+
+        if (!HasSlime || !slime.Links.SequenceEqual(_slime.Links) || slime.GrowthPeriod != _slime.GrowthPeriod)
+            throw new InvalidOperationException("Only the slime of this board can change its sticky columns and growth counter.");
+
+        CreateSnapshot().WithSlime(slime);
+        _slime = slime;
+    }
+
+    public ShelfColumn GetColumn(ColumnPosition position)
+    {
+        Initialize();
+
+        if (position.ShelfIndex < 0 || position.ShelfIndex >= _shelves.Count || position.ColumnIndex < 0 || position.ColumnIndex >= _shelves[position.ShelfIndex].Capacity)
+            throw new ArgumentOutOfRangeException(nameof(position));
+
+        return _shelves[position.ShelfIndex].Columns[position.ColumnIndex];
+    }
+
     public bool CanMatch(Shelf shelf) => CreateShelfSnapshot(shelf).CanMatch(_filteredTypes);
 
     public bool CanMatchType(Shelf shelf, ItemType type) => ShelfStateSnapshot.CanMatchType(GetAcceptedTypes(shelf), type, _filteredTypes);
@@ -223,6 +266,7 @@ public sealed class ShelfBoard : MonoBehaviour
         Initialize();
         return column != null && column.FrontItem != null && _positions.TryGetValue(column, out ColumnPosition position)
             && IsShelfAvailable(_shelves[position.ShelfIndex])
+            && !IsSticky(column)
             && !ItemAnimations.IsAnimating(column.FrontItem);
     }
 
@@ -239,7 +283,7 @@ public sealed class ShelfBoard : MonoBehaviour
     public BoardStateSnapshot CreateSnapshot()
     {
         Initialize();
-        return new BoardStateSnapshot(_shelves.Select(CreateShelfSnapshot).ToArray(), _filteredTypes);
+        return new BoardStateSnapshot(_shelves.Select(CreateShelfSnapshot).ToArray(), _filteredTypes, _slime);
     }
 
     public bool CanMove(ShelfColumn source, ShelfColumn target) => TrySimulateMove(source, target, out _);
@@ -265,7 +309,7 @@ public sealed class ShelfBoard : MonoBehaviour
                 shelves[index] = _simulator.ResolveShelfMatches(board, index);
         }
 
-        return _simulator.TrySimulate(new BoardStateSnapshot(shelves, board.FilteredTypes), _positions[source], targetPosition, out simulation) && simulation.IsAllowed;
+        return _simulator.TrySimulate(board.WithShelves(shelves), _positions[source], targetPosition, out simulation) && simulation.IsAllowed;
     }
 
     public MoveOutcome TryMove(ShelfColumn source, ShelfColumn target)

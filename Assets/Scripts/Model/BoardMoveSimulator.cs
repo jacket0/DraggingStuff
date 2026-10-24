@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 public sealed class BoardMoveSimulator
 {
@@ -30,6 +31,9 @@ public sealed class BoardMoveSimulator
         bool isSwap = !targetColumn.IsEmpty;
 
         if (isSwap && sourceItem == targetItem)
+            return false;
+
+        if (board.IsSticky(source) || isSwap && board.IsSticky(target))
             return false;
 
         if (!targetShelf.Accepts(sourceItem.Value))
@@ -78,9 +82,20 @@ public sealed class BoardMoveSimulator
             matches.AddRange(matchesAfterSwitch);
         }
 
+        BoardStateSnapshot state = board.WithShelves(shelves);
+        IReadOnlyList<ColumnPosition> cleanedColumns = Array.Empty<ColumnPosition>();
+        ColumnPosition? grownColumn = null;
+
+        if (board.HasSlime)
+        {
+            state = SlimeRule.Clean(state, matches.Select(match => match.ShelfIndex), out cleanedColumns);
+
+            if (isMatchingMove)
+                state = SlimeRule.AdvanceGrowth(state, cleanedColumns.Count > 0, out grownColumn);
+        }
+
         simulation = CreateSimulation(
-            shelves,
-            board.FilteredTypes,
+            state,
             matches,
             affectedShelves,
             openedShelfIndexes,
@@ -88,7 +103,9 @@ public sealed class BoardMoveSimulator
             conveyorsShifted,
             matchCountAfterShift,
             switchedShelfIndexes,
-            matchCountAfterSwitch);
+            matchCountAfterSwitch,
+            cleanedColumns,
+            grownColumn);
         return true;
     }
 
@@ -101,7 +118,7 @@ public sealed class BoardMoveSimulator
         List<int> switchedIndexes = new List<int>();
         AdvanceCycles(shelves, new bool[shelves.Length], switchedIndexes);
         switchedShelfIndexes = switchedIndexes.AsReadOnly();
-        return new BoardStateSnapshot(shelves, board.FilteredTypes);
+        return board.WithShelves(shelves);
     }
 
     public BoardStateSnapshot ApplyCycleRescue(BoardStateSnapshot board, bool isRepeated, out IReadOnlyList<MatchInfo> matches)
@@ -117,7 +134,7 @@ public sealed class BoardMoveSimulator
 
         ShelfStateSnapshot[] shelves = CopyShelves(board);
         matches = ResolveBoard(shelves, new bool[shelves.Length], new List<int>(), board.FilteredTypes).AsReadOnly();
-        return new BoardStateSnapshot(shelves, board.FilteredTypes);
+        return board.WithShelves(shelves);
     }
 
     public ShelfStateSnapshot ResolveShelfMatches(BoardStateSnapshot board, int shelfIndex)
@@ -140,7 +157,7 @@ public sealed class BoardMoveSimulator
 
         ShelfStateSnapshot[] shelves = CopyShelves(board);
         ShiftConveyors(shelves, new bool[shelves.Length]);
-        return new BoardStateSnapshot(shelves, board.FilteredTypes);
+        return board.WithShelves(shelves);
     }
 
     public BoardStateSnapshot CollectFrontKeys(BoardStateSnapshot board)
@@ -150,7 +167,7 @@ public sealed class BoardMoveSimulator
 
         ShelfStateSnapshot[] shelves = CopyShelves(board);
         CollectFrontKeys(shelves, new bool[shelves.Length], new List<int>());
-        return new BoardStateSnapshot(shelves, board.FilteredTypes);
+        return board.WithShelves(shelves);
     }
 
     private static ShelfStateSnapshot[] CopyShelves(BoardStateSnapshot board)
@@ -285,8 +302,7 @@ public sealed class BoardMoveSimulator
     }
 
     private static BoardMoveSimulation CreateSimulation(
-        ShelfStateSnapshot[] shelves,
-        IReadOnlyCollection<ItemType> filteredTypes,
+        BoardStateSnapshot state,
         List<MatchInfo> matches,
         bool[] affectedShelves,
         List<int> openedShelfIndexes,
@@ -294,18 +310,20 @@ public sealed class BoardMoveSimulator
         bool conveyorsShifted,
         int matchCountAfterShift,
         List<int> switchedShelfIndexes,
-        int matchCountAfterSwitch)
+        int matchCountAfterSwitch,
+        IReadOnlyList<ColumnPosition> cleanedColumns,
+        ColumnPosition? grownColumn)
     {
         List<int> affectedShelfIndexes = new List<int>();
 
-        for (int shelfIndex = 0; shelfIndex < shelves.Length; shelfIndex++)
+        for (int shelfIndex = 0; shelfIndex < affectedShelves.Length; shelfIndex++)
         {
             if (affectedShelves[shelfIndex])
                 affectedShelfIndexes.Add(shelfIndex);
         }
 
         return new BoardMoveSimulation(
-            new BoardStateSnapshot(shelves, filteredTypes),
+            state,
             matches,
             affectedShelfIndexes,
             openedShelfIndexes,
@@ -313,7 +331,9 @@ public sealed class BoardMoveSimulator
             conveyorsShifted,
             matchCountAfterShift,
             switchedShelfIndexes,
-            matchCountAfterSwitch);
+            matchCountAfterSwitch,
+            cleanedColumns,
+            grownColumn);
     }
 
     private static void ReplaceColumn(ShelfStateSnapshot[] shelves, ColumnPosition position, ColumnStateSnapshot column)

@@ -15,12 +15,18 @@ public sealed class BoardStateSnapshot
     public int KeyCount { get; }
     public bool HasKeys => KeyCount > 0;
     public bool IsCleared => ItemCount == 0;
+    public SlimeSnapshot Slime { get; }
+    public bool HasSlime => Slime != null;
 
     public BoardStateSnapshot(IReadOnlyList<ShelfStateSnapshot> shelves) : this(shelves, CollectShelfFilteredTypes(shelves))
     {
     }
 
-    public BoardStateSnapshot(IReadOnlyList<ShelfStateSnapshot> shelves, IReadOnlyCollection<ItemType> filteredTypes)
+    public BoardStateSnapshot(IReadOnlyList<ShelfStateSnapshot> shelves, IReadOnlyCollection<ItemType> filteredTypes) : this(shelves, filteredTypes, null)
+    {
+    }
+
+    public BoardStateSnapshot(IReadOnlyList<ShelfStateSnapshot> shelves, IReadOnlyCollection<ItemType> filteredTypes, SlimeSnapshot slime)
     {
         if (shelves == null)
             throw new ArgumentNullException(nameof(shelves));
@@ -46,7 +52,18 @@ public sealed class BoardStateSnapshot
 
         Shelves = Array.AsReadOnly(copy);
         FilteredTypes = filteredTypes ?? throw new ArgumentNullException(nameof(filteredTypes));
+
+        if (slime != null)
+            ValidateSlime(slime);
+
+        Slime = slime;
     }
+
+    public BoardStateSnapshot WithShelves(IReadOnlyList<ShelfStateSnapshot> shelves) => new BoardStateSnapshot(shelves, FilteredTypes, Slime);
+
+    public BoardStateSnapshot WithSlime(SlimeSnapshot slime) => new BoardStateSnapshot(Shelves, FilteredTypes, slime);
+
+    public bool IsSticky(ColumnPosition position) => HasSlime && Slime.IsSticky(position);
 
     public static IReadOnlyCollection<ItemType> CollectFilteredTypes(IEnumerable<IReadOnlyList<ItemType>> acceptedTypes)
     {
@@ -64,6 +81,18 @@ public sealed class BoardStateSnapshot
     {
         return position.ShelfIndex >= 0 && position.ShelfIndex < Shelves.Count
             && position.ColumnIndex >= 0 && position.ColumnIndex < Shelves[position.ShelfIndex].Capacity;
+    }
+
+    private void ValidateSlime(SlimeSnapshot slime)
+    {
+        if (HasConveyors || HasCycles || HasKeys || Shelves.Any(shelf => !shelf.IsOpen || shelf.IsFiltered))
+            throw new ArgumentException("Slime cannot share a board with other shelf mechanics.", nameof(slime));
+
+        if (slime.StickyColumns.Any(column => !Contains(column)))
+            throw new ArgumentException("A sticky column must belong to the board.", nameof(slime));
+
+        if (slime.Links.Any(link => !Contains(link.First) || !Contains(link.Second)))
+            throw new ArgumentException("A slime link must connect columns of the board.", nameof(slime));
     }
 
     private static IReadOnlyCollection<ItemType> CollectShelfFilteredTypes(IReadOnlyList<ShelfStateSnapshot> shelves)

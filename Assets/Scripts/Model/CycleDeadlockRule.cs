@@ -78,7 +78,7 @@ public static class CycleDeadlockRule
         }
 
         switchedShelfIndexes = switchedIndexes.AsReadOnly();
-        return new BoardStateSnapshot(shelves, board.FilteredTypes);
+        return board.WithShelves(shelves);
     }
 
     private static int GetMovesToNextOpening(BoardStateSnapshot board)

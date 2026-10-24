@@ -12,10 +12,14 @@ public static class BoardStateFingerprint
 
         List<string> shelves = new List<string>();
 
-        foreach (ShelfStateSnapshot shelf in board.Shelves)
+        for (int shelfIndex = 0; shelfIndex < board.Shelves.Count; shelfIndex++)
         {
-            List<string> columns = shelf.Columns.Select(CreateColumnKey).ToList();
-            columns.Sort(StringComparer.Ordinal);
+            ShelfStateSnapshot shelf = board.Shelves[shelfIndex];
+            List<string> columns = Enumerable.Range(0, shelf.Capacity).Select(columnIndex => CreateColumnKey(board, shelfIndex, columnIndex)).ToList();
+
+            if (!board.HasSlime)
+                columns.Sort(StringComparer.Ordinal);
+
             string marker = !shelf.IsOpen ? "C" : shelf.IsConveyor ? "B" : shelf.IsFiltered ? $"{CreateFilterMarker(shelf)}|" : "";
             string cycleMarker = shelf.IsCyclic ? $"{CreateCycleMarker(shelf)}|" : "";
             shelves.Add($"[{marker}{cycleMarker}{string.Join("", columns)}]");
@@ -24,7 +28,8 @@ public static class BoardStateFingerprint
         if (!HasPhysicalShelfReferences(board))
             shelves.Sort(StringComparer.Ordinal);
 
-        return string.Join("", shelves);
+        string slimeMarker = board.HasSlime ? $"G{board.Slime.MovesToGrowth}|" : "";
+        return slimeMarker + string.Join("", shelves);
     }
 
     public static string CreateHash(BoardStateSnapshot board)
@@ -34,8 +39,10 @@ public static class BoardStateFingerprint
 
         StringBuilder layout = new StringBuilder();
 
-        foreach (ShelfStateSnapshot shelf in board.Shelves)
+        for (int shelfIndex = 0; shelfIndex < board.Shelves.Count; shelfIndex++)
         {
+            ShelfStateSnapshot shelf = board.Shelves[shelfIndex];
+
             if (!shelf.IsOpen)
                 layout.Append('C');
 
@@ -50,8 +57,8 @@ public static class BoardStateFingerprint
 
             layout.Append('[');
 
-            foreach (ColumnStateSnapshot column in shelf.Columns)
-                layout.Append(CreateColumnKey(column));
+            for (int columnIndex = 0; columnIndex < shelf.Capacity; columnIndex++)
+                layout.Append(CreateColumnKey(board, shelfIndex, columnIndex));
 
             layout.Append(']');
         }
@@ -72,7 +79,7 @@ public static class BoardStateFingerprint
 
     private static bool HasPhysicalShelfReferences(BoardStateSnapshot board)
     {
-        return board.HasKeys || board.HasCycles || board.Shelves.Any(shelf => !shelf.IsOpen && shelf.Columns.Any(column => column.Count > 0));
+        return board.HasKeys || board.HasCycles || board.HasSlime || board.Shelves.Any(shelf => !shelf.IsOpen && shelf.Columns.Any(column => column.Count > 0));
     }
 
     private static string CreateFilterMarker(ShelfStateSnapshot shelf)
@@ -85,9 +92,10 @@ public static class BoardStateFingerprint
         return $"Y{shelf.Cycle.OpenMoves}.{shelf.Cycle.ClosedMoves}.{shelf.Cycle.MovesToSwitch}";
     }
 
-    private static string CreateColumnKey(ColumnStateSnapshot column)
+    private static string CreateColumnKey(BoardStateSnapshot board, int shelfIndex, int columnIndex)
     {
-        StringBuilder key = new StringBuilder("(");
+        ColumnStateSnapshot column = board.Shelves[shelfIndex].Columns[columnIndex];
+        StringBuilder key = new StringBuilder(board.IsSticky(new ColumnPosition(shelfIndex, columnIndex)) ? "s(" : "(");
 
         foreach (ItemType type in column.Items)
             key.Append((int)type).Append(',');
