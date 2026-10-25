@@ -88,7 +88,7 @@ public class LevelSession : GameSession
             FinishRun(ShelfBoard.IsCleared);
     }
 
-    private void FinishRun(bool won)
+    protected void FinishRun(bool won)
     {
         if (_result != null)
             return;

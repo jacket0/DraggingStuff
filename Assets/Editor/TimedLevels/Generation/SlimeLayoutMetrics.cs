@@ -46,7 +46,7 @@ public sealed class SlimeLayoutMetrics
                 return new SlimeLayoutMetrics(false, hasDeadlockOnPath, cleanedColumnCount, growthCount, maximumStickyColumnCount, state.Slime.StickyColumns.Count);
 
             cleanedColumnCount += simulation.CleanedColumns.Count;
-            growthCount += simulation.GrownColumn.HasValue ? 1 : 0;
+            growthCount += simulation.GrownColumns.Count;
             state = simulation.State;
             maximumStickyColumnCount = Math.Max(maximumStickyColumnCount, state.Slime.StickyColumns.Count);
         }

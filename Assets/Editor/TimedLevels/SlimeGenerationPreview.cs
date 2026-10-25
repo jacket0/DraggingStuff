@@ -13,14 +13,14 @@ public static class SlimeGenerationPreview
     private const int RequiredVariantCount = 12;
     private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
     private const string ItemCatalogSceneName = "SixthLevel";
-    public const int BoardShelfCount = 10;
+    public const int BoardShelfCount = 11;
     private const int ShelfCapacity = 3;
     private const int EmptyColumnCount = 3;
     private const int GrowthPeriod = 2;
     private const int BotRunsPerPolicy = 10;
 
-    private static readonly ColumnPosition[] StartStickyColumns = { new ColumnPosition(5, 1) };
-    private static readonly ColumnPosition[] SpreadStickyColumns = { new ColumnPosition(1, 0), new ColumnPosition(6, 2), new ColumnPosition(8, 1) };
+    private static readonly ColumnPosition[] StartStickyColumns = { new ColumnPosition(4, 1) };
+    private static readonly ColumnPosition[] SpreadStickyColumns = { new ColumnPosition(1, 0), new ColumnPosition(4, 2), new ColumnPosition(8, 1) };
 
     private static readonly (ItemType Type, int Count)[] Groups =
     {
@@ -108,16 +108,29 @@ public static class SlimeGenerationPreview
 
     public static TimedLevelDefinition CreatePreviewDefinition(string formName, IReadOnlyList<ColumnPosition> stickyColumns, List<UnityEngine.Object> temporaryAssets)
     {
-        LevelCatalog catalog = AssetDatabase.LoadAssetAtPath<LevelCatalog>(CatalogPath);
-        ShelfItemCatalog itemCatalog = catalog.Levels.First(level => level.SceneName == ItemCatalogSceneName).Definition.ItemCatalog;
         TimedLevelDefinition definition = ScriptableObject.CreateInstance<TimedLevelDefinition>();
         definition.name = $"SlimePreview_{formName}";
         definition.hideFlags = HideFlags.HideAndDontSave;
         temporaryAssets.Add(definition);
+        ConfigureDefinition(definition, stickyColumns, GrowthPeriod, true, 160, 120, 90);
+        return definition;
+    }
+
+    public static void ConfigureDefinition(
+        TimedLevelDefinition definition,
+        IReadOnlyList<ColumnPosition> stickyColumns,
+        int growthPeriod,
+        bool cleansOwnShelfOnly,
+        int timeLimitSeconds,
+        int twoStarTimeSeconds,
+        int threeStarTimeSeconds)
+    {
+        LevelCatalog catalog = AssetDatabase.LoadAssetAtPath<LevelCatalog>(CatalogPath);
+        ShelfItemCatalog itemCatalog = catalog.Levels.First(level => level.SceneName == ItemCatalogSceneName).Definition.ItemCatalog;
         SerializedObject serializedDefinition = new SerializedObject(definition);
-        serializedDefinition.FindProperty("_timeLimitSeconds").intValue = 160;
-        serializedDefinition.FindProperty("_twoStarTimeSeconds").intValue = 120;
-        serializedDefinition.FindProperty("_threeStarTimeSeconds").intValue = 90;
+        serializedDefinition.FindProperty("_timeLimitSeconds").intValue = timeLimitSeconds;
+        serializedDefinition.FindProperty("_twoStarTimeSeconds").intValue = twoStarTimeSeconds;
+        serializedDefinition.FindProperty("_threeStarTimeSeconds").intValue = threeStarTimeSeconds;
         serializedDefinition.FindProperty("_emptyColumnCount").intValue = EmptyColumnCount;
         serializedDefinition.FindProperty("_itemCatalog").objectReferenceValue = itemCatalog;
 
@@ -133,7 +146,8 @@ public static class SlimeGenerationPreview
 
         SerializedProperty slime = serializedDefinition.FindProperty("_slime");
         slime.FindPropertyRelative("_neighborhood").objectReferenceValue = LoadNeighborhood();
-        slime.FindPropertyRelative("_growthPeriod").intValue = GrowthPeriod;
+        slime.FindPropertyRelative("_growthPeriod").intValue = growthPeriod;
+        slime.FindPropertyRelative("_cleansOwnShelfOnly").boolValue = cleansOwnShelfOnly;
         SerializedProperty stickyProperty = slime.FindPropertyRelative("_stickyColumns");
         stickyProperty.arraySize = stickyColumns.Count;
 
@@ -141,7 +155,6 @@ public static class SlimeGenerationPreview
             WriteColumn(stickyProperty.GetArrayElementAtIndex(index), stickyColumns[index]);
 
         serializedDefinition.ApplyModifiedPropertiesWithoutUndo();
-        return definition;
     }
 
     private static SlimeNeighborhood LoadNeighborhood()

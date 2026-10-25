@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public sealed class SlimeController : MonoBehaviour
@@ -15,7 +16,8 @@ public sealed class SlimeController : MonoBehaviour
 
     public event Action<IReadOnlyList<ColumnPosition>> SlimeCleaned;
     public event Action<ColumnPosition> SlimeGrown;
-    public event Action<ColumnPosition> RescueApplied;
+    public event Action DeadlockReached;
+    public event Action<Shelf> ShelfLost;
     public event Action<ShelfItem> PickUpRejected;
 
     private void Awake()
@@ -36,7 +38,7 @@ public sealed class SlimeController : MonoBehaviour
     private void OnEnable()
     {
         _session.SessionStarted += HandleSessionStarted;
-        _session.MatchingMoveResolved += HandleMatchingMoveResolved;
+        _session.MoveResolved += HandleMoveResolved;
         _session.CascadeMatchesResolved += HandleCascadeMatchesResolved;
         _session.BoardSettled += HandleBoardSettled;
         _session.StateChanged += HandleStateChanged;
@@ -46,7 +48,7 @@ public sealed class SlimeController : MonoBehaviour
     private void OnDisable()
     {
         _session.SessionStarted -= HandleSessionStarted;
-        _session.MatchingMoveResolved -= HandleMatchingMoveResolved;
+        _session.MoveResolved -= HandleMoveResolved;
         _session.CascadeMatchesResolved -= HandleCascadeMatchesResolved;
         _session.BoardSettled -= HandleBoardSettled;
         _session.StateChanged -= HandleStateChanged;
@@ -67,16 +69,30 @@ public sealed class SlimeController : MonoBehaviour
         RefreshForecast();
     }
 
-    private void HandleMatchingMoveResolved(IReadOnlyList<Shelf> matchedShelves)
+    public void ReportDeadlock()
+    {
+        _view.PlayDeadlock();
+        DeadlockReached?.Invoke();
+    }
+
+    public void ReportShelfLost(Shelf shelf)
+    {
+        if (shelf == null)
+            throw new ArgumentNullException(nameof(shelf));
+
+        _view.PlayShelfLost(shelf);
+        ShelfLost?.Invoke(shelf);
+    }
+
+    private void HandleMoveResolved(IReadOnlyList<Shelf> matchedShelves)
     {
         if (!_shelfBoard.HasSlime)
             return;
 
-        bool hasCleaned = Clean(matchedShelves);
-        ColumnPosition? grownColumn = _shelfBoard.AdvanceSlimeGrowth(hasCleaned);
+        Clean(matchedShelves);
 
-        if (grownColumn.HasValue)
-            RequestGrowth(grownColumn.Value);
+        foreach (ColumnPosition grownColumn in _shelfBoard.AdvanceSlimeGrowth())
+            RequestGrowth(grownColumn);
 
         RefreshForecast();
     }
@@ -92,13 +108,6 @@ public sealed class SlimeController : MonoBehaviour
 
     private void HandleBoardSettled()
     {
-        while (_session.State == LevelState.Playing && _shelfBoard.IsStuckInSlime())
-        {
-            ColumnPosition cleanedColumn = _shelfBoard.ApplySlimeRescue();
-            _view.PlayCleaned(new[] { cleanedColumn });
-            RescueApplied?.Invoke(cleanedColumn);
-        }
-
         if (_shelfBoard.HasSlime)
             RefreshForecast();
     }
@@ -120,16 +129,15 @@ public sealed class SlimeController : MonoBehaviour
         PickUpRejected?.Invoke(item);
     }
 
-    private bool Clean(IReadOnlyList<Shelf> matchedShelves)
+    private void Clean(IReadOnlyList<Shelf> matchedShelves)
     {
         IReadOnlyList<ColumnPosition> cleanedColumns = _shelfBoard.CleanSlime(matchedShelves);
 
         if (cleanedColumns.Count == 0)
-            return false;
+            return;
 
         _view.PlayCleaned(cleanedColumns);
         SlimeCleaned?.Invoke(cleanedColumns);
-        return true;
     }
 
     private void RequestGrowth(ColumnPosition column)
@@ -148,7 +156,7 @@ public sealed class SlimeController : MonoBehaviour
             return;
         }
 
-        _view.PlayGrowth(column, () =>
+        _view.PlayGrowth(column, _shelfBoard.Slime.PerimeterColumns.Contains(column), () =>
         {
             _growthCount--;
             SlimeGrown?.Invoke(column);
@@ -158,17 +166,17 @@ public sealed class SlimeController : MonoBehaviour
 
     private void RefreshForecast()
     {
-        if (!_shelfBoard.Slime.HasStickyColumns || _session.State != LevelState.Playing)
+        if (_session.State != LevelState.Playing)
         {
             _view.HideForecast();
             return;
         }
 
-        ColumnPosition? target = SlimeRule.FindGrowthTarget(_shelfBoard.CreateSnapshot());
-
-        if (target.HasValue)
-            _view.ShowForecast(target.Value, _shelfBoard.Slime.MovesToGrowth);
-        else
-            _view.HideForecast();
+        SlimeSnapshot slime = _shelfBoard.Slime;
+        IReadOnlyList<ColumnPosition> targets = SlimeRule.FindGrowthTargets(_shelfBoard.CreateSnapshot(), _view.ForecastCount);
+        int[] movesToGrowth = Enumerable.Range(0, targets.Count)
+            .Select(index => slime.MovesToGrowth + index / slime.Rules.ColumnsPerGrowth * slime.GrowthPeriod)
+            .ToArray();
+        _view.ShowForecast(targets, movesToGrowth);
     }
 }

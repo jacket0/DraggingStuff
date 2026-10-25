@@ -26,16 +26,18 @@ public static class SlimePlayModeValidation
     private const int PausedFrameCount = 10;
     private const float ScenarioTimeScale = 3f;
     private const float SelectionPaddingPixels = 48f;
-    private const float ForecastTolerance = 0.05f;
+    private const float ForecastTolerance = 0.2f;
 
     private static readonly BoardMoveSimulator Simulator = new BoardMoveSimulator();
-    private static readonly ColumnPosition[] ScenarioStickyColumns = { new ColumnPosition(1, 0), new ColumnPosition(6, 2), new ColumnPosition(8, 1) };
-    private static readonly ColumnPosition[] GrowingStickyColumns = { new ColumnPosition(6, 0), new ColumnPosition(6, 1), new ColumnPosition(6, 2) };
+    private static readonly ColumnPosition[] ScenarioStickyColumns = { new ColumnPosition(4, 1), new ColumnPosition(1, 1), new ColumnPosition(8, 1) };
     private static readonly ColumnPosition GrowthTarget = new ColumnPosition(7, 0);
-    private static readonly ColumnPosition FirstMatchSource = new ColumnPosition(8, 0);
-    private static readonly ColumnPosition FirstMatchTarget = new ColumnPosition(2, 2);
-    private static readonly ColumnPosition SecondMatchSource = new ColumnPosition(9, 0);
-    private static readonly ColumnPosition SecondMatchTarget = new ColumnPosition(4, 2);
+    private static readonly ColumnPosition FirstMoveSource = new ColumnPosition(3, 0);
+    private static readonly ColumnPosition FirstMoveTarget = new ColumnPosition(8, 0);
+    private static readonly ColumnPosition SecondMoveSource = new ColumnPosition(3, 1);
+    private static readonly ColumnPosition SecondMoveTarget = new ColumnPosition(8, 1);
+    private static readonly ColumnPosition OverlapMoveSource = new ColumnPosition(4, 0);
+    private static readonly ColumnPosition OverlapMoveTarget = new ColumnPosition(9, 0);
+    private static readonly ColumnPosition MatchTarget = new ColumnPosition(4, 2);
 
     private static IEnumerator _scenarios;
     private static int _lastFrame = -1;
@@ -71,6 +73,7 @@ public static class SlimePlayModeValidation
         SessionState.SetBool(FailedKey, false);
         SessionState.SetBool(RunInBackgroundKey, Application.runInBackground);
         Application.runInBackground = true;
+        DestroyScenarioLevel();
         GetScenarioLevel();
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         EditorApplication.isPlaying = true;
@@ -124,11 +127,13 @@ public static class SlimePlayModeValidation
             ValidateSolutionReplay,
             ValidatePickUpRejection,
             ValidatePlacementIntoSlime,
-            ValidateNeighborCleaning,
-            ValidateGrowthThroughSeam,
+            ValidateOwnShelfCleaning,
+            ValidateGrowthOnPlainMoves,
+            ValidateFullPathStopsGrowth,
             ValidateGrowthCancelsDrag,
-            ValidateTwoOverlappingMatchingMoves,
-            ValidateDeadlockRescue,
+            ValidateTwoOverlappingMoves,
+            ValidateDeadlockLoss,
+            ValidateShelfLostDefeat,
             ValidatePauseDuringGrowth,
             ValidateRestartWithPendingGrowth,
             ValidateSuggestions,
@@ -165,7 +170,7 @@ public static class SlimePlayModeValidation
         {
             BoardMoveSimulation simulation = Simulate(expected, move.Source, move.Target);
             cleanedCount += simulation.CleanedColumns.Count;
-            growthCount += simulation.GrownColumn.HasValue ? 1 : 0;
+            growthCount += simulation.GrownColumns.Count;
             expected = Move(expected, move.Source, move.Target);
 
             foreach (object step in WaitUntilSettled("P1 move")) yield return step;
@@ -221,7 +226,7 @@ public static class SlimePlayModeValidation
     {
         foreach (object step in LoadScenarioLevel()) yield return step;
 
-        ColumnPosition stickyEmpty = new ColumnPosition(3, 2);
+        ColumnPosition stickyEmpty = new ColumnPosition(9, 2);
         BoardStateSnapshot expected = Arrange(
             new[] { new ColumnPosition(3, 1), stickyEmpty },
             Shelf(3, Column(ItemType.Lamp), Column(ItemType.Toy), Column()),
@@ -231,28 +236,30 @@ public static class SlimePlayModeValidation
 
         foreach (object step in WaitUntilSettled("P3 placement")) yield return step;
 
+        Expect(_session.State == LevelState.Playing, "P3: one stuck item per shelf must not end the level");
+
         ExpectBoard(expected, "P3 placement");
         Expect(!_board.CanPickUp(_board.GetColumn(stickyEmpty)), "P3: an item placed into slime must stick");
         Expect(!TryStartMove(new ColumnPosition(8, 0), stickyEmpty), "P3: a swap into a sticky column must be refused");
         Expect(!TryStartMove(stickyEmpty, new ColumnPosition(8, 0)), "P3: a swap out of a sticky column must be refused");
-        Expect(!TryStartMove(new ColumnPosition(3, 1), new ColumnPosition(9, 0)), "P3: a sticky item must not move into an empty column");
+        Expect(!TryStartMove(new ColumnPosition(3, 1), new ColumnPosition(10, 0)), "P3: a sticky item must not move into an empty column");
 
         foreach (object step in WaitUntilSettled("P3")) yield return step;
 
         ExpectBoard(expected, "P3");
     }
 
-    private static IEnumerable ValidateNeighborCleaning()
+    private static IEnumerable ValidateOwnShelfCleaning()
     {
         foreach (object step in LoadScenarioLevel()) yield return step;
 
         ColumnPosition farColumn = new ColumnPosition(6, 1);
         BoardStateSnapshot expected = Arrange(
-            new[] { new ColumnPosition(2, 1), new ColumnPosition(3, 0), farColumn },
-            Shelf(2, Column(ItemType.Ball), Column(ItemType.Ball), Column()),
+            new[] { new ColumnPosition(3, 0), new ColumnPosition(4, 1), farColumn },
             Shelf(3, Column(ItemType.Lamp), Column(), Column()),
+            Shelf(4, Column(ItemType.Ball), Column(ItemType.Ball), Column()),
             Shelf(6, Column(ItemType.Toy), Column(ItemType.Bear), Column()),
-            Shelf(7, Column(ItemType.Ball), Column(), Column()));
+            Shelf(8, Column(ItemType.Ball), Column(), Column()));
         List<ColumnPosition> cleaned = new List<ColumnPosition>();
 
         void HandleSlimeCleaned(IReadOnlyList<ColumnPosition> columns) => cleaned.AddRange(columns);
@@ -261,7 +268,7 @@ public static class SlimePlayModeValidation
 
         try
         {
-            expected = Move(expected, new ColumnPosition(7, 0), FirstMatchTarget);
+            expected = Move(expected, new ColumnPosition(8, 0), MatchTarget);
 
             foreach (object step in WaitUntilSettled("P4")) yield return step;
         }
@@ -271,14 +278,14 @@ public static class SlimePlayModeValidation
         }
 
         ExpectBoard(expected, "P4");
-        Expect(cleaned.OrderBy(column => column.ShelfIndex).SequenceEqual(new[] { new ColumnPosition(2, 1), new ColumnPosition(3, 0) }), "P4: a match must clean its shelf and the linked neighbor");
-        Expect(_board.Slime.StickyColumns.SequenceEqual(new[] { farColumn }), "P4: slime on other shelves must stay");
-        Expect(_board.Slime.MovesToGrowth == _board.Slime.GrowthPeriod, "P4: a cleaning move must reset the growth counter");
+        Expect(cleaned.SequenceEqual(new[] { new ColumnPosition(4, 1) }), "P4: a match must clean only its own shelf");
+        Expect(_board.Slime.StickyColumns.SequenceEqual(new[] { new ColumnPosition(3, 0), farColumn }), "P4: slime on the neighbor and on other shelves must stay");
+        Expect(_board.Slime.MovesToGrowth == _board.Slime.GrowthPeriod - 1, "P4: a cleaning move must still count down the growth counter");
 
         foreach (object step in WaitUntilViewsMatch("P4")) yield return step;
     }
 
-    private static IEnumerable ValidateGrowthThroughSeam()
+    private static IEnumerable ValidateGrowthOnPlainMoves()
     {
         foreach (object step in LoadScenarioLevel()) yield return step;
 
@@ -291,17 +298,17 @@ public static class SlimePlayModeValidation
 
         try
         {
-            expected = Move(expected, FirstMatchSource, FirstMatchTarget);
+            expected = Move(expected, FirstMoveSource, FirstMoveTarget);
 
             foreach (object step in WaitUntilSettled("P5 first move")) yield return step;
 
             ExpectBoard(expected, "P5 first move");
-            Expect(grown.Count == 0 && _board.Slime.MovesToGrowth == 1, "P5: the first matching move must only count down");
+            Expect(grown.Count == 0 && _board.Slime.MovesToGrowth == 1, "P5: the first move without a match must only count down");
 
             foreach (object step in WaitUntilViewsMatch("P5 first move")) yield return step;
 
-            Expect(IsForecastOn(GrowthTarget, 1), "P5: the forecast must show the next growth across the seam");
-            expected = Move(expected, SecondMatchSource, SecondMatchTarget);
+            Expect(IsForecastOn(GrowthTarget, 1), "P5: the forecast must show the first free perimeter column");
+            expected = Move(expected, SecondMoveSource, SecondMoveTarget);
 
             foreach (object step in WaitUntilSettled("P5 second move")) yield return step;
         }
@@ -311,10 +318,47 @@ public static class SlimePlayModeValidation
         }
 
         ExpectBoard(expected, "P5");
-        Expect(grown.SequenceEqual(new[] { GrowthTarget }), "P5: the second matching move must grow slime across the seam");
-        Expect(_board.IsSticky(_board.GetColumn(GrowthTarget)) && GetFrontItem(GrowthTarget) != null, "P5: slime must grow onto the column with an item");
+        Expect(grown.SequenceEqual(new[] { GrowthTarget }), "P5: the second move without a match must grow slime from the source");
+        Expect(_board.IsSticky(_board.GetColumn(GrowthTarget)) && _board.Slime.MovesToGrowth == _board.Slime.GrowthPeriod, "P5: the grown column must be sticky and the counter must restart");
 
         foreach (object step in WaitUntilViewsMatch("P5")) yield return step;
+    }
+
+    private static IEnumerable ValidateFullPathStopsGrowth()
+    {
+        foreach (object step in LoadScenarioLevel()) yield return step;
+
+        BoardStateSnapshot expected = Arrange(
+            _board.Slime.PerimeterColumns,
+            Shelf(3, Column(), Column(), Column(ItemType.Lamp)),
+            Shelf(4, Column(), Column(), Column(ItemType.Toy)));
+        List<ColumnPosition> grown = new List<ColumnPosition>();
+
+        void HandleSlimeGrown(ColumnPosition column) => grown.Add(column);
+
+        _slime.SlimeGrown += HandleSlimeGrown;
+
+        try
+        {
+            Expect(!SlimeRule.FindGrowthTarget(expected).HasValue, "P11: with the whole path sticky there must be no growth target");
+            expected = Move(expected, new ColumnPosition(3, 2), new ColumnPosition(5, 0));
+
+            foreach (object step in WaitUntilSettled("P11 first move")) yield return step;
+
+            expected = Move(expected, new ColumnPosition(4, 2), new ColumnPosition(6, 0));
+
+            foreach (object step in WaitUntilSettled("P11 second move")) yield return step;
+
+            Expect(grown.Count == 0, "P11: slime must stop growing once the whole path is sticky");
+        }
+        finally
+        {
+            _slime.SlimeGrown -= HandleSlimeGrown;
+        }
+
+        ExpectBoard(expected, "P11");
+
+        foreach (object step in WaitUntilViewsMatch("P11")) yield return step;
     }
 
     private static IEnumerable ValidateGrowthCancelsDrag()
@@ -322,12 +366,12 @@ public static class SlimePlayModeValidation
         foreach (object step in LoadScenarioLevel()) yield return step;
 
         BoardStateSnapshot expected = ArrangeGrowth();
-        expected = Move(expected, FirstMatchSource, FirstMatchTarget);
+        expected = Move(expected, FirstMoveSource, FirstMoveTarget);
 
         foreach (object step in WaitUntilSettled("P6 preparation")) yield return step;
 
         Shelf targetShelf = _board.Shelves[GrowthTarget.ShelfIndex];
-        expected = Move(expected, SecondMatchSource, SecondMatchTarget);
+        expected = Move(expected, SecondMoveSource, SecondMoveTarget);
         ShelfItem draggedItem = targetShelf.Columns[1].FrontItem;
         Vector2 pressPosition = GetScreenCenter(draggedItem);
         Expect(_drag.TryBeginDrag(draggedItem, pressPosition), "P6: a drag from the growth target shelf must start");
@@ -347,58 +391,86 @@ public static class SlimePlayModeValidation
         foreach (object step in WaitUntilViewsMatch("P6")) yield return step;
     }
 
-    private static IEnumerable ValidateTwoOverlappingMatchingMoves()
+    private static IEnumerable ValidateTwoOverlappingMoves()
     {
         foreach (object step in LoadScenarioLevel()) yield return step;
 
         BoardStateSnapshot expected = ArrangeGrowth();
-        expected = Move(expected, FirstMatchSource, FirstMatchTarget);
+        expected = Move(expected, FirstMoveSource, FirstMoveTarget);
         Expect(!_session.IsBoardSettled, "P7: the first move must still be resolving");
-        expected = Move(expected, SecondMatchSource, SecondMatchTarget);
+        expected = Move(expected, OverlapMoveSource, OverlapMoveTarget);
 
         foreach (object step in WaitUntilSettled("P7")) yield return step;
 
         ExpectBoard(expected, "P7");
-        Expect(_board.IsSticky(_board.GetColumn(GrowthTarget)), "P7: two overlapping matching moves must count twice");
+        Expect(_board.IsSticky(_board.GetColumn(GrowthTarget)), "P7: two overlapping moves must count twice");
 
         foreach (object step in WaitUntilViewsMatch("P7")) yield return step;
     }
 
-    private static IEnumerable ValidateDeadlockRescue()
+    private static IEnumerable ValidateDeadlockLoss()
     {
         foreach (object step in LoadScenarioLevel()) yield return step;
 
         ColumnPosition lastFreeItem = new ColumnPosition(4, 0);
         ColumnPosition stickyEmpty = new ColumnPosition(4, 1);
         BoardStateSnapshot expected = Arrange(
-            new[] { new ColumnPosition(2, 0), new ColumnPosition(2, 1), stickyEmpty },
-            Shelf(2, Column(ItemType.Lamp), Column(ItemType.Toy), Column()),
-            Shelf(4, Column(ItemType.Ball), Column(), Column()));
-        List<ColumnPosition> rescues = new List<ColumnPosition>();
+            new[] { new ColumnPosition(2, 0), new ColumnPosition(5, 1), stickyEmpty },
+            Shelf(2, Column(ItemType.Lamp), Column(), Column()),
+            Shelf(4, Column(ItemType.Ball), Column(), Column()),
+            Shelf(5, Column(), Column(ItemType.Toy), Column()));
+        int deadlockCount = 0;
 
-        void HandleRescueApplied(ColumnPosition column) => rescues.Add(column);
+        void HandleDeadlockReached() => deadlockCount++;
 
-        _slime.RescueApplied += HandleRescueApplied;
+        _slime.DeadlockReached += HandleDeadlockReached;
 
         try
         {
             expected = Move(expected, lastFreeItem, stickyEmpty);
             Expect(SlimeRule.IsStuck(expected, Simulator), "P8: the arranged move must leave no legal move");
-            expected = SlimeRule.ApplyRescue(expected, out ColumnPosition rescuedColumn);
 
-            foreach (object step in WaitUntilSettled("P8")) yield return step;
-
-            Expect(rescues.SequenceEqual(new[] { rescuedColumn }), "P8: a deadlock must remove exactly one slime spot by priority");
+            foreach (object step in WaitUntil(() => _session.State == LevelState.Lost, "P8 defeat")) yield return step;
         }
         finally
         {
-            _slime.RescueApplied -= HandleRescueApplied;
+            _slime.DeadlockReached -= HandleDeadlockReached;
         }
 
         ExpectBoard(expected, "P8");
-        Expect(!SlimeRule.IsStuck(_board.CreateSnapshot(), Simulator), "P8: the rescue must leave a legal move");
+        Expect(deadlockCount == 1 && _session.Result != null && !_session.Result.Won, "P8: a deadlock must end the level as a defeat once");
+    }
 
-        foreach (object step in WaitUntilViewsMatch("P8")) yield return step;
+    private static IEnumerable ValidateShelfLostDefeat()
+    {
+        foreach (object step in LoadScenarioLevel()) yield return step;
+
+        ColumnPosition stickyEmpty = new ColumnPosition(3, 2);
+        BoardStateSnapshot expected = Arrange(
+            new[] { new ColumnPosition(3, 1), stickyEmpty },
+            Shelf(3, Column(ItemType.Lamp), Column(ItemType.Toy), Column()),
+            Shelf(7, Column(ItemType.Ball), Column(), Column()),
+            Shelf(8, Column(ItemType.Bear), Column(), Column()));
+        List<Shelf> lostShelves = new List<Shelf>();
+
+        void HandleShelfLost(Shelf shelf) => lostShelves.Add(shelf);
+
+        _slime.ShelfLost += HandleShelfLost;
+
+        try
+        {
+            expected = Move(expected, new ColumnPosition(7, 0), stickyEmpty);
+            Expect(SlimeRule.FindHopelessShelf(expected) == 3, "P12: two different stuck items must make their shelf hopeless");
+
+            foreach (object step in WaitUntil(() => _session.State == LevelState.Lost, "P12 defeat")) yield return step;
+        }
+        finally
+        {
+            _slime.ShelfLost -= HandleShelfLost;
+        }
+
+        ExpectBoard(expected, "P12");
+        Expect(lostShelves.SequenceEqual(new[] { _board.Shelves[3] }) && !_session.Result.Won, "P12: a hopeless shelf must end the level as a defeat once");
     }
 
     private static IEnumerable ValidatePauseDuringGrowth()
@@ -406,8 +478,8 @@ public static class SlimePlayModeValidation
         foreach (object step in LoadScenarioLevel()) yield return step;
 
         BoardStateSnapshot expected = ArrangeGrowth();
-        expected = Move(expected, FirstMatchSource, FirstMatchTarget);
-        expected = Move(expected, SecondMatchSource, SecondMatchTarget);
+        expected = Move(expected, FirstMoveSource, FirstMoveTarget);
+        expected = Move(expected, OverlapMoveSource, OverlapMoveTarget);
 
         foreach (object step in WaitUntil(() => _slime.IsGrowing && _view.IsAnimating, "the growth")) yield return step;
 
@@ -437,8 +509,8 @@ public static class SlimePlayModeValidation
 
         BoardStateSnapshot start = _board.CreateSnapshot();
         BoardStateSnapshot expected = ArrangeGrowth();
-        expected = Move(expected, FirstMatchSource, FirstMatchTarget);
-        Move(expected, SecondMatchSource, SecondMatchTarget);
+        expected = Move(expected, FirstMoveSource, FirstMoveTarget);
+        Move(expected, OverlapMoveSource, OverlapMoveTarget);
 
         foreach (object step in WaitUntil(() => _slime.IsGrowing, "pending growth")) yield return step;
 
@@ -483,28 +555,25 @@ public static class SlimePlayModeValidation
             new[] { new ColumnPosition(8, 1) },
             Shelf(2, Column(ItemType.Ball), Column(ItemType.Ball), Column()),
             Shelf(7, Column(ItemType.Ball), Column(), Column()));
-        expected = Move(expected, new ColumnPosition(7, 0), FirstMatchTarget);
+        expected = Move(expected, new ColumnPosition(7, 0), new ColumnPosition(2, 2));
 
         foreach (object step in WaitUntilSettled("P10 win")) yield return step;
 
         ExpectBoard(expected, "P10 win");
         Expect(_session.State == LevelState.Won && _board.Slime.HasStickyColumns, "P10: the level must be won with slime left");
 
-        foreach (object step in WaitUntil(() => !_view.IsAnimating, "P10 drying")) yield return step;
+        foreach (object step in WaitUntil(() => !_view.IsAnimating && !_view.IsSourceShown, "P10 drying")) yield return step;
 
-        Expect(_view.GetVisibleSpots().Count == 0 && !_view.Forecast.gameObject.activeSelf, "P10: the remaining slime must dry up on the win");
+        Expect(_view.GetVisibleSpots().Count == 0 && !_view.Forecast.gameObject.activeSelf, "P10: the remaining slime and the source must dry up on the win");
     }
 
     private static BoardStateSnapshot ArrangeGrowth()
     {
         return Arrange(
-            GrowingStickyColumns,
-            Shelf(2, Column(ItemType.Ball), Column(ItemType.Ball), Column()),
-            Shelf(4, Column(ItemType.Bear), Column(ItemType.Bear), Column()),
-            Shelf(6, Column(ItemType.Lamp), Column(ItemType.Toy), Column()),
-            Shelf(7, Column(ItemType.Plant), Column(ItemType.Plant), Column()),
-            Shelf(8, Column(ItemType.Ball), Column(), Column()),
-            Shelf(9, Column(ItemType.Bear), Column(), Column()));
+            Array.Empty<ColumnPosition>(),
+            Shelf(3, Column(ItemType.Lamp), Column(ItemType.Toy), Column()),
+            Shelf(4, Column(ItemType.Plant), Column(ItemType.Plant), Column()),
+            Shelf(7, Column(), Column(ItemType.Bear), Column()));
     }
 
     private static IEnumerable LoadScenarioLevel()
@@ -672,6 +741,17 @@ public static class SlimePlayModeValidation
     private static (int ShelfIndex, ColumnStateSnapshot[] Columns) Shelf(int shelfIndex, params ColumnStateSnapshot[] columns) => (shelfIndex, columns);
 
     private static ColumnStateSnapshot Column(params ItemType[] items) => new ColumnStateSnapshot(items);
+
+    private static void DestroyScenarioLevel()
+    {
+        foreach (LevelEntry level in Resources.FindObjectsOfTypeAll<LevelEntry>().Where(candidate => candidate.name == ScenarioLevelName).ToArray())
+        {
+            if (level.Definition != null)
+                UnityEngine.Object.DestroyImmediate(level.Definition);
+
+            UnityEngine.Object.DestroyImmediate(level);
+        }
+    }
 
     private static LevelEntry GetScenarioLevel()
     {

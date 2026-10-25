@@ -33,6 +33,7 @@ public abstract class GameSession : MonoBehaviour
     public event Action<MatchResolution> MatchSucceeded;
     public event Action<LevelState> StateChanged;
     public event Action<IReadOnlyList<Shelf>> MatchingMoveResolved;
+    public event Action<IReadOnlyList<Shelf>> MoveResolved;
     public event Action<IReadOnlyList<Shelf>> CascadeMatchesResolved;
     public event Action<Shelf> ShelfReserved;
     public event Action<Shelf> ShelfResolved;
@@ -147,6 +148,9 @@ public abstract class GameSession : MonoBehaviour
             if (wave.Operations.Count == 0)
             {
                 _waves.Remove(wave);
+
+                if (wave.IsMove)
+                    MoveResolved?.Invoke(wave.MatchedShelves);
 
                 if (wave.IsMove && wave.HasMatch)
                     MatchingMoveResolved?.Invoke(wave.MatchedShelves);

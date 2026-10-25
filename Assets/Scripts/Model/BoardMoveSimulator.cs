@@ -84,14 +84,12 @@ public sealed class BoardMoveSimulator
 
         BoardStateSnapshot state = board.WithShelves(shelves);
         IReadOnlyList<ColumnPosition> cleanedColumns = Array.Empty<ColumnPosition>();
-        ColumnPosition? grownColumn = null;
+        IReadOnlyList<ColumnPosition> grownColumns = Array.Empty<ColumnPosition>();
 
         if (board.HasSlime)
         {
             state = SlimeRule.Clean(state, matches.Select(match => match.ShelfIndex), out cleanedColumns);
-
-            if (isMatchingMove)
-                state = SlimeRule.AdvanceGrowth(state, cleanedColumns.Count > 0, out grownColumn);
+            state = SlimeRule.AdvanceGrowth(state, out grownColumns);
         }
 
         simulation = CreateSimulation(
@@ -105,7 +103,7 @@ public sealed class BoardMoveSimulator
             switchedShelfIndexes,
             matchCountAfterSwitch,
             cleanedColumns,
-            grownColumn);
+            grownColumns);
         return true;
     }
 
@@ -312,7 +310,7 @@ public sealed class BoardMoveSimulator
         List<int> switchedShelfIndexes,
         int matchCountAfterSwitch,
         IReadOnlyList<ColumnPosition> cleanedColumns,
-        ColumnPosition? grownColumn)
+        IReadOnlyList<ColumnPosition> grownColumns)
     {
         List<int> affectedShelfIndexes = new List<int>();
 
@@ -333,7 +331,7 @@ public sealed class BoardMoveSimulator
             switchedShelfIndexes,
             matchCountAfterSwitch,
             cleanedColumns,
-            grownColumn);
+            grownColumns);
     }
 
     private static void ReplaceColumn(ShelfStateSnapshot[] shelves, ColumnPosition position, ColumnStateSnapshot column)

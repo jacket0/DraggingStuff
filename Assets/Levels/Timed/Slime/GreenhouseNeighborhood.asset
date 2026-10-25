@@ -14,10 +14,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _links:
   - _first:
-      _shelfIndex: 2
+      _shelfIndex: 0
       _columnIndex: 2
     _second:
+      _shelfIndex: 1
+      _columnIndex: 0
+  - _first:
+      _shelfIndex: 1
+      _columnIndex: 2
+    _second:
+      _shelfIndex: 2
+      _columnIndex: 0
+  - _first:
       _shelfIndex: 3
+      _columnIndex: 2
+    _second:
+      _shelfIndex: 4
       _columnIndex: 0
   - _first:
       _shelfIndex: 4
@@ -26,10 +38,16 @@ MonoBehaviour:
       _shelfIndex: 5
       _columnIndex: 0
   - _first:
-      _shelfIndex: 6
+      _shelfIndex: 5
       _columnIndex: 2
     _second:
+      _shelfIndex: 6
+      _columnIndex: 0
+  - _first:
       _shelfIndex: 7
+      _columnIndex: 2
+    _second:
+      _shelfIndex: 8
       _columnIndex: 0
   - _first:
       _shelfIndex: 8
@@ -37,3 +55,54 @@ MonoBehaviour:
     _second:
       _shelfIndex: 9
       _columnIndex: 0
+  - _first:
+      _shelfIndex: 9
+      _columnIndex: 2
+    _second:
+      _shelfIndex: 10
+      _columnIndex: 0
+  _perimeterColumns:
+  - _shelfIndex: 7
+    _columnIndex: 0
+  - _shelfIndex: 10
+    _columnIndex: 2
+  - _shelfIndex: 3
+    _columnIndex: 0
+  - _shelfIndex: 6
+    _columnIndex: 2
+  - _shelfIndex: 0
+    _columnIndex: 0
+  - _shelfIndex: 2
+    _columnIndex: 2
+  - _shelfIndex: 7
+    _columnIndex: 1
+  - _shelfIndex: 10
+    _columnIndex: 1
+  - _shelfIndex: 3
+    _columnIndex: 1
+  - _shelfIndex: 6
+    _columnIndex: 1
+  - _shelfIndex: 0
+    _columnIndex: 1
+  - _shelfIndex: 2
+    _columnIndex: 1
+  - _shelfIndex: 8
+    _columnIndex: 0
+  - _shelfIndex: 9
+    _columnIndex: 2
+  - _shelfIndex: 4
+    _columnIndex: 0
+  - _shelfIndex: 5
+    _columnIndex: 2
+  - _shelfIndex: 1
+    _columnIndex: 0
+  - _shelfIndex: 8
+    _columnIndex: 1
+  - _shelfIndex: 9
+    _columnIndex: 1
+  - _shelfIndex: 4
+    _columnIndex: 1
+  - _shelfIndex: 5
+    _columnIndex: 1
+  - _shelfIndex: 1
+    _columnIndex: 1

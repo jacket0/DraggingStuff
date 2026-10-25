@@ -93,6 +93,9 @@ public sealed class BoardStateSnapshot
 
         if (slime.Links.Any(link => !Contains(link.First) || !Contains(link.Second)))
             throw new ArgumentException("A slime link must connect columns of the board.", nameof(slime));
+
+        if (slime.PerimeterColumns.Any(column => !Contains(column)))
+            throw new ArgumentException("A perimeter column must belong to the board.", nameof(slime));
     }
 
     private static IReadOnlyCollection<ItemType> CollectShelfFilteredTypes(IReadOnlyList<ShelfStateSnapshot> shelves)

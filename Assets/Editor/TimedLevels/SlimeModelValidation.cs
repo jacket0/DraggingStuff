@@ -22,12 +22,15 @@ public static class SlimeModelValidation
         ValidateStickyColumnAcceptsItem();
         ValidateMatchCleansOwnShelf();
         ValidateMatchCleansNeighborShelves();
-        ValidateTransferKeepsCounter();
+        ValidateMoveWithoutMatchTicks();
         ValidateDoubleMatchGrowsOnce();
-        ValidateGrowthAcrossLink();
+        ValidateWaveGrowth();
         ValidateGrowthWithoutTarget();
-        ValidateCleanSlimeStopsGrowing();
-        ValidateDeadlockRescue();
+        ValidatePerimeterGrowth();
+        ValidateOwnShelfCleaning();
+        ValidateHopelessShelf();
+        ValidateGracePeriod();
+        ValidateDeadlock();
         ValidateClearedBoardWithSlime();
         ValidateFingerprintSlime();
         ValidateShelfBoardSlime();
@@ -51,6 +54,12 @@ public static class SlimeModelValidation
         ExpectFailure<ArgumentException>(
             () => SlimeBoard(Slime(2, 2, Array.Empty<ColumnPosition>(), new SlimeColumnLink(Position(0, 0), Position(2, 0))), OpenShelf(Column(), Column(), Column()), OpenShelf(Column(), Column(), Column())),
             "Slime S1: a link outside the board passed.");
+        ExpectFailure<ArgumentException>(
+            () => PerimeterSlime(2, 2, new[] { Position(0, 0), Position(0, 0) }),
+            "Slime S1: a perimeter column repeated.");
+        ExpectFailure<ArgumentException>(
+            () => SlimeBoard(PerimeterSlime(2, 2, new[] { Position(1, 0) }), OpenShelf(Column(), Column(), Column())),
+            "Slime S1: a perimeter column outside the board passed.");
         ExpectFailure<ArgumentException>(
             () => SlimeBoard(Slime(2, 2), new ShelfStateSnapshot(new[] { Column(), Column(), Column() }, true, true)),
             "Slime S1: slime shared a board with a conveyor.");
@@ -87,11 +96,11 @@ public static class SlimeModelValidation
         if (simulation.MatchCount != 0
             || !simulation.State.IsSticky(Position(0, 0))
             || simulation.State.Shelves[0].Columns[0].FrontItem != ItemType.Ball
-            || simulation.State.Slime.MovesToGrowth != GrowthPeriod
+            || simulation.State.Slime.MovesToGrowth != GrowthPeriod - 1
             || simulation.CleanedColumns.Count != 0
-            || simulation.GrownColumn.HasValue)
+            || simulation.GrownColumns.Count != 0)
         {
-            throw new InvalidOperationException("Slime S3: an item placed into a sticky column must stick without moving the growth counter.");
+            throw new InvalidOperationException("Slime S3: an item placed into a sticky column must stick and count down the growth counter.");
         }
 
         ExpectRejected(simulation.State, Position(0, 0), Position(1, 0), "Slime S3: a stuck item was taken back.");
@@ -108,7 +117,7 @@ public static class SlimeModelValidation
         if (simulation.MatchCount != 1
             || simulation.State.Slime.HasStickyColumns
             || !simulation.CleanedColumns.SequenceEqual(new[] { Position(0, 0), Position(0, 1) })
-            || simulation.GrownColumn.HasValue
+            || simulation.GrownColumns.Count != 0
             || simulation.State.Shelves[0].Columns[1].FrontItem != ItemType.Plant)
         {
             throw new InvalidOperationException("Slime S4: a match on a sticky shelf must clean its own columns without growth.");
@@ -129,93 +138,178 @@ public static class SlimeModelValidation
             || !simulation.CleanedColumns.SequenceEqual(new[] { Position(1, 0) })
             || simulation.State.IsSticky(Position(1, 0))
             || !simulation.State.IsSticky(Position(2, 0))
-            || simulation.State.Slime.MovesToGrowth != GrowthPeriod
-            || simulation.GrownColumn.HasValue)
+            || simulation.GrownColumns.Count != 0
+            || simulation.State.Slime.MovesToGrowth != GrowthPeriod)
         {
-            throw new InvalidOperationException("Slime S5: a match must clean only linked neighbor shelves and reset the growth counter.");
+            throw new InvalidOperationException("Slime S5: a match must clean only linked neighbor shelves and must not stop the growth counter.");
         }
     }
 
-    private static void ValidateTransferKeepsCounter()
+    private static void ValidateMoveWithoutMatchTicks()
     {
-        BoardStateSnapshot board = SlimeBoard(
-            Slime(GrowthPeriod, 1, new[] { Position(0, 0) }),
+        ShelfStateSnapshot[] shelves =
+        {
             OpenShelf(Column(ItemType.Ball), Column(ItemType.Bear), Column(ItemType.Plant)),
-            OpenShelf(Column(), Column(ItemType.Lamp), Column(ItemType.Toy)));
-        BoardMoveSimulation simulation = Simulate(board, Position(1, 1), Position(1, 0), "S6");
+            OpenShelf(Column(), Column(ItemType.Lamp), Column(ItemType.Toy))
+        };
+        BoardMoveSimulation firstMove = Simulate(SlimeBoard(PathSlime(GrowthPeriod, GrowthPeriod, new[] { Position(0, 1) }, new[] { Position(0, 0) }), shelves), Position(1, 1), Position(1, 0), "S6");
 
-        if (simulation.State.Slime.MovesToGrowth != 1 || simulation.GrownColumn.HasValue || simulation.State.Slime.StickyColumns.Count != 1)
-            throw new InvalidOperationException("Slime S6: a move without a match must not touch the growth counter.");
+        if (firstMove.State.Slime.MovesToGrowth != GrowthPeriod - 1 || firstMove.GrownColumns.Count != 0 || firstMove.State.Slime.StickyColumns.Count != 1)
+            throw new InvalidOperationException("Slime S6: a move without a match must count down the growth counter.");
+
+        BoardMoveSimulation secondMove = Simulate(SlimeBoard(PathSlime(GrowthPeriod, 1, new[] { Position(0, 1) }, new[] { Position(0, 0) }), shelves), Position(1, 1), Position(1, 0), "S6");
+
+        if (secondMove.MatchCount != 0 || !secondMove.GrownColumns.SequenceEqual(new[] { Position(0, 1) }) || secondMove.State.Slime.MovesToGrowth != GrowthPeriod)
+            throw new InvalidOperationException("Slime S6: the last move of a period must grow slime even without a match.");
     }
 
     private static void ValidateDoubleMatchGrowsOnce()
     {
         BoardStateSnapshot board = SlimeBoard(
-            Slime(GrowthPeriod, 1, new[] { Position(2, 0) }),
+            PathSlime(GrowthPeriod, 1, new[] { Position(2, 0), Position(2, 1) }, new[] { Position(2, 0) }),
             OpenShelf(Column(ItemType.Ball), Column(ItemType.Ball), Column(ItemType.Bear)),
             OpenShelf(Column(ItemType.Bear), Column(ItemType.Bear), Column(ItemType.Ball)),
             OpenShelf(Column(ItemType.Lamp), Column(ItemType.Toy, ItemType.Plant), Column(ItemType.Plant)));
         BoardMoveSimulation simulation = Simulate(board, Position(0, 2), Position(1, 2), "S7");
 
         if (simulation.MatchCount != 2
-            || !simulation.GrownColumn.Equals(Position(2, 1))
+            || !simulation.GrownColumns.SequenceEqual(new[] { Position(2, 1) })
             || !simulation.State.Slime.StickyColumns.SequenceEqual(new[] { Position(2, 0), Position(2, 1) })
             || simulation.State.Slime.MovesToGrowth != GrowthPeriod
             || !simulation.State.Shelves[2].Columns[1].Items.SequenceEqual(new[] { ItemType.Toy, ItemType.Plant }))
         {
-            throw new InvalidOperationException("Slime S7: a double match must grow slime once onto the neighbor column and keep its items.");
+            throw new InvalidOperationException("Slime S7: a double match must grow slime once onto the path column and keep its items.");
         }
 
-        BoardMoveSimulation nextSimulation = Simulate(Board(board, Slime(GrowthPeriod, GrowthPeriod, new[] { Position(2, 0) })), Position(0, 2), Position(1, 2), "S7");
+        BoardMoveSimulation nextSimulation = Simulate(Board(board, PathSlime(GrowthPeriod, GrowthPeriod, new[] { Position(2, 0), Position(2, 1) }, new[] { Position(2, 0) })), Position(0, 2), Position(1, 2), "S7");
 
-        if (nextSimulation.GrownColumn.HasValue || nextSimulation.State.Slime.MovesToGrowth != 1)
-            throw new InvalidOperationException("Slime S7: the first matching move of a period must only count down.");
+        if (nextSimulation.GrownColumns.Count != 0 || nextSimulation.State.Slime.MovesToGrowth != 1)
+            throw new InvalidOperationException("Slime S7: the first move of a period must only count down.");
     }
 
-    private static void ValidateGrowthAcrossLink()
+    private static void ValidateWaveGrowth()
     {
+        ColumnPosition[] path = { Position(2, 0), Position(2, 1), Position(3, 0), Position(3, 1) };
+        SlimeRules waveRules = new SlimeRules(2, true, 0);
         BoardStateSnapshot board = SlimeBoard(
-            Slime(GrowthPeriod, 1, new[] { Position(2, 0), Position(2, 1), Position(2, 2) }, new SlimeColumnLink(Position(2, 2), Position(3, 0))),
+            new SlimeSnapshot(new[] { Position(2, 0) }, Array.Empty<SlimeColumnLink>(), path, GrowthPeriod, 1, waveRules),
             OpenShelf(Column(ItemType.Ball), Column(ItemType.Ball), Column()),
             OpenShelf(Column(ItemType.Ball), Column(ItemType.Lamp), Column(ItemType.Toy)),
-            OpenShelf(Column(ItemType.Bear), Column(ItemType.Plant), Column(ItemType.Lamp)),
+            OpenShelf(Column(), Column(ItemType.Bear), Column(ItemType.Plant)),
             OpenShelf(Column(ItemType.Toy), Column(ItemType.Plant), Column(ItemType.Bear)));
 
-        if (!SlimeRule.FindGrowthTarget(board).Equals(Position(3, 0)))
-            throw new InvalidOperationException("Slime S8: the growth forecast must cross the link to the neighbor shelf.");
+        if (!SlimeRule.FindGrowthTargets(board, 2).SequenceEqual(new[] { Position(2, 1), Position(3, 0) }))
+            throw new InvalidOperationException("Slime S8: a wave must forecast the first free path columns.");
 
         BoardMoveSimulation simulation = Simulate(board, Position(1, 0), Position(0, 2), "S8");
 
-        if (simulation.CleanedColumns.Count != 0 || !simulation.GrownColumn.Equals(Position(3, 0)) || !simulation.State.IsSticky(Position(3, 0)))
-            throw new InvalidOperationException("Slime S8: slime must grow across the link to the neighbor shelf.");
+        if (simulation.CleanedColumns.Count != 0
+            || !simulation.GrownColumns.SequenceEqual(new[] { Position(2, 1), Position(3, 0) })
+            || !simulation.State.Slime.StickyColumns.SequenceEqual(new[] { Position(2, 0), Position(2, 1), Position(3, 0) })
+            || simulation.State.Slime.MovesToGrowth != GrowthPeriod)
+        {
+            throw new InvalidOperationException("Slime S8: a wave must grow the whole group of columns and restart the counter.");
+        }
     }
 
     private static void ValidateGrowthWithoutTarget()
     {
         BoardStateSnapshot board = SlimeBoard(
-            Slime(GrowthPeriod, 1, new[] { Position(2, 0), Position(2, 1), Position(2, 2) }),
+            PathSlime(GrowthPeriod, 1, new[] { Position(2, 0) }, new[] { Position(2, 0) }),
             OpenShelf(Column(ItemType.Ball), Column(ItemType.Ball), Column()),
             OpenShelf(Column(ItemType.Ball), Column(ItemType.Lamp), Column(ItemType.Toy)),
             OpenShelf(Column(ItemType.Bear), Column(ItemType.Plant), Column(ItemType.Lamp)));
         BoardMoveSimulation simulation = Simulate(board, Position(1, 0), Position(0, 2), "S9");
 
-        if (simulation.GrownColumn.HasValue || simulation.State.Slime.StickyColumns.Count != 3 || simulation.State.Slime.MovesToGrowth != GrowthPeriod)
-            throw new InvalidOperationException("Slime S9: growth without a target must be skipped and restart the counter.");
+        if (simulation.GrownColumns.Count != 0 || simulation.State.Slime.StickyColumns.Count != 1 || simulation.State.Slime.MovesToGrowth != GrowthPeriod)
+            throw new InvalidOperationException("Slime S9: growth with a full path must be skipped and restart the counter.");
     }
 
-    private static void ValidateCleanSlimeStopsGrowing()
+    private static void ValidatePerimeterGrowth()
     {
-        BoardStateSnapshot board = SlimeBoard(
-            Slime(GrowthPeriod, 1),
+        ColumnPosition[] path = { Position(1, 2), Position(0, 2) };
+        ShelfStateSnapshot[] shelves =
+        {
             OpenShelf(Column(ItemType.Ball), Column(ItemType.Ball), Column()),
-            OpenShelf(Column(ItemType.Ball), Column(ItemType.Lamp), Column(ItemType.Toy)));
-        BoardMoveSimulation simulation = Simulate(board, Position(1, 0), Position(0, 2), "S10");
+            OpenShelf(Column(ItemType.Ball), Column(ItemType.Lamp), Column(ItemType.Toy))
+        };
+        BoardMoveSimulation cleanBoardMove = Simulate(SlimeBoard(PathSlime(GrowthPeriod, 1, path), shelves), Position(1, 0), Position(0, 2), "S10");
 
-        if (simulation.GrownColumn.HasValue || simulation.State.Slime.HasStickyColumns || SlimeRule.FindGrowthTarget(simulation.State).HasValue)
-            throw new InvalidOperationException("Slime S10: fully cleaned slime must stop growing.");
+        if (cleanBoardMove.MatchCount != 1 || !cleanBoardMove.GrownColumns.SequenceEqual(new[] { Position(1, 2) }) || !cleanBoardMove.State.IsSticky(Position(1, 2)))
+            throw new InvalidOperationException("Slime S10: the source must keep growing on the first free path column after a full clean.");
+
+        BoardStateSnapshot firstTaken = SlimeBoard(PathSlime(GrowthPeriod, 1, path, new[] { Position(1, 2) }), shelves);
+
+        if (!SlimeRule.FindGrowthTarget(firstTaken).Equals(Position(0, 2)))
+            throw new InvalidOperationException("Slime S10: growth must follow the path order.");
+
+        BoardStateSnapshot pathTaken = SlimeBoard(PathSlime(GrowthPeriod, 1, path, new[] { Position(0, 2), Position(1, 2) }), shelves);
+
+        if (SlimeRule.FindGrowthTarget(pathTaken).HasValue)
+            throw new InvalidOperationException("Slime S10: growth must stop when the whole path is sticky.");
     }
 
-    private static void ValidateDeadlockRescue()
+    private static void ValidateOwnShelfCleaning()
+    {
+        SlimeRules ownRules = new SlimeRules(1, false, 0);
+        ShelfStateSnapshot[] shelves =
+        {
+            OpenShelf(Column(ItemType.Plant), Column(ItemType.Ball), Column()),
+            OpenShelf(Column(ItemType.Bear), Column(ItemType.Lamp), Column(ItemType.Toy)),
+            OpenShelf(Column(ItemType.Ball), Column(ItemType.Ball), Column(ItemType.Toy)),
+            OpenShelf(Column(ItemType.Ball), Column(ItemType.Lamp), Column())
+        };
+        BoardStateSnapshot matchBoard = SlimeBoard(
+            new SlimeSnapshot(new[] { Position(1, 0), Position(3, 1) }, new[] { new SlimeColumnLink(Position(1, 2), Position(2, 0)) }, Array.Empty<ColumnPosition>(), GrowthPeriod, GrowthPeriod, ownRules),
+            shelves);
+        BoardMoveSimulation match = Simulate(matchBoard, Position(3, 0), Position(2, 2), "S13");
+
+        if (match.MatchCount != 1 || match.CleanedColumns.Count != 0 || !match.State.IsSticky(Position(1, 0)) || !match.State.IsSticky(Position(3, 1)))
+            throw new InvalidOperationException("Slime S13: a match must not clean neighbor shelves when slime cleans only its own shelf.");
+
+        BoardStateSnapshot ownMatch = SlimeBoard(
+            new SlimeSnapshot(new[] { Position(2, 1), Position(1, 0) }, new[] { new SlimeColumnLink(Position(1, 2), Position(2, 0)) }, Array.Empty<ColumnPosition>(), GrowthPeriod, GrowthPeriod, ownRules),
+            shelves);
+        BoardMoveSimulation own = Simulate(ownMatch, Position(3, 0), Position(2, 2), "S13");
+
+        if (!own.CleanedColumns.SequenceEqual(new[] { Position(2, 1) }) || !own.State.IsSticky(Position(1, 0)))
+            throw new InvalidOperationException("Slime S13: a match must clean its own shelf and only it.");
+    }
+
+    private static void ValidateHopelessShelf()
+    {
+        SlimeRules ownRules = new SlimeRules(1, false, 0);
+        ShelfStateSnapshot[] shelves =
+        {
+            OpenShelf(Column(ItemType.Ball), Column(ItemType.Bear), Column(ItemType.Ball)),
+            OpenShelf(Column(ItemType.Ball), Column(ItemType.Ball), Column())
+        };
+        BoardStateSnapshot hopeless = SlimeBoard(new SlimeSnapshot(new[] { Position(0, 0), Position(0, 1) }, Array.Empty<SlimeColumnLink>(), Array.Empty<ColumnPosition>(), GrowthPeriod, GrowthPeriod, ownRules), shelves);
+        BoardStateSnapshot sameFronts = SlimeBoard(new SlimeSnapshot(new[] { Position(0, 0), Position(0, 2) }, Array.Empty<SlimeColumnLink>(), Array.Empty<ColumnPosition>(), GrowthPeriod, GrowthPeriod, ownRules), shelves);
+        BoardStateSnapshot wide = SlimeBoard(Slime(GrowthPeriod, GrowthPeriod, new[] { Position(0, 0), Position(0, 1) }), shelves);
+
+        if (!SlimeRule.HasHopelessShelf(hopeless) || SlimeRule.HasHopelessShelf(sameFronts) || SlimeRule.HasHopelessShelf(wide))
+            throw new InvalidOperationException("Slime S14: a shelf with two different stuck fronts must be hopeless only when slime cleans its own shelf.");
+    }
+
+    private static void ValidateGracePeriod()
+    {
+        SlimeRules graceRules = new SlimeRules(1, true, 3);
+        ColumnPosition[] path = { Position(0, 0) };
+        ExpectFailure<ArgumentOutOfRangeException>(
+            () => new SlimeSnapshot(Array.Empty<ColumnPosition>(), Array.Empty<SlimeColumnLink>(), path, GrowthPeriod, GrowthPeriod + 4, graceRules),
+            "Slime S15: moves to growth beyond the grace period passed.");
+        BoardStateSnapshot board = SlimeBoard(
+            new SlimeSnapshot(Array.Empty<ColumnPosition>(), Array.Empty<SlimeColumnLink>(), path, GrowthPeriod, GrowthPeriod + 3, graceRules),
+            OpenShelf(Column(ItemType.Ball), Column(ItemType.Bear), Column()),
+            OpenShelf(Column(), Column(ItemType.Lamp), Column()));
+        BoardMoveSimulation first = Simulate(board, Position(0, 0), Position(1, 0), "S15");
+
+        if (first.State.Slime.MovesToGrowth != GrowthPeriod + 2 || first.GrownColumns.Count != 0)
+            throw new InvalidOperationException("Slime S15: the grace period must delay the first growth.");
+    }
+
+    private static void ValidateDeadlock()
     {
         BoardMoveSimulator simulator = new BoardMoveSimulator();
         BoardStateSnapshot board = SlimeBoard(
@@ -225,17 +319,6 @@ public static class SlimeModelValidation
 
         if (!SlimeRule.IsStuck(board, simulator))
             throw new InvalidOperationException("Slime S11: a board without legal moves must be stuck.");
-
-        BoardStateSnapshot rescuedBoard = SlimeRule.ApplyRescue(board, out ColumnPosition cleanedColumn);
-
-        if (!cleanedColumn.Equals(Position(0, 0))
-            || rescuedBoard.IsSticky(Position(0, 0))
-            || rescuedBoard.Slime.StickyColumns.Count != 4
-            || rescuedBoard.Slime.MovesToGrowth != GrowthPeriod
-            || SlimeRule.IsStuck(rescuedBoard, simulator))
-        {
-            throw new InvalidOperationException("Slime S11: a rescue must clean the first filled sticky column and free a move.");
-        }
 
         BoardStateSnapshot movableBoard = SlimeBoard(
             Slime(GrowthPeriod, 1, new[] { Position(0, 0) }),
@@ -303,6 +386,9 @@ public static class SlimeModelValidation
             ExpectFailure<InvalidOperationException>(() => board.SetFilter(secondShelf, new[] { ItemType.Lamp }), "Slime SB1: a filter shared a board with slime.");
             ExpectFailure<InvalidOperationException>(() => board.MarkCyclic(secondShelf, new ShelfCycleSnapshot(3, 3, 1), true), "Slime SB1: a cycle shared a board with slime.");
             ExpectFailure<InvalidOperationException>(() => board.SetSlime(Slime(GrowthPeriod, 1, new[] { Position(0, 1) })), "Slime SB1: slime changed its links.");
+            ExpectFailure<InvalidOperationException>(
+                () => board.SetSlime(new SlimeSnapshot(new[] { Position(0, 1) }, slime.Links, new[] { Position(1, 2) }, GrowthPeriod, 1)),
+                "Slime SB1: slime changed its perimeter.");
 
             BoardStateSnapshot snapshot = board.CreateSnapshot();
 
@@ -349,11 +435,13 @@ public static class SlimeModelValidation
         BoardStateSnapshot boardShape = new BoardStateSnapshot(Enumerable.Range(0, DefinitionShelfCount).Select(_ => OpenShelf(Column(), Column(), Column())).ToArray());
         ColumnPosition[] oneSticky = { Position(0, 0) };
         ColumnPosition[][] validLinks = { new[] { Position(0, 2), Position(1, 0) } };
+        ColumnPosition[] validPerimeter = { Position(3, 0), Position(3, 2) };
         List<UnityEngine.Object> temporaryAssets = new List<UnityEngine.Object>();
 
         try
         {
-            Validate(CreateDefinition(template, oneSticky, validLinks, GrowthPeriod, Array.Empty<int>(), true, temporaryAssets));
+            Validate(CreateDefinition(template, oneSticky, validLinks, validPerimeter, GrowthPeriod, Array.Empty<int>(), true, temporaryAssets));
+            Validate(CreateDefinition(template, Array.Empty<ColumnPosition>(), validLinks, validPerimeter, GrowthPeriod, Array.Empty<int>(), true, temporaryAssets));
 
             ExpectDefinitionFailure(new[] { Position(0, 0), Position(0, 0) }, validLinks, Array.Empty<int>(), true, "a duplicated sticky column passed validation.");
             ExpectDefinitionFailure(
@@ -366,6 +454,12 @@ public static class SlimeModelValidation
             ExpectDefinitionFailure(oneSticky, new[] { new[] { Position(0, 2), Position(9, 0) } }, Array.Empty<int>(), true, "a slime link outside the board passed validation.");
             ExpectDefinitionFailure(oneSticky, validLinks, Array.Empty<int>(), false, "slime without a neighborhood passed validation.");
             ExpectDefinitionFailure(oneSticky, validLinks, new[] { 2 }, true, "slime combined with a conveyor passed validation.");
+            ExpectFailure<InvalidOperationException>(
+                () => Validate(CreateDefinition(template, oneSticky, validLinks, Array.Empty<ColumnPosition>(), GrowthPeriod, Array.Empty<int>(), true, temporaryAssets)),
+                "Slime D1: a neighborhood without a perimeter passed validation.");
+            ExpectFailure<InvalidOperationException>(
+                () => Validate(CreateDefinition(template, oneSticky, validLinks, new[] { Position(8, 0) }, GrowthPeriod, Array.Empty<int>(), true, temporaryAssets)),
+                "Slime D1: a perimeter column outside the board passed validation.");
         }
         finally
         {
@@ -383,7 +477,7 @@ public static class SlimeModelValidation
             string message)
         {
             ExpectFailure<InvalidOperationException>(
-                () => Validate(CreateDefinition(template, stickyColumns, links, GrowthPeriod, conveyorShelfIndices, hasNeighborhood, temporaryAssets)),
+                () => Validate(CreateDefinition(template, stickyColumns, links, validPerimeter, GrowthPeriod, conveyorShelfIndices, hasNeighborhood, temporaryAssets)),
                 $"Slime D1: {message}");
         }
     }
@@ -398,6 +492,7 @@ public static class SlimeModelValidation
                 catalog.Levels[0].Definition,
                 new[] { Position(0, 0), Position(2, 1) },
                 new[] { new[] { Position(0, 2), Position(1, 0) } },
+                new[] { Position(3, 1) },
                 3,
                 Array.Empty<int>(),
                 true,
@@ -410,6 +505,7 @@ public static class SlimeModelValidation
                 || !definition.HasSlime
                 || !playable.Slime.StickyColumns.SequenceEqual(new[] { Position(0, 0), Position(2, 1) })
                 || !playable.Slime.Links.SequenceEqual(new[] { new SlimeColumnLink(Position(0, 2), Position(1, 0)) })
+                || !playable.Slime.PerimeterColumns.SequenceEqual(new[] { Position(3, 1) })
                 || playable.Slime.GrowthPeriod != 3
                 || playable.Slime.MovesToGrowth != 3
                 || BoardStateFingerprint.CreateKey(playable.WithSlime(null)) != BoardStateFingerprint.CreateKey(DefinitionLayout())
@@ -430,6 +526,7 @@ public static class SlimeModelValidation
         TimedLevelDefinition template,
         IReadOnlyList<ColumnPosition> stickyColumns,
         IReadOnlyList<ColumnPosition[]> links,
+        IReadOnlyList<ColumnPosition> perimeterColumns,
         int growthPeriod,
         IReadOnlyList<int> conveyorShelfIndices,
         bool hasNeighborhood,
@@ -460,7 +557,7 @@ public static class SlimeModelValidation
         }
 
         SerializedProperty slime = serializedDefinition.FindProperty("_slime");
-        slime.FindPropertyRelative("_neighborhood").objectReferenceValue = hasNeighborhood ? CreateNeighborhood(links, temporaryAssets) : null;
+        slime.FindPropertyRelative("_neighborhood").objectReferenceValue = hasNeighborhood ? CreateNeighborhood(links, perimeterColumns, temporaryAssets) : null;
         slime.FindPropertyRelative("_growthPeriod").intValue = growthPeriod;
         SerializedProperty stickyProperty = slime.FindPropertyRelative("_stickyColumns");
         stickyProperty.arraySize = stickyColumns.Count;
@@ -473,7 +570,7 @@ public static class SlimeModelValidation
         return definition;
     }
 
-    private static SlimeNeighborhood CreateNeighborhood(IReadOnlyList<ColumnPosition[]> links, List<UnityEngine.Object> temporaryAssets)
+    private static SlimeNeighborhood CreateNeighborhood(IReadOnlyList<ColumnPosition[]> links, IReadOnlyList<ColumnPosition> perimeterColumns, List<UnityEngine.Object> temporaryAssets)
     {
         SlimeNeighborhood neighborhood = ScriptableObject.CreateInstance<SlimeNeighborhood>();
         neighborhood.hideFlags = HideFlags.HideAndDontSave;
@@ -487,6 +584,12 @@ public static class SlimeModelValidation
             WriteColumn(linksProperty.GetArrayElementAtIndex(index).FindPropertyRelative("_first"), links[index][0]);
             WriteColumn(linksProperty.GetArrayElementAtIndex(index).FindPropertyRelative("_second"), links[index][1]);
         }
+
+        SerializedProperty perimeterProperty = serializedNeighborhood.FindProperty("_perimeterColumns");
+        perimeterProperty.arraySize = perimeterColumns.Count;
+
+        for (int index = 0; index < perimeterColumns.Count; index++)
+            WriteColumn(perimeterProperty.GetArrayElementAtIndex(index), perimeterColumns[index]);
 
         serializedNeighborhood.ApplyModifiedPropertiesWithoutUndo();
         return neighborhood;
@@ -571,7 +674,17 @@ public static class SlimeModelValidation
 
     private static SlimeSnapshot Slime(int growthPeriod, int movesToGrowth, IEnumerable<ColumnPosition> stickyColumns = null, params SlimeColumnLink[] links)
     {
-        return new SlimeSnapshot(stickyColumns ?? Array.Empty<ColumnPosition>(), links, growthPeriod, movesToGrowth);
+        return new SlimeSnapshot(stickyColumns ?? Array.Empty<ColumnPosition>(), links, Array.Empty<ColumnPosition>(), growthPeriod, movesToGrowth);
+    }
+
+    private static SlimeSnapshot PathSlime(int growthPeriod, int movesToGrowth, IEnumerable<ColumnPosition> path, IEnumerable<ColumnPosition> stickyColumns = null)
+    {
+        return new SlimeSnapshot(stickyColumns ?? Array.Empty<ColumnPosition>(), Array.Empty<SlimeColumnLink>(), path, growthPeriod, movesToGrowth);
+    }
+
+    private static SlimeSnapshot PerimeterSlime(int growthPeriod, int movesToGrowth, IEnumerable<ColumnPosition> perimeterColumns, IEnumerable<ColumnPosition> stickyColumns = null)
+    {
+        return new SlimeSnapshot(stickyColumns ?? Array.Empty<ColumnPosition>(), Array.Empty<SlimeColumnLink>(), perimeterColumns, growthPeriod, movesToGrowth);
     }
 
     private static ColumnStateSnapshot Column(params ItemType[] items) => new ColumnStateSnapshot(items);

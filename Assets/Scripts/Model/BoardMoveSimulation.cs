@@ -16,7 +16,7 @@ public sealed class BoardMoveSimulation
     public IReadOnlyList<int> OpenedShelfIndexes { get; }
     public int OpenedShelfCount => OpenedShelfIndexes.Count;
     public IReadOnlyList<ColumnPosition> CleanedColumns { get; }
-    public ColumnPosition? GrownColumn { get; }
+    public IReadOnlyList<ColumnPosition> GrownColumns { get; }
     public int EmptyColumnCount => State.EmptyColumnCount;
     public bool IsAllowed => IsSwap || MatchCount > 0 || EmptyColumnCount > 0;
 
@@ -31,7 +31,7 @@ public sealed class BoardMoveSimulation
         IReadOnlyList<int> switchedShelfIndexes = null,
         int matchCountAfterSwitch = 0,
         IReadOnlyList<ColumnPosition> cleanedColumns = null,
-        ColumnPosition? grownColumn = null)
+        IReadOnlyList<ColumnPosition> grownColumns = null)
     {
         State = state ?? throw new ArgumentNullException(nameof(state));
         Matches = new List<MatchInfo>(matches).AsReadOnly();
@@ -43,6 +43,6 @@ public sealed class BoardMoveSimulation
         SwitchedShelfIndexes = Array.AsReadOnly(switchedShelfIndexes?.ToArray() ?? Array.Empty<int>());
         MatchCountAfterSwitch = matchCountAfterSwitch;
         CleanedColumns = Array.AsReadOnly(cleanedColumns?.ToArray() ?? Array.Empty<ColumnPosition>());
-        GrownColumn = grownColumn;
+        GrownColumns = Array.AsReadOnly(grownColumns?.ToArray() ?? Array.Empty<ColumnPosition>());
     }
 }

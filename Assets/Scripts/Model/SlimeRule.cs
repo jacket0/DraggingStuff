@@ -6,50 +6,22 @@ public static class SlimeRule
 {
     public static ColumnPosition? FindGrowthTarget(BoardStateSnapshot board)
     {
-        if (board == null)
-            throw new ArgumentNullException(nameof(board));
-
-        if (!board.HasSlime)
-            return null;
-
-        foreach (ColumnPosition stickyColumn in board.Slime.StickyColumns)
-        {
-            foreach (ColumnPosition neighbor in GetNeighborColumns(board, stickyColumn))
-            {
-                if (!board.Slime.IsSticky(neighbor))
-                    return neighbor;
-            }
-        }
-
-        return null;
+        IReadOnlyList<ColumnPosition> targets = FindGrowthTargets(board, 1);
+        return targets.Count > 0 ? targets[0] : (ColumnPosition?)null;
     }
 
-    public static IReadOnlyList<ColumnPosition> GetNeighborColumns(BoardStateSnapshot board, ColumnPosition position)
+    public static IReadOnlyList<ColumnPosition> FindGrowthTargets(BoardStateSnapshot board, int count)
     {
         if (board == null)
             throw new ArgumentNullException(nameof(board));
 
-        if (!board.Contains(position))
-            throw new ArgumentOutOfRangeException(nameof(position));
-
-        List<ColumnPosition> neighbors = new List<ColumnPosition>();
-
-        if (position.ColumnIndex > 0)
-            neighbors.Add(new ColumnPosition(position.ShelfIndex, position.ColumnIndex - 1));
-
-        if (position.ColumnIndex < board.Shelves[position.ShelfIndex].Capacity - 1)
-            neighbors.Add(new ColumnPosition(position.ShelfIndex, position.ColumnIndex + 1));
+        if (count < 1)
+            throw new ArgumentOutOfRangeException(nameof(count));
 
         if (!board.HasSlime)
-            return neighbors;
+            return Array.Empty<ColumnPosition>();
 
-        foreach (SlimeColumnLink link in board.Slime.Links)
-        {
-            if (link.TryGetOtherEnd(position, out ColumnPosition otherEnd))
-                neighbors.Add(otherEnd);
-        }
-
-        return neighbors;
+        return board.Slime.PerimeterColumns.Where(column => !board.Slime.IsSticky(column)).Take(count).ToArray();
     }
 
     public static BoardStateSnapshot Clean(BoardStateSnapshot board, IEnumerable<int> matchedShelfIndexes, out IReadOnlyList<ColumnPosition> cleanedColumns)
@@ -77,27 +49,23 @@ public static class SlimeRule
         return board.WithSlime(board.Slime.WithStickyColumns(board.Slime.StickyColumns.Except(cleaned), board.Slime.MovesToGrowth));
     }
 
-    public static BoardStateSnapshot AdvanceGrowth(BoardStateSnapshot board, bool hasCleaned, out ColumnPosition? grownColumn)
+    public static BoardStateSnapshot AdvanceGrowth(BoardStateSnapshot board, out IReadOnlyList<ColumnPosition> grownColumns)
     {
         if (board == null)
             throw new ArgumentNullException(nameof(board));
 
-        grownColumn = null;
+        grownColumns = Array.Empty<ColumnPosition>();
 
-        if (!board.HasSlime || !board.Slime.HasStickyColumns)
+        if (!board.HasSlime)
             return board;
 
         SlimeSnapshot slime = board.Slime;
 
-        if (hasCleaned)
-            return board.WithSlime(slime.WithStickyColumns(slime.StickyColumns, slime.GrowthPeriod));
-
         if (slime.MovesToGrowth > 1)
             return board.WithSlime(slime.WithStickyColumns(slime.StickyColumns, slime.MovesToGrowth - 1));
 
-        grownColumn = FindGrowthTarget(board);
-        IEnumerable<ColumnPosition> stickyColumns = grownColumn.HasValue ? slime.StickyColumns.Append(grownColumn.Value) : slime.StickyColumns;
-        return board.WithSlime(slime.WithStickyColumns(stickyColumns, slime.GrowthPeriod));
+        grownColumns = FindGrowthTargets(board, slime.Rules.ColumnsPerGrowth);
+        return board.WithSlime(slime.WithStickyColumns(slime.StickyColumns.Concat(grownColumns), slime.GrowthPeriod));
     }
 
     public static bool IsStuck(BoardStateSnapshot board, BoardMoveSimulator simulator)
@@ -127,28 +95,33 @@ public static class SlimeRule
         return true;
     }
 
-    public static BoardStateSnapshot ApplyRescue(BoardStateSnapshot board, out ColumnPosition cleanedColumn)
+    public static bool HasHopelessShelf(BoardStateSnapshot board) => FindHopelessShelf(board) >= 0;
+
+    public static int FindHopelessShelf(BoardStateSnapshot board)
     {
         if (board == null)
             throw new ArgumentNullException(nameof(board));
 
-        if (!board.HasSlime || !board.Slime.HasStickyColumns)
-            throw new InvalidOperationException("Only a board with sticky columns can be rescued.");
+        if (!board.HasSlime || board.Slime.Rules.CleansNeighborShelves)
+            return -1;
 
-        SlimeSnapshot slime = board.Slime;
-        ColumnPosition[] filledColumns = slime.StickyColumns.Where(column => GetColumn(board, column).FrontItem != null).ToArray();
-        ColumnPosition rescuedColumn = filledColumns.Length > 0 ? filledColumns[0] : slime.StickyColumns[0];
-        cleanedColumn = rescuedColumn;
-        return board.WithSlime(slime.WithStickyColumns(slime.StickyColumns.Where(column => !column.Equals(rescuedColumn)), slime.GrowthPeriod));
+        for (int shelfIndex = 0; shelfIndex < board.Shelves.Count; shelfIndex++)
+        {
+            ShelfStateSnapshot shelf = board.Shelves[shelfIndex];
+            ItemType[] stickyFronts = Enumerable.Range(0, shelf.Capacity)
+                .Where(columnIndex => board.Slime.IsSticky(new ColumnPosition(shelfIndex, columnIndex)) && shelf.Columns[columnIndex].FrontItem.HasValue)
+                .Select(columnIndex => shelf.Columns[columnIndex].FrontItem.Value)
+                .ToArray();
+
+            if (stickyFronts.Distinct().Count() > 1)
+                return shelfIndex;
+        }
+
+        return -1;
     }
 
     private static bool IsCleanedBy(SlimeSnapshot slime, int matchedShelfIndex, ColumnPosition column)
     {
-        return column.ShelfIndex == matchedShelfIndex || slime.AreNeighborShelves(matchedShelfIndex, column.ShelfIndex);
-    }
-
-    private static ColumnStateSnapshot GetColumn(BoardStateSnapshot board, ColumnPosition position)
-    {
-        return board.Shelves[position.ShelfIndex].Columns[position.ColumnIndex];
+        return column.ShelfIndex == matchedShelfIndex || slime.Rules.CleansNeighborShelves && slime.AreNeighborShelves(matchedShelfIndex, column.ShelfIndex);
     }
 }

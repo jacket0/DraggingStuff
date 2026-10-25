@@ -234,7 +234,7 @@ public sealed class ShelfBoard : MonoBehaviour
         if (slime == null)
             throw new ArgumentNullException(nameof(slime));
 
-        if (!HasSlime || !slime.Links.SequenceEqual(_slime.Links) || slime.GrowthPeriod != _slime.GrowthPeriod)
+        if (!HasSlime || !slime.Links.SequenceEqual(_slime.Links) || !slime.PerimeterColumns.SequenceEqual(_slime.PerimeterColumns) || slime.GrowthPeriod != _slime.GrowthPeriod || slime.Rules != _slime.Rules)
             throw new InvalidOperationException("Only the slime of this board can change its sticky columns and growth counter.");
 
         CreateSnapshot().WithSlime(slime);
@@ -254,23 +254,22 @@ public sealed class ShelfBoard : MonoBehaviour
         return cleanedColumns;
     }
 
-    public ColumnPosition? AdvanceSlimeGrowth(bool hasCleaned)
+    public IReadOnlyList<ColumnPosition> AdvanceSlimeGrowth()
     {
         if (!HasSlime)
-            return null;
+            return Array.Empty<ColumnPosition>();
 
-        BoardStateSnapshot grownBoard = SlimeRule.AdvanceGrowth(CreateSnapshot(), hasCleaned, out ColumnPosition? grownColumn);
+        BoardStateSnapshot grownBoard = SlimeRule.AdvanceGrowth(CreateSnapshot(), out IReadOnlyList<ColumnPosition> grownColumns);
         _slime = grownBoard.Slime;
-        return grownColumn;
+        return grownColumns;
     }
 
     public bool IsStuckInSlime() => HasSlime && SlimeRule.IsStuck(CreateSnapshot(), _simulator);
 
-    public ColumnPosition ApplySlimeRescue()
+    public Shelf FindShelfLostToSlime()
     {
-        BoardStateSnapshot rescuedBoard = SlimeRule.ApplyRescue(CreateSnapshot(), out ColumnPosition cleanedColumn);
-        _slime = rescuedBoard.Slime;
-        return cleanedColumn;
+        int shelfIndex = HasSlime ? SlimeRule.FindHopelessShelf(CreateSnapshot()) : -1;
+        return shelfIndex >= 0 ? _shelves[shelfIndex] : null;
     }
 
     public ShelfColumn GetColumn(ColumnPosition position)

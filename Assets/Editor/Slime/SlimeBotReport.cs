@@ -16,10 +16,15 @@ public sealed class SlimeBotReport
 
     public void RunVariant(BoardStateSnapshot layout, int variantIndex, int runsPerPolicy, int moveLimit)
     {
+        RunVariant(layout, variantIndex, runsPerPolicy, moveLimit, (SlimeBotSimulation.Policy[])Enum.GetValues(typeof(SlimeBotSimulation.Policy)));
+    }
+
+    public void RunVariant(BoardStateSnapshot layout, int variantIndex, int runsPerPolicy, int moveLimit, IReadOnlyCollection<SlimeBotSimulation.Policy> policies)
+    {
         if (layout == null)
             throw new ArgumentNullException(nameof(layout));
 
-        foreach (SlimeBotSimulation.Policy policy in (SlimeBotSimulation.Policy[])Enum.GetValues(typeof(SlimeBotSimulation.Policy)))
+        foreach (SlimeBotSimulation.Policy policy in policies)
         {
             if (!_results.TryGetValue(policy, out List<SlimeBotResult> results))
             {
@@ -51,11 +56,38 @@ public sealed class SlimeBotReport
                 $"max sticky {Average(results.Select(result => result.MaximumStickyCount)):0.#}, " +
                 $"sticky at end {Average(results.Select(result => result.StickyAtEnd)):0.#}, " +
                 $"stuck items {Average(results.Select(result => result.StuckItemCount)):0.#}, " +
-                $"rescues in {Percent(results.Count(result => result.RescueCount > 0), results.Count)}% of runs, " +
-                $"no moves {results.Count(result => result.HasNoMoves)}");
+                $"deadlocks {Percent(results.Count(result => result.IsDeadlocked), results.Count)}%, " +
+                $"hopeless {Percent(results.Count(result => result.FirstHopelessMove >= 0), results.Count)}%");
         }
 
         return builder.ToString();
+    }
+
+    public string FormatGridRow(string configName)
+    {
+        IReadOnlyList<SlimeBotResult> careful = GetResults(SlimeBotSimulation.Policy.Careful);
+        IReadOnlyList<SlimeBotResult> skilled = GetResults(SlimeBotSimulation.Policy.Skilled);
+        IReadOnlyList<SlimeBotResult> greedy = GetResults(SlimeBotSimulation.Policy.Greedy);
+        IReadOnlyList<SlimeBotResult> baseline = GetResults(SlimeBotSimulation.Policy.Baseline);
+        int[] hopelessMoves = careful.Where(result => result.FirstHopelessMove >= 0).Select(result => result.FirstHopelessMove).OrderBy(move => move).ToArray();
+        string medianHopelessMove = hopelessMoves.Length == 0 ? "-" : hopelessMoves[hopelessMoves.Length / 2].ToString();
+
+        return $"SLIME_GRID {configName}: " +
+            $"baseline {Wins(baseline)}% | skilled {Wins(skilled)}% hopeless {Hopeless(skilled)}% dead {Dead(skilled)}% | " +
+            $"careful {Wins(careful)}% hopeless {Hopeless(careful)}% (median move {medianHopelessMove}, before 15: {Percent(careful.Count(result => result.FirstHopelessMove >= 0 && result.FirstHopelessMove < 15), careful.Count)}%) dead {Dead(careful)}% | " +
+            $"greedy {Wins(greedy)}% hopeless {Hopeless(greedy)}% dead {Dead(greedy)}% | " +
+            $"sticky@10/20/30 {AverageStickyAt(careful, 10):0.#}/{AverageStickyAt(careful, 20):0.#}/{AverageStickyAt(careful, 30):0.#}";
+    }
+
+    private static double Wins(IReadOnlyList<SlimeBotResult> results) => Percent(results.Count(result => result.IsWon), results.Count);
+
+    private static double Hopeless(IReadOnlyList<SlimeBotResult> results) => Percent(results.Count(result => result.FirstHopelessMove >= 0), results.Count);
+
+    private static double Dead(IReadOnlyList<SlimeBotResult> results) => Percent(results.Count(result => result.IsDeadlocked), results.Count);
+
+    private static double AverageStickyAt(IReadOnlyList<SlimeBotResult> results, int move)
+    {
+        return Average(results.Where(result => result.StickyAfterMove.Count >= move).Select(result => result.StickyAfterMove[move - 1]));
     }
 
     private static double Average(IEnumerable<int> values)

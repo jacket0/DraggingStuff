@@ -9,6 +9,8 @@ public sealed class SlimeSpotView : MonoBehaviour
     [SerializeField, Min(0.01f)] private float _vanishDuration = 0.25f;
     [SerializeField, Min(0.01f)] private float _wobbleDuration = 1.2f;
     [SerializeField, Min(0f)] private float _wobbleStrength = 0.06f;
+    [SerializeField, Min(0f)] private float _clenchStrength = 0.3f;
+    [SerializeField, Min(0.01f)] private float _clenchDuration = 0.5f;
 
     private Vector3 _restScale;
     private Tween _transition;
@@ -48,16 +50,30 @@ public sealed class SlimeSpotView : MonoBehaviour
         });
     }
 
-    public void PlayVanish()
+    public void PlayVanish(float delay = 0f)
     {
         if (!gameObject.activeSelf)
             return;
 
         Cancel();
-        _transition = _blob.DOScale(Vector3.zero, _vanishDuration).SetEase(Ease.InBack).OnComplete(() =>
+        _transition = _blob.DOScale(Vector3.zero, _vanishDuration).SetDelay(delay).SetEase(Ease.InBack).OnComplete(() =>
         {
             _transition = null;
             gameObject.SetActive(false);
+        });
+    }
+
+    public void PlayClench()
+    {
+        if (!gameObject.activeSelf || _transition != null)
+            return;
+
+        Cancel();
+        _blob.localScale = _restScale;
+        _transition = _blob.DOPunchScale(_restScale * _clenchStrength, _clenchDuration, 5, 0.5f).OnComplete(() =>
+        {
+            _transition = null;
+            StartWobble();
         });
     }
 

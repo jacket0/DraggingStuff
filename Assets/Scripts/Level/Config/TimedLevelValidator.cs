@@ -157,12 +157,17 @@ public static class TimedLevelValidator
     private static void ValidateSlimeDefinition(TimedLevelDefinition definition)
     {
         if (!definition.HasSlime)
+        {
+            if (definition.Slime != null && definition.Slime.StickyColumns.Count > 0)
+                throw new InvalidOperationException($"{definition.name}: slime requires a neighborhood.");
+
             return;
+        }
 
         SlimeDefinition slime = definition.Slime;
 
-        if (slime.Neighborhood == null)
-            throw new InvalidOperationException($"{definition.name}: slime requires a neighborhood.");
+        if (slime.Neighborhood.PerimeterColumns.Count == 0)
+            throw new InvalidOperationException($"{definition.name}: the slime neighborhood has no perimeter to grow from.");
 
         if (slime.StickyColumns.Any(column => column == null))
             throw new InvalidOperationException($"{definition.name}: a sticky column is missing.");

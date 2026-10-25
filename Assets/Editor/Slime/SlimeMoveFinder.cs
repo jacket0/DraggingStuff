@@ -24,14 +24,16 @@ public static class SlimeMoveFinder
             }
         }
 
-        ColumnPosition? growthTarget = board.HasSlime && board.Slime.MovesToGrowth == 1 ? SlimeRule.FindGrowthTarget(board) : null;
+        HashSet<ColumnPosition> growthTargets = board.HasSlime && board.Slime.MovesToGrowth == 1
+            ? new HashSet<ColumnPosition>(SlimeRule.FindGrowthTargets(board, board.Slime.Rules.ColumnsPerGrowth))
+            : new HashSet<ColumnPosition>();
         List<SlimeBotMove> moves = new List<SlimeBotMove>();
 
         for (int sourceIndex = 0; sourceIndex < sources.Count; sourceIndex++)
         {
             ColumnPosition source = sources[sourceIndex];
             ItemType type = FrontItem(board, source).Value;
-            bool isEvacuation = growthTarget.HasValue && growthTarget.Value.Equals(source);
+            bool isEvacuation = growthTargets.Contains(source);
 
             foreach (ColumnPosition target in emptyTargets)
             {
@@ -41,7 +43,7 @@ public static class SlimeMoveFinder
                 int sameFronts = CountOtherFronts(board, target, type);
                 bool isMatch = sameFronts == board.Shelves[target.ShelfIndex].Capacity - 1;
                 bool isSetup = !isMatch && sameFronts > 0;
-                bool sticksItem = !isMatch && board.IsSticky(target);
+                bool sticksItem = !isMatch && (board.IsSticky(target) || growthTargets.Contains(target));
                 moves.Add(new SlimeBotMove(source, target, isMatch, isMatch && CleansSlime(board, target.ShelfIndex), isSetup, isEvacuation, sticksItem));
             }
 
@@ -66,7 +68,7 @@ public static class SlimeMoveFinder
     private static bool CleansSlime(BoardStateSnapshot board, int matchedShelfIndex)
     {
         return board.HasSlime && board.Slime.StickyColumns.Any(column =>
-            column.ShelfIndex == matchedShelfIndex || board.Slime.AreNeighborShelves(matchedShelfIndex, column.ShelfIndex));
+            column.ShelfIndex == matchedShelfIndex || board.Slime.Rules.CleansNeighborShelves && board.Slime.AreNeighborShelves(matchedShelfIndex, column.ShelfIndex));
     }
 
     private static int CountOtherFronts(BoardStateSnapshot board, ColumnPosition position, ItemType type)
