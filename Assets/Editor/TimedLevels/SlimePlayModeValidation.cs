@@ -199,10 +199,13 @@ public static class SlimePlayModeValidation
         Vector2 pressPosition = GetScreenCenter(stickyItem);
         ShelfItemTargetResolver resolver = new ShelfItemTargetResolver(Camera.main, _board, SelectionPaddingPixels);
         List<ShelfItem> rejections = new List<ShelfItem>();
+        List<ShelfItem> swapRejections = new List<ShelfItem>();
 
         void HandlePickUpRejected(ShelfItem item) => rejections.Add(item);
+        void HandleSwapRejected(ShelfItem item) => swapRejections.Add(item);
 
         _slime.PickUpRejected += HandlePickUpRejected;
+        _slime.SwapRejected += HandleSwapRejected;
 
         try
         {
@@ -212,13 +215,21 @@ public static class SlimePlayModeValidation
             _drag.RejectPickUp(stickyItem);
 
             foreach (object step in WaitUntilSettled("P2")) yield return step;
+
+            ShelfItem draggedItem = GetFrontItem(new ColumnPosition(7, 0));
+            Expect(_drag.TryBeginDrag(draggedItem, GetScreenCenter(draggedItem)), "P2: a free item must start a drag");
+            _drag.EndDrag(pressPosition);
+
+            foreach (object step in WaitUntilSettled("P2 swap")) yield return step;
         }
         finally
         {
             _slime.PickUpRejected -= HandlePickUpRejected;
+            _slime.SwapRejected -= HandleSwapRejected;
         }
 
         Expect(rejections.SequenceEqual(new[] { stickyItem }), "P2: the slime must answer the refused pick-up once");
+        Expect(swapRejections.SequenceEqual(new[] { stickyItem }), "P2: the slime must answer a drop onto a sticky item once");
         ExpectBoard(expected, "P2");
     }
 

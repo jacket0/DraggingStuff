@@ -14,7 +14,7 @@ public sealed class SlimeBoardView : MonoBehaviour
     [SerializeField] private Vector3 _spotOffset = new Vector3(0f, -0.095f, -0.07f);
     [SerializeField] private Vector3 _forecastOffset = new Vector3(0f, 0.004f, 0f);
     [SerializeField, Range(0f, 1f)] private float _spreadOriginFactor = 0.7f;
-    [SerializeField] private Vector3 _splashOffset = new Vector3(0f, 0.03f, 0.04f);
+    [SerializeField] private Vector3 _splashOffset = new Vector3(0f, 0.05f, 0.04f);
     [SerializeField, Min(1)] private int _growSplashCount = 5;
     [SerializeField, Min(1)] private int _cleanSplashCount = 14;
     [SerializeField, Min(1)] private int _rejectSplashCount = 6;

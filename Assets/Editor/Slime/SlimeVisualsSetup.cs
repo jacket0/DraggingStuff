@@ -30,21 +30,29 @@ public static class SlimeVisualsSetup
     private static readonly Vector3 ForecastDigitScale = new Vector3(1.8f, 1.8f, 1.8f);
     private static readonly Vector3 DigitOutlineScale = new Vector3(1.15f, 1.08f, 1.6f);
     private static readonly Quaternion ForecastDigitRotation = Quaternion.identity;
-    private static readonly Color SlimeBody = new Color(0.7f, 0.81f, 0.35f, 0.92f);
-    private static readonly Color SlimeEdge = new Color(0.2f, 0.4f, 0.09f, 0.96f);
-    private static readonly Color SlimeOutlineColor = new Color(0.12f, 0.3f, 0.05f, 1f);
+    private static readonly Color SlimeBody = new Color(0.7f, 0.81f, 0.35f, 0.94f);
+    private static readonly Color SlimeEdge = new Color(0.35f, 0.56f, 0.16f, 0.96f);
+    private static readonly Color SlimeOutlineColor = new Color(0.16f, 0.33f, 0.06f, 1f);
     private static readonly Color DigitBody = new Color(0.92f, 1f, 0.6f, 1f);
-    private static readonly Color ForecastBody = new Color(0.7f, 0.81f, 0.35f, 0.5f);
-    private static readonly Color ForecastEdge = new Color(0.2f, 0.4f, 0.09f, 0.6f);
+    private static readonly Color ForecastBody = new Color(0.55f, 0.71f, 0.27f, 0.45f);
+    private static readonly Color ForecastEdge = new Color(0.4f, 0.6f, 0.2f, 0.5f);
+    private static readonly Color ForecastOutlineColor = new Color(0.25f, 0.48f, 0.1f, 0.55f);
+    private const float SlimeOutlineWidth = 0.009f;
+    private const float ForecastOutlineWidth = 0.006f;
+    private const float SlimeSelfLight = 0.25f;
+    private const float DigitSelfLight = 0.6f;
+    private const float PuddleHeightScale = 0.04f;
+    private const float HighlightPower = 22f;
+    private const float HighlightCut = 0.72f;
 
     [MenuItem("Tools/Slime/Setup Visuals")]
     public static void Setup()
     {
         EnsureFolder(MaterialFolder);
         EnsureFolder(PrefabFolder);
-        Material spotMaterial = CreateMaterial("SlimeSpot", SlimeBody, SlimeEdge);
-        Material forecastMaterial = CreateMaterial("SlimeForecast", ForecastBody, ForecastEdge);
-        Material digitMaterial = CreateMaterial("SlimeDigit", DigitBody, SlimeEdge, 0.12f, 0.1f);
+        Material spotMaterial = CreateMaterial("SlimeSpot", SlimeBody, SlimeEdge, SlimeOutlineColor, SlimeOutlineWidth, SlimeSelfLight, PuddleHeightScale);
+        Material forecastMaterial = CreateMaterial("SlimeForecast", ForecastBody, ForecastEdge, ForecastOutlineColor, ForecastOutlineWidth, SlimeSelfLight, PuddleHeightScale);
+        Material digitMaterial = CreateMaterial("SlimeDigit", DigitBody, SlimeEdge, Color.clear, 0f, DigitSelfLight, 0.12f, 0.1f);
         Material outlineMaterial = CreateOutlineMaterial();
         CreateSpotPrefab(spotMaterial);
         AssetDatabase.SaveAssets();
@@ -70,6 +78,7 @@ public static class SlimeVisualsSetup
         Assign(controller, "_session", session);
         Assign(controller, "_shelfBoard", FindSingle<ShelfBoard>());
         Assign(controller, "_dragController", FindSingle<ShelfItemDragController>());
+        Assign(controller, "_columnRaycaster", FindSingle<ShelfColumnRaycaster>());
         Assign(controller, "_view", boardView);
         Assign(controller, "_audio", SetupAudio(host));
         EditorSceneManager.MarkSceneDirty(scene);
@@ -124,10 +133,9 @@ public static class SlimeVisualsSetup
 
     private static GameObject CreateMeshPart(string name, Transform parent, Mesh mesh, Material material)
     {
-        GameObject part = new GameObject(name);
-        part.transform.SetParent(parent, false);
-        part.AddComponent<MeshFilter>().sharedMesh = mesh;
-        MeshRenderer renderer = part.AddComponent<MeshRenderer>();
+        GameObject part = GetOrCreateChild(parent, name);
+        GetOrAdd<MeshFilter>(part).sharedMesh = mesh;
+        MeshRenderer renderer = GetOrAdd<MeshRenderer>(part);
         renderer.sharedMaterial = material;
         renderer.shadowCastingMode = ShadowCastingMode.Off;
         return part;
@@ -135,27 +143,20 @@ public static class SlimeVisualsSetup
 
     private static SlimeSplashView CreateSplash(Transform parent, Material material)
     {
-        Transform existing = parent.Find(SplashName);
-
-        if (existing != null)
-            UnityEngine.Object.DestroyImmediate(existing.gameObject);
-
-        GameObject root = new GameObject(SplashName);
-        root.transform.SetParent(parent, false);
-        GameObject particlesObject = new GameObject("Particles");
-        particlesObject.transform.SetParent(root.transform, false);
+        GameObject root = GetOrCreateChild(parent, SplashName);
+        GameObject particlesObject = GetOrCreateChild(root.transform, "Particles");
         particlesObject.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
-        ParticleSystem particles = particlesObject.AddComponent<ParticleSystem>();
+        ParticleSystem particles = GetOrAdd<ParticleSystem>(particlesObject);
         particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
         ParticleSystem.MainModule main = particles.main;
         main.playOnAwake = false;
         main.loop = false;
-        main.duration = 1f;
-        main.startLifetime = new ParticleSystem.MinMaxCurve(0.45f, 0.8f);
-        main.startSpeed = new ParticleSystem.MinMaxCurve(0.4f, 1f);
+        main.duration = 0.4f;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(0.18f, 0.32f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.3f, 0.6f);
         main.startSize = new ParticleSystem.MinMaxCurve(0.018f, 0.04f);
-        main.gravityModifier = 1.6f;
+        main.gravityModifier = 0.1f;
         main.simulationSpace = ParticleSystemSimulationSpace.World;
         main.maxParticles = 200;
 
@@ -165,8 +166,8 @@ public static class SlimeVisualsSetup
         ParticleSystem.ShapeModule shape = particles.shape;
         shape.enabled = true;
         shape.shapeType = ParticleSystemShapeType.Cone;
-        shape.angle = 38f;
-        shape.radius = 0.03f;
+        shape.angle = 60f;
+        shape.radius = 0.02f;
 
         ParticleSystem.SizeOverLifetimeModule size = particles.sizeOverLifetime;
         size.enabled = true;
@@ -179,7 +180,7 @@ public static class SlimeVisualsSetup
         renderer.shadowCastingMode = ShadowCastingMode.Off;
         renderer.receiveShadows = false;
 
-        SlimeSplashView splash = root.AddComponent<SlimeSplashView>();
+        SlimeSplashView splash = GetOrAdd<SlimeSplashView>(root);
         Assign(splash, "_particles", particles);
         return splash;
     }
@@ -232,13 +233,7 @@ public static class SlimeVisualsSetup
 
     private static SlimeForecastView CreateForecast(Transform parent, Material material, Material digitMaterial, Material outlineMaterial)
     {
-        Transform existing = parent.Find(ForecastName);
-
-        if (existing != null)
-            UnityEngine.Object.DestroyImmediate(existing.gameObject);
-
-        GameObject root = new GameObject(ForecastName);
-        root.transform.SetParent(parent, false);
+        GameObject root = GetOrCreateChild(parent, ForecastName);
 
         GameObject drop = CreateMeshPart("Drop", root.transform, LoadMesh(ForecastModelPath), material);
 
@@ -249,7 +244,7 @@ public static class SlimeVisualsSetup
         GameObject outline = CreateMeshPart("DigitOutline", digit.transform, LoadDigitMeshes()[0], outlineMaterial);
         outline.transform.localScale = DigitOutlineScale;
 
-        SlimeForecastView forecast = root.AddComponent<SlimeForecastView>();
+        SlimeForecastView forecast = GetOrAdd<SlimeForecastView>(root);
         Assign(forecast, "_drop", drop.transform);
         Assign(forecast, "_digit", digit.GetComponent<MeshFilter>());
         Assign(forecast, "_digitOutline", outline.GetComponent<MeshFilter>());
@@ -287,7 +282,7 @@ public static class SlimeVisualsSetup
         return material;
     }
 
-    private static Material CreateMaterial(string name, Color color, Color edgeColor, float heightScale = 0.02f, float shadeStrength = 0.35f)
+    private static Material CreateMaterial(string name, Color color, Color edgeColor, Color outlineColor, float outlineWidth, float selfLight, float heightScale = 0.02f, float shadeStrength = 0.35f)
     {
         string path = $"{MaterialFolder}/{name}.mat";
         Shader shader = Shader.Find("Custom/SlimeJelly");
@@ -308,6 +303,11 @@ public static class SlimeVisualsSetup
         material.SetColor("_EdgeColor", edgeColor);
         material.SetFloat("_HeightScale", heightScale);
         material.SetFloat("_ShadeStrength", shadeStrength);
+        material.SetColor("_OutlineColor", outlineColor);
+        material.SetFloat("_OutlineWidth", outlineWidth);
+        material.SetFloat("_SelfLight", selfLight);
+        material.SetFloat("_HighlightPower", HighlightPower);
+        material.SetFloat("_HighlightCut", HighlightCut);
         EditorUtility.SetDirty(material);
         return material;
     }
@@ -334,6 +334,18 @@ public static class SlimeVisualsSetup
         }
 
         return new GameObject(name);
+    }
+
+    private static GameObject GetOrCreateChild(Transform parent, string name)
+    {
+        Transform existing = parent.Find(name);
+
+        if (existing != null)
+            return existing.gameObject;
+
+        GameObject child = new GameObject(name);
+        child.transform.SetParent(parent, false);
+        return child;
     }
 
     private static T GetOrAdd<T>(GameObject host) where T : Component

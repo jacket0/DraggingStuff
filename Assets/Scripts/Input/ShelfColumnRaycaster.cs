@@ -23,6 +23,11 @@ public class ShelfColumnRaycaster : MonoBehaviour
         return _targetResolver.TryResolve(sourceColumn, pointerPosition, out targetColumn);
     }
 
+    public bool TryGetColumnUnderPointer(Vector2 pointerPosition, out ShelfColumnView column)
+    {
+        return _targetResolver.TryGetColumnUnderPointer(pointerPosition, out column);
+    }
+
     public bool TryGetShelf(Vector2 pointerPosition, out Shelf shelf)
     {
         return _targetResolver.TryGetShelfUnderPointer(pointerPosition, out shelf);

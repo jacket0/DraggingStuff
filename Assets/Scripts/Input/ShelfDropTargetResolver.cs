@@ -37,6 +37,8 @@ public sealed class ShelfDropTargetResolver
         return TryGetNearestValidColumn(sourceColumn, nearestShelf, pointerPosition, out targetColumn);
     }
 
+    public bool TryGetColumnUnderPointer(Vector2 pointerPosition, out ShelfColumnView column) => TryGetDirectColumn(pointerPosition, out column);
+
     public bool TryGetShelfUnderPointer(Vector2 pointerPosition, out Shelf shelf)
     {
         if (TryGetDirectColumn(pointerPosition, out ShelfColumnView directColumn))

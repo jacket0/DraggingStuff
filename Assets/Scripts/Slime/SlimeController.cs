@@ -8,6 +8,7 @@ public sealed class SlimeController : MonoBehaviour
     [SerializeField] private LevelSession _session;
     [SerializeField] private ShelfBoard _shelfBoard;
     [SerializeField] private ShelfItemDragController _dragController;
+    [SerializeField] private ShelfColumnRaycaster _columnRaycaster;
     [SerializeField] private SlimeBoardView _view;
     [SerializeField] private SlimeAudioPlayer _audio;
 
@@ -20,6 +21,7 @@ public sealed class SlimeController : MonoBehaviour
     public event Action DeadlockReached;
     public event Action<Shelf> ShelfLost;
     public event Action<ShelfItem> PickUpRejected;
+    public event Action<ShelfItem> SwapRejected;
 
     private void Awake()
     {
@@ -31,6 +33,9 @@ public sealed class SlimeController : MonoBehaviour
 
         if (_dragController == null)
             throw new InvalidOperationException(nameof(_dragController));
+
+        if (_columnRaycaster == null)
+            throw new InvalidOperationException(nameof(_columnRaycaster));
 
         if (_view == null)
             throw new InvalidOperationException(nameof(_view));
@@ -47,6 +52,7 @@ public sealed class SlimeController : MonoBehaviour
         _session.BoardSettled += HandleBoardSettled;
         _session.StateChanged += HandleStateChanged;
         _dragController.PickUpRejected += HandlePickUpRejected;
+        _dragController.DropRejected += HandleDropRejected;
     }
 
     private void OnDisable()
@@ -57,6 +63,7 @@ public sealed class SlimeController : MonoBehaviour
         _session.BoardSettled -= HandleBoardSettled;
         _session.StateChanged -= HandleStateChanged;
         _dragController.PickUpRejected -= HandlePickUpRejected;
+        _dragController.DropRejected -= HandleDropRejected;
     }
 
     private void HandleSessionStarted()
@@ -137,6 +144,21 @@ public sealed class SlimeController : MonoBehaviour
         _view.PlayPickUpRejected(item);
         _audio.PlayStuck();
         PickUpRejected?.Invoke(item);
+    }
+
+    private void HandleDropRejected(Vector2 pointerPosition)
+    {
+        if (!_shelfBoard.HasSlime || !_columnRaycaster.TryGetColumnUnderPointer(pointerPosition, out ShelfColumnView column))
+            return;
+
+        ShelfItem frontItem = column.FrontItem;
+
+        if (frontItem == null || !_shelfBoard.IsSticky(column.Column))
+            return;
+
+        _view.PlayPickUpRejected(frontItem);
+        _audio.PlayStuck();
+        SwapRejected?.Invoke(frontItem);
     }
 
     private void Clean(IReadOnlyList<Shelf> matchedShelves)

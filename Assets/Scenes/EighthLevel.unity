@@ -11937,6 +11937,7 @@ MonoBehaviour:
   _session: {fileID: 1965460504}
   _shelfBoard: {fileID: 4747417877561742387}
   _dragController: {fileID: 1826330310520820387}
+  _columnRaycaster: {fileID: 5720635887749783755}
   _view: {fileID: 192534112}
   _audio: {fileID: 192534114}
 --- !u!114 &192534112
@@ -11959,7 +11960,7 @@ MonoBehaviour:
   _spotOffset: {x: 0, y: -0.095, z: -0.07}
   _forecastOffset: {x: 0, y: 0.004, z: 0}
   _spreadOriginFactor: 0.7
-  _splashOffset: {x: 0, y: 0.03, z: 0.04}
+  _splashOffset: {x: 0, y: 0.05, z: 0.04}
   _growSplashCount: 5
   _cleanSplashCount: 14
   _rejectSplashCount: 6
@@ -51252,7 +51253,7 @@ ParticleSystem:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2134697113}
   serializedVersion: 8
-  lengthInSec: 1
+  lengthInSec: 0.4
   simulationSpeed: 1
   stopAction: 0
   cullingMode: 0
@@ -51327,8 +51328,8 @@ ParticleSystem:
     startLifetime:
       serializedVersion: 2
       minMaxState: 3
-      scalar: 0.8
-      minScalar: 0.45
+      scalar: 0.32
+      minScalar: 0.18
       maxCurve:
         serializedVersion: 2
         m_Curve:
@@ -51380,8 +51381,8 @@ ParticleSystem:
     startSpeed:
       serializedVersion: 2
       minMaxState: 3
-      scalar: 1
-      minScalar: 0.4
+      scalar: 0.6
+      minScalar: 0.3
       maxCurve:
         serializedVersion: 2
         m_Curve:
@@ -51822,7 +51823,7 @@ ParticleSystem:
     gravityModifier:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 1.6
+      scalar: 0.1
       minScalar: 0
       maxCurve:
         serializedVersion: 2
@@ -51876,7 +51877,7 @@ ParticleSystem:
     serializedVersion: 6
     enabled: 1
     type: 4
-    angle: 38
+    angle: 60
     length: 5
     boxThickness: {x: 0, y: 0, z: 0}
     radiusThickness: 1
@@ -51962,7 +51963,7 @@ ParticleSystem:
     sphericalDirectionAmount: 0
     randomPositionAmount: 0
     radius:
-      value: 0.03
+      value: 0.02
       mode: 0
       spread: 0
       speed:
