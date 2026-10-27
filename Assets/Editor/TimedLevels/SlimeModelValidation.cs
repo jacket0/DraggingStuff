@@ -37,6 +37,7 @@ public static class SlimeModelValidation
         ValidateLevelsWithoutSlime(catalog);
         ValidateDefinitionErrors(catalog);
         ValidateVariantRoundTrip(catalog);
+        ValidateIntroHintLevels(catalog);
     }
 
     private static void ValidateSnapshotErrors()
@@ -427,6 +428,14 @@ public static class SlimeModelValidation
             if (level.Definition != null && level.Definition.Variants.Any(variant => variant.CreateLayout().HasSlime))
                 throw new InvalidOperationException($"Slime S14: level {level.Number} stores slime in its layout.");
         }
+    }
+
+    private static void ValidateIntroHintLevels(LevelCatalog catalog)
+    {
+        int[] chapterStarts = catalog.Levels.Where(level => SlimeIntroHint.IsChapterStart(catalog, level)).Select(level => level.Number).ToArray();
+
+        if (!chapterStarts.SequenceEqual(new[] { 31 }))
+            throw new InvalidOperationException($"Slime S16: the intro hint must start on level 31, found [{string.Join(",", chapterStarts)}].");
     }
 
     private static void ValidateDefinitionErrors(LevelCatalog catalog)

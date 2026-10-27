@@ -50,6 +50,8 @@ public sealed class SlimeBoardView : MonoBehaviour
 
     public bool IsSpotVisible(ColumnPosition column) => _spots.TryGetValue(column, out SlimeSpotView spot) && spot.IsVisible;
 
+    public Vector3 GetSpotPosition(ColumnPosition column) => GetAnchorPosition(column);
+
     public IReadOnlyList<ColumnPosition> GetVisibleSpots() => _spots.Where(pair => pair.Value.IsVisible).Select(pair => pair.Key).ToArray();
 
     public void ShowLevel(IReadOnlyList<ColumnPosition> stickyColumns)
