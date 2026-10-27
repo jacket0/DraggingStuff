@@ -9,6 +9,7 @@ public sealed class SlimeController : MonoBehaviour
     [SerializeField] private ShelfBoard _shelfBoard;
     [SerializeField] private ShelfItemDragController _dragController;
     [SerializeField] private SlimeBoardView _view;
+    [SerializeField] private SlimeAudioPlayer _audio;
 
     private int _growthCount;
 
@@ -33,6 +34,9 @@ public sealed class SlimeController : MonoBehaviour
 
         if (_view == null)
             throw new InvalidOperationException(nameof(_view));
+
+        if (_audio == null)
+            throw new InvalidOperationException(nameof(_audio));
     }
 
     private void OnEnable()
@@ -72,6 +76,7 @@ public sealed class SlimeController : MonoBehaviour
     public void ReportDeadlock()
     {
         _view.PlayDeadlock();
+        _audio.PlayLoss();
         DeadlockReached?.Invoke();
     }
 
@@ -81,6 +86,7 @@ public sealed class SlimeController : MonoBehaviour
             throw new ArgumentNullException(nameof(shelf));
 
         _view.PlayShelfLost(shelf);
+        _audio.PlayLoss();
         ShelfLost?.Invoke(shelf);
     }
 
@@ -115,7 +121,10 @@ public sealed class SlimeController : MonoBehaviour
     private void HandleStateChanged(LevelState state)
     {
         if (state == LevelState.Won)
+        {
             _view.PlayDried();
+            _audio.PlayDry();
+        }
         else if (state == LevelState.Ending || state == LevelState.Lost)
             _view.HideForecast();
     }
@@ -126,6 +135,7 @@ public sealed class SlimeController : MonoBehaviour
             return;
 
         _view.PlayPickUpRejected(item);
+        _audio.PlayStuck();
         PickUpRejected?.Invoke(item);
     }
 
@@ -137,6 +147,7 @@ public sealed class SlimeController : MonoBehaviour
             return;
 
         _view.PlayCleaned(cleanedColumns);
+        _audio.PlayClean();
         SlimeCleaned?.Invoke(cleanedColumns);
     }
 
@@ -156,7 +167,8 @@ public sealed class SlimeController : MonoBehaviour
             return;
         }
 
-        _view.PlayGrowth(column, _shelfBoard.Slime.PerimeterColumns.Contains(column), () =>
+        _audio.PlayGrow();
+        _view.PlayGrowth(column, () =>
         {
             _growthCount--;
             SlimeGrown?.Invoke(column);

@@ -16,6 +16,13 @@ public sealed class ShelfItemTargetResolver
 
     public bool TryResolve(Vector2 pointerPosition, out ShelfItem item) => TryResolve(pointerPosition, _shelfBoard.CanPickUp, out item);
 
+    public bool TryResolveAny(Vector2 pointerPosition, out ShelfItem item, out bool isSticky)
+    {
+        bool found = TryResolve(pointerPosition, column => column.FrontItem != null && (_shelfBoard.CanPickUp(column) || _shelfBoard.IsSticky(column)), out item);
+        isSticky = found && _shelfBoard.IsSticky(item.Column);
+        return found;
+    }
+
     public bool TryResolveSticky(Vector2 pointerPosition, out ShelfItem item)
     {
         return TryResolve(pointerPosition, column => column.FrontItem != null && _shelfBoard.IsSticky(column), out item);

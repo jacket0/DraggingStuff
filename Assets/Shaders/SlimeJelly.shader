@@ -2,17 +2,18 @@ Shader "Custom/SlimeJelly"
 {
     Properties
     {
-        _Color ("Color", Color) = (0.6, 1, 0.1, 0.85)
-        _RimColor ("Rim Color", Color) = (0.9, 1, 0.6, 1)
-        _RimPower ("Rim Power", Range(0.5, 8)) = 2.5
-        _RimStrength ("Rim Strength", Range(0, 1)) = 0.55
+        _Color ("Color", Color) = (0.7, 0.81, 0.35, 0.92)
+        _EdgeColor ("Edge Color", Color) = (0.2, 0.4, 0.09, 0.96)
+        _HeightScale ("Height Scale", Range(0.005, 0.2)) = 0.02
+        _ShadeStrength ("Shade Strength", Range(0, 1)) = 0.35
         _HighlightColor ("Highlight Color", Color) = (1, 1, 1, 1)
-        _HighlightPower ("Highlight Power", Range(4, 128)) = 48
-        _HighlightStrength ("Highlight Strength", Range(0, 2)) = 0.8
-        _WobbleAmount ("Wobble Amount", Range(0, 0.02)) = 0.004
+        _HighlightPower ("Highlight Power", Range(4, 256)) = 90
+        _HighlightCut ("Highlight Cut", Range(0.3, 0.99)) = 0.62
+        _HighlightStrength ("Highlight Strength", Range(0, 1)) = 0.7
+        _WobbleAmount ("Wobble Amount", Range(0, 0.02)) = 0.002
         _WobbleSpeed ("Wobble Speed", Range(0, 8)) = 2.2
         _WobbleFrequency ("Wobble Frequency", Range(1, 120)) = 40
-        _DissolveScale ("Dissolve Scale", Range(10, 200)) = 70
+        _DissolveScale ("Dissolve Scale", Range(10, 400)) = 120
         _Reveal ("Reveal", Range(0, 1)) = 0
     }
 
@@ -33,11 +34,12 @@ Shader "Custom/SlimeJelly"
             #include "UnityCG.cginc"
 
             fixed4 _Color;
-            fixed4 _RimColor;
-            float _RimPower;
-            float _RimStrength;
+            fixed4 _EdgeColor;
+            float _HeightScale;
+            float _ShadeStrength;
             fixed4 _HighlightColor;
             float _HighlightPower;
+            float _HighlightCut;
             float _HighlightStrength;
             float _WobbleAmount;
             float _WobbleSpeed;
@@ -81,12 +83,16 @@ Shader "Custom/SlimeJelly"
                 float3 normal = normalize(input.worldNormal);
                 float3 viewDirection = normalize(_WorldSpaceCameraPos - input.worldPosition);
                 float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
-                float rim = pow(1.0 - saturate(dot(normal, viewDirection)), _RimPower);
-                float highlight = pow(saturate(dot(normal, normalize(lightDirection + viewDirection))), _HighlightPower) * _HighlightStrength;
 
-                fixed4 color = _Color;
-                color.rgb = lerp(color.rgb, _RimColor.rgb, rim * _RimStrength) + _HighlightColor.rgb * highlight;
-                color.a = saturate(color.a + rim * 0.25 + highlight);
+                float thickness = smoothstep(0.0, 1.0, saturate(input.objectPosition.y / _HeightScale));
+                float lighting = lerp(1.0 - _ShadeStrength, 1.0, saturate(dot(normal, lightDirection) * 0.5 + 0.5));
+                fixed4 color = lerp(_EdgeColor, _Color, thickness);
+                color.rgb *= lighting;
+
+                float halfVector = pow(saturate(dot(normal, normalize(lightDirection + viewDirection))), _HighlightPower);
+                float highlight = smoothstep(_HighlightCut, _HighlightCut + 0.08, halfVector) * _HighlightStrength;
+                color.rgb = lerp(color.rgb, _HighlightColor.rgb, highlight);
+                color.a = saturate(color.a + highlight);
 
                 float noise = Hash(floor(input.objectPosition * _DissolveScale));
                 float visible = smoothstep(_Reveal - 0.12, _Reveal, noise) * step(_Reveal, 0.999);

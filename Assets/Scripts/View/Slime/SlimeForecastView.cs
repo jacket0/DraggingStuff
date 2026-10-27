@@ -1,12 +1,13 @@
 using System;
 using DG.Tweening;
-using TMPro;
 using UnityEngine;
 
 public sealed class SlimeForecastView : MonoBehaviour
 {
     [SerializeField] private Transform _drop;
-    [SerializeField] private TMP_Text _countdownText;
+    [SerializeField] private MeshFilter _digit;
+    [SerializeField] private MeshFilter _digitOutline;
+    [SerializeField] private Mesh[] _digitMeshes;
     [SerializeField, Min(0.01f)] private float _pulseDuration = 0.5f;
     [SerializeField, Min(0f)] private float _pulseStrength = 0.25f;
 
@@ -20,8 +21,14 @@ public sealed class SlimeForecastView : MonoBehaviour
         if (_drop == null)
             throw new InvalidOperationException(nameof(_drop));
 
-        if (_countdownText == null)
-            throw new InvalidOperationException(nameof(_countdownText));
+        if (_digit == null)
+            throw new InvalidOperationException(nameof(_digit));
+
+        if (_digitOutline == null)
+            throw new InvalidOperationException(nameof(_digitOutline));
+
+        if (_digitMeshes == null || _digitMeshes.Length == 0)
+            throw new InvalidOperationException(nameof(_digitMeshes));
 
         _restScale = _drop.localScale;
     }
@@ -36,7 +43,9 @@ public sealed class SlimeForecastView : MonoBehaviour
         transform.position = position;
         gameObject.SetActive(true);
         MovesToGrowth = movesToGrowth;
-        _countdownText.text = movesToGrowth.ToString();
+        Mesh mesh = _digitMeshes[Mathf.Min(movesToGrowth, _digitMeshes.Length) - 1];
+        _digit.sharedMesh = mesh;
+        _digitOutline.sharedMesh = mesh;
         StopPulse();
 
         if (movesToGrowth == 1)

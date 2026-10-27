@@ -30,17 +30,21 @@ Material:
     m_Ints: []
     m_Floats:
     - _DissolveScale: 70
+    - _HeightScale: 0.02
+    - _HighlightCut: 0.62
     - _HighlightPower: 48
     - _HighlightStrength: 0.8
     - _Reveal: 0
     - _RimPower: 2.5
     - _RimStrength: 0.55
+    - _ShadeStrength: 0.35
     - _Shininess: 0.15
     - _WobbleAmount: 0.004
     - _WobbleFrequency: 40
     - _WobbleSpeed: 2.2
     m_Colors:
-    - _Color: {r: 0.6, g: 1, b: 0.1, a: 0.7}
+    - _Color: {r: 0.7, g: 0.81, b: 0.35, a: 0.5}
+    - _EdgeColor: {r: 0.2, g: 0.4, b: 0.09, a: 0.6}
     - _HighlightColor: {r: 1, g: 1, b: 1, a: 1}
     - _RimColor: {r: 0.9, g: 1, b: 0.6, a: 1}
     - _SpecColor: {r: 0.9, g: 1, b: 0.8, a: 1}

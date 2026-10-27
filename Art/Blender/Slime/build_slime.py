@@ -1,28 +1,77 @@
 import os
 import bpy
-from math import radians
 
 SCRIPT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(SCRIPT_DIRECTORY, "..", "..", ".."))
-FBX_PATH = os.path.join(ROOT, "Assets", "Models", "Slime", "SlimeBlob.fbx")
+FBX_DIRECTORY = os.path.join(ROOT, "Assets", "Models", "Slime")
 BLEND_PATH = os.path.join(SCRIPT_DIRECTORY, "Slime.blend")
-VOXEL_SIZE = 0.0045
-TARGET_TRIANGLES = 1800
+PREVIEW_SPACING = 0.45
 
-LOBES = (
-    ("Puddle", (0.0, 0.0, 0.012), (0.145, 0.118, 0.016)),
-    ("Dome", (-0.01, 0.0, 0.035), (0.095, 0.082, 0.07)),
-    ("LobeLeft", (-0.085, 0.03, 0.016), (0.05, 0.04, 0.022)),
-    ("LobeRight", (0.09, -0.035, 0.015), (0.045, 0.036, 0.02)),
-    ("LobeBack", (0.03, 0.085, 0.014), (0.042, 0.034, 0.018)),
-    ("LobeFront", (-0.02, -0.092, 0.013), (0.046, 0.032, 0.017)),
-    ("Crest", (0.025, 0.012, 0.08), (0.045, 0.04, 0.042)),
-)
+PIECES = {
+    "SlimePuddle": {
+        "voxel": 0.003,
+        "triangles": 1200,
+        "lobes": (
+            ((0.0, 0.0, 0.006), (0.15, 0.12, 0.012)),
+            ((-0.06, 0.03, 0.008), (0.08, 0.07, 0.016)),
+            ((0.07, -0.03, 0.01), (0.075, 0.06, 0.018)),
+            ((0.0, 0.0, 0.014), (0.09, 0.07, 0.014)),
+            ((-0.15, -0.04, 0.004), (0.035, 0.025, 0.008)),
+            ((0.16, 0.05, 0.004), (0.03, 0.022, 0.008)),
+            ((0.02, 0.11, 0.004), (0.04, 0.025, 0.008)),
+            ((-0.04, -0.12, 0.004), (0.035, 0.025, 0.008)),
+                    ((-0.07, 0.115, 0.016), (0.055, 0.03, 0.026)),
+            ((0.01, 0.125, 0.02), (0.07, 0.03, 0.034)),
+            ((0.08, 0.11, 0.016), (0.05, 0.03, 0.026)),
+        ),
+    },
+    "SlimePuddleWall": {
+        "voxel": 0.003,
+        "triangles": 1800,
+        "lobes": (
+            ((0.0, 0.0, 0.006), (0.15, 0.12, 0.012)),
+            ((-0.06, 0.03, 0.008), (0.08, 0.07, 0.016)),
+            ((0.07, -0.03, 0.01), (0.075, 0.06, 0.018)),
+            ((0.0, 0.0, 0.014), (0.09, 0.07, 0.014)),
+            ((0.16, 0.05, 0.004), (0.03, 0.022, 0.008)),
+            ((-0.04, -0.12, 0.004), (0.035, 0.025, 0.008)),
+            ((-0.13, 0.0, 0.03), (0.04, 0.11, 0.03)),
+            ((-0.148, 0.0, 0.07), (0.011, 0.11, 0.07)),
+            ((-0.147, 0.03, 0.11), (0.009, 0.07, 0.04)),
+            ((-0.147, 0.06, 0.07), (0.009, 0.02, 0.07)),
+            ((-0.146, 0.06, 0.022), (0.014, 0.016, 0.016)),
+            ((-0.147, -0.07, 0.08), (0.009, 0.014, 0.05)),
+            ((-0.146, -0.07, 0.03), (0.011, 0.012, 0.012)),
+                    ((-0.07, 0.115, 0.016), (0.055, 0.03, 0.026)),
+            ((0.01, 0.125, 0.02), (0.07, 0.03, 0.034)),
+            ((0.08, 0.11, 0.016), (0.05, 0.03, 0.026)),
+        ),
+    },
+    "SlimeBridge": {
+        "voxel": 0.003,
+        "triangles": 700,
+        "lobes": (
+            ((0.0, 0.0, 0.006), (0.075, 0.1, 0.012)),
+            ((0.0, 0.0, 0.012), (0.05, 0.07, 0.013)),
+            ((0.0, 0.1, 0.004), (0.03, 0.02, 0.008)),
+        ),
+    },
+    "SlimeForecastPuddle": {
+        "voxel": 0.0025,
+        "triangles": 500,
+        "lobes": (
+            ((0.0, 0.0, 0.004), (0.04, 0.032, 0.008)),
+            ((0.03, 0.01, 0.003), (0.018, 0.014, 0.006)),
+            ((-0.035, -0.012, 0.003), (0.014, 0.011, 0.005)),
+        ),
+    },
+}
 
-DRIPS = (
-    ("DripLeft", (-0.055, -0.07, 0.035), (0.016, 0.014, 0.034)),
-    ("DripRight", (0.07, 0.05, 0.03), (0.014, 0.012, 0.03)),
-)
+
+def clear_meshes():
+    for obj in list(bpy.data.objects):
+        if obj.type == 'MESH':
+            bpy.data.objects.remove(obj, do_unlink=True)
 
 
 def add_ellipsoid(name, location, scale):
@@ -33,61 +82,60 @@ def add_ellipsoid(name, location, scale):
     return obj
 
 
-def build():
-    for obj in list(bpy.data.objects):
-        if obj.type == 'MESH':
-            bpy.data.objects.remove(obj, do_unlink=True)
+def triangle_count(obj):
+    return sum(len(polygon.vertices) - 2 for polygon in obj.data.polygons)
 
-    parts = [add_ellipsoid(name, location, scale) for name, location, scale in LOBES + DRIPS]
+
+def build_piece(name, settings):
+    parts = [add_ellipsoid(name + "_Lobe", location, scale) for location, scale in settings["lobes"]]
     bpy.ops.object.select_all(action='DESELECT')
     for obj in parts:
         obj.select_set(True)
     bpy.context.view_layer.objects.active = parts[0]
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
     bpy.ops.object.join()
-    blob = bpy.context.active_object
-    blob.name = "SlimeBlob"
+    piece = bpy.context.active_object
+    piece.name = name
 
-    remesh = blob.modifiers.new("Remesh", 'REMESH')
+    remesh = piece.modifiers.new("Remesh", 'REMESH')
     remesh.mode = 'VOXEL'
-    remesh.voxel_size = VOXEL_SIZE
+    remesh.voxel_size = settings["voxel"]
     remesh.adaptivity = 0.0
     bpy.ops.object.modifier_apply(modifier="Remesh")
 
-    smooth = blob.modifiers.new("Smooth", 'SMOOTH')
+    smooth = piece.modifiers.new("Smooth", 'SMOOTH')
     smooth.factor = 0.8
     smooth.iterations = 6
     bpy.ops.object.modifier_apply(modifier="Smooth")
 
-    triangle_count = sum(len(polygon.vertices) - 2 for polygon in blob.data.polygons)
-
-    if triangle_count > TARGET_TRIANGLES:
-        decimate = blob.modifiers.new("Decimate", 'DECIMATE')
-        decimate.ratio = TARGET_TRIANGLES / triangle_count
+    count = triangle_count(piece)
+    if count > settings["triangles"]:
+        decimate = piece.modifiers.new("Decimate", 'DECIMATE')
+        decimate.ratio = settings["triangles"] / count
         bpy.ops.object.modifier_apply(modifier="Decimate")
 
     bpy.context.scene.cursor.location = (0, 0, 0)
     bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
 
-    for vertex in blob.data.vertices:
+    for vertex in piece.data.vertices:
         if vertex.co.z < 0.0:
             vertex.co.z = 0.0
 
     bpy.ops.object.shade_smooth()
     material = bpy.data.materials.get("SlimeJelly") or bpy.data.materials.new("SlimeJelly")
-    material.diffuse_color = (0.6, 1.0, 0.1, 0.85)
-    blob.data.materials.clear()
-    blob.data.materials.append(material)
-    return blob
+    material.diffuse_color = (0.55, 0.7, 0.2, 0.9)
+    piece.data.materials.clear()
+    piece.data.materials.append(material)
+    return piece
 
 
-def export(blob):
-    os.makedirs(os.path.dirname(FBX_PATH), exist_ok=True)
+def export(piece):
+    os.makedirs(FBX_DIRECTORY, exist_ok=True)
     bpy.ops.object.select_all(action='DESELECT')
-    blob.select_set(True)
-    bpy.context.view_layer.objects.active = blob
+    piece.select_set(True)
+    bpy.context.view_layer.objects.active = piece
     bpy.ops.export_scene.fbx(
-        filepath=FBX_PATH,
+        filepath=os.path.join(FBX_DIRECTORY, piece.name + ".fbx"),
         use_selection=True,
         object_types={'MESH'},
         apply_unit_scale=True,
@@ -101,7 +149,14 @@ def export(blob):
         bake_anim=False)
 
 
-blob = build()
-export(blob)
+clear_meshes()
+report = []
+for index, (name, settings) in enumerate(PIECES.items()):
+    piece = build_piece(name, settings)
+    export(piece)
+    report.append((name, triangle_count(piece), tuple(round(value, 3) for value in piece.dimensions)))
+    piece.location.x = index * PREVIEW_SPACING
+
 bpy.ops.wm.save_as_mainfile(filepath=BLEND_PATH)
-print("triangles", sum(len(polygon.vertices) - 2 for polygon in blob.data.polygons), "size", tuple(round(value, 3) for value in blob.dimensions))
+for line in report:
+    print(line)

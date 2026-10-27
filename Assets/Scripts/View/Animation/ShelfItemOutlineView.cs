@@ -6,9 +6,12 @@ using UnityEngine.Rendering;
 public sealed class ShelfItemOutlineView : MonoBehaviour
 {
     private const string OutlineMaterialPath = "ShelfItemOutline";
+    private const string StickyOutlineMaterialPath = "ShelfItemOutlineSlime";
 
     private readonly List<GameObject> _outlineObjects = new List<GameObject>();
 
+    private Material _defaultMaterial;
+    private Material _stickyMaterial;
     private int _requestCount;
     private bool _isInitialized;
 
@@ -31,9 +34,12 @@ public sealed class ShelfItemOutlineView : MonoBehaviour
         return outlineView;
     }
 
-    public void Show()
+    public void Show() => Show(false);
+
+    public void Show(bool isSticky)
     {
         EnsureInitialized();
+        ApplyMaterial(isSticky ? _stickyMaterial : _defaultMaterial);
         _requestCount++;
         SetVisible(true);
     }
@@ -55,6 +61,12 @@ public sealed class ShelfItemOutlineView : MonoBehaviour
 
         if (outlineMaterial == null)
             throw new InvalidOperationException(OutlineMaterialPath);
+
+        _defaultMaterial = outlineMaterial;
+        _stickyMaterial = Resources.Load<Material>(StickyOutlineMaterialPath);
+
+        if (_stickyMaterial == null)
+            throw new InvalidOperationException(StickyOutlineMaterialPath);
 
         Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
 
@@ -126,6 +138,20 @@ public sealed class ShelfItemOutlineView : MonoBehaviour
         target.reflectionProbeUsage = ReflectionProbeUsage.Off;
         target.sortingLayerID = source.sortingLayerID;
         target.sortingOrder = source.sortingOrder - 1;
+    }
+
+    private void ApplyMaterial(Material material)
+    {
+        foreach (GameObject outlineObject in _outlineObjects)
+        {
+            Renderer outlineRenderer = outlineObject.GetComponent<Renderer>();
+            Material[] materials = new Material[outlineRenderer.sharedMaterials.Length];
+
+            for (int index = 0; index < materials.Length; index++)
+                materials[index] = material;
+
+            outlineRenderer.sharedMaterials = materials;
+        }
     }
 
     private void SetVisible(bool isVisible)

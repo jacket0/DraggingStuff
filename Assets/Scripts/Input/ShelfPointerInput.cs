@@ -21,6 +21,7 @@ public sealed class ShelfPointerInput : MonoBehaviour
     private ShelfItem _pressedItem;
     private ShelfItem _pressedStickyItem;
     private ShelfItem _hoveredItem;
+    private bool _isHoveredSticky;
     private Vector2 _pressPosition;
     private int _activePointerId = NoPointer;
     private bool _ownsDrag;
@@ -134,8 +135,18 @@ public sealed class ShelfPointerInput : MonoBehaviour
         _activePointerId = pointerId;
         _pressPosition = pointerPosition;
 
-        if (!_targetResolver.TryResolve(pointerPosition, out _pressedItem))
-            _targetResolver.TryResolveSticky(pointerPosition, out _pressedStickyItem);
+        if (_targetResolver.TryResolveAny(pointerPosition, out ShelfItem pressed, out bool isSticky))
+        {
+            if (isSticky)
+            {
+                _pressedStickyItem = pressed;
+                RejectStickyPickUp();
+            }
+            else
+            {
+                _pressedItem = pressed;
+            }
+        }
 
         Interacted?.Invoke();
     }
@@ -197,16 +208,17 @@ public sealed class ShelfPointerInput : MonoBehaviour
             return;
         }
 
-        _targetResolver.TryResolve(pointerPosition, out ShelfItem item);
+        _targetResolver.TryResolveAny(pointerPosition, out ShelfItem item, out bool isSticky);
 
-        if (item == _hoveredItem)
+        if (item == _hoveredItem && isSticky == _isHoveredSticky)
             return;
 
         ClearHover();
         _hoveredItem = item;
+        _isHoveredSticky = isSticky;
 
         if (_hoveredItem != null)
-            ShelfItemOutlineView.GetRequired(_hoveredItem).Show();
+            ShelfItemOutlineView.GetRequired(_hoveredItem).Show(isSticky);
     }
 
     private void ClearHover()

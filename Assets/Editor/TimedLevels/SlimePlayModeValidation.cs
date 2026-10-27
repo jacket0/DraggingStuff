@@ -562,9 +562,9 @@ public static class SlimePlayModeValidation
         ExpectBoard(expected, "P10 win");
         Expect(_session.State == LevelState.Won && _board.Slime.HasStickyColumns, "P10: the level must be won with slime left");
 
-        foreach (object step in WaitUntil(() => !_view.IsAnimating && !_view.IsSourceShown, "P10 drying")) yield return step;
+        foreach (object step in WaitUntil(() => !_view.IsAnimating, "P10 drying")) yield return step;
 
-        Expect(_view.GetVisibleSpots().Count == 0 && !_view.Forecast.gameObject.activeSelf, "P10: the remaining slime and the source must dry up on the win");
+        Expect(_view.GetVisibleSpots().Count == 0 && !_view.Forecast.gameObject.activeSelf, "P10: the remaining slime must dry up on the win");
     }
 
     private static BoardStateSnapshot ArrangeGrowth()
