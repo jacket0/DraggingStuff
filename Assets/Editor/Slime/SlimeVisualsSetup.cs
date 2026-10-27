@@ -14,6 +14,7 @@ public static class SlimeVisualsSetup
     private const string MaterialFolder = "Assets/Materials/Slime";
     private const string PrefabFolder = "Assets/Prefabs/Slime";
     private const string SpotPrefabPath = PrefabFolder + "/SlimeSpot.prefab";
+    private const string BlobModelPath = "Assets/Models/Slime/SlimeBlob.fbx";
     private const string FontPath = "Assets/Fonts/Code New Roman SDF.asset";
     private const string ControllerName = "Slime";
     private const string ForecastName = "SlimeForecast";
@@ -24,9 +25,6 @@ public static class SlimeVisualsSetup
     private static readonly Vector3 BottomSourceOffset = new Vector3(0f, -0.25f, 0.06f);
     private static readonly Vector3 ForecastOffset = new Vector3(0f, 0.2f, 0.14f);
     private const float SideSourceOffset = 0.2f;
-    private static readonly Vector3 PuddleScale = new Vector3(0.29f, 0.05f, 0.24f);
-    private static readonly Vector3 DripPosition = new Vector3(0f, -0.06f, 0.1f);
-    private static readonly Vector3 DripScale = new Vector3(0.12f, 0.15f, 0.04f);
     private static readonly Vector3 ForecastDropScale = new Vector3(0.1f, 0.1f, 0.1f);
     private static readonly Vector3 ForecastTextPosition = new Vector3(0f, 0.12f, 0f);
     private static readonly Quaternion ForecastTextRotation = Quaternion.Euler(0f, 180f, 0f);
@@ -76,10 +74,14 @@ public static class SlimeVisualsSetup
 
         try
         {
+            Mesh mesh = AssetDatabase.LoadAssetAtPath<Mesh>(BlobModelPath);
+
+            if (mesh == null)
+                throw new InvalidOperationException($"{BlobModelPath}: the slime model was not found.");
+
             GameObject blob = new GameObject("Blob");
             blob.transform.SetParent(root.transform, false);
-            CreateBlobPart("Puddle", blob.transform, Vector3.zero, PuddleScale, material);
-            CreateBlobPart("Drip", blob.transform, DripPosition, DripScale, material);
+            CreateBlobPart("Mesh", blob.transform, mesh, material);
 
             SlimeSpotView spot = root.AddComponent<SlimeSpotView>();
             Assign(spot, "_blob", blob.transform);
@@ -91,15 +93,12 @@ public static class SlimeVisualsSetup
         }
     }
 
-    private static void CreateBlobPart(string name, Transform parent, Vector3 position, Vector3 scale, Material material)
+    private static void CreateBlobPart(string name, Transform parent, Mesh mesh, Material material)
     {
-        GameObject part = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        part.name = name;
+        GameObject part = new GameObject(name);
         part.transform.SetParent(parent, false);
-        part.transform.localPosition = position;
-        part.transform.localScale = scale;
-        UnityEngine.Object.DestroyImmediate(part.GetComponent<Collider>());
-        MeshRenderer renderer = part.GetComponent<MeshRenderer>();
+        part.AddComponent<MeshFilter>().sharedMesh = mesh;
+        MeshRenderer renderer = part.AddComponent<MeshRenderer>();
         renderer.sharedMaterial = material;
         renderer.shadowCastingMode = ShadowCastingMode.Off;
     }
@@ -235,10 +234,10 @@ public static class SlimeVisualsSetup
     private static Material CreateMaterial(string name, Color color)
     {
         string path = $"{MaterialFolder}/{name}.mat";
-        Shader shader = Shader.Find("Legacy Shaders/Transparent/Specular");
+        Shader shader = Shader.Find("Custom/SlimeJelly");
 
         if (shader == null)
-            throw new InvalidOperationException("The transparent specular shader was not found.");
+            throw new InvalidOperationException("The Custom/SlimeJelly shader was not found.");
 
         Material material = AssetDatabase.LoadAssetAtPath<Material>(path);
 
@@ -250,8 +249,6 @@ public static class SlimeVisualsSetup
 
         material.shader = shader;
         material.color = color;
-        material.SetColor("_SpecColor", new Color(0.9f, 1f, 0.8f));
-        material.SetFloat("_Shininess", 0.15f);
         EditorUtility.SetDirty(material);
         return material;
     }
