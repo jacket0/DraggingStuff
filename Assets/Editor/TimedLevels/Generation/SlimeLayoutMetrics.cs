@@ -40,7 +40,7 @@ public sealed class SlimeLayoutMetrics
 
         foreach (TimedLevelMove move in solution)
         {
-            hasDeadlockOnPath |= SlimeRule.IsStuck(state, simulator);
+            hasDeadlockOnPath |= SlimeRule.IsStuck(state, simulator) || SlimeRule.HasHopelessShelf(state);
 
             if (!simulator.TrySimulate(state, move.Source, move.Target, out BoardMoveSimulation simulation) || !simulation.IsAllowed)
                 return new SlimeLayoutMetrics(false, hasDeadlockOnPath, cleanedColumnCount, growthCount, maximumStickyColumnCount, state.Slime.StickyColumns.Count);

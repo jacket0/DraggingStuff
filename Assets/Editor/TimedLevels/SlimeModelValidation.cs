@@ -445,11 +445,11 @@ public static class SlimeModelValidation
 
             ExpectDefinitionFailure(new[] { Position(0, 0), Position(0, 0) }, validLinks, Array.Empty<int>(), true, "a duplicated sticky column passed validation.");
             ExpectDefinitionFailure(
-                new[] { Position(0, 0), Position(0, 1), Position(0, 2), Position(1, 0), Position(1, 1) },
+                new[] { Position(0, 0), Position(0, 1), Position(0, 2), Position(1, 0), Position(1, 1), Position(1, 2), Position(2, 0), Position(2, 1), Position(2, 2) },
                 validLinks,
                 Array.Empty<int>(),
                 true,
-                "five sticky columns passed validation.");
+                "nine sticky columns passed validation.");
             ExpectDefinitionFailure(new[] { Position(7, 0) }, validLinks, Array.Empty<int>(), true, "a sticky column outside the board passed validation.");
             ExpectDefinitionFailure(oneSticky, new[] { new[] { Position(0, 2), Position(9, 0) } }, Array.Empty<int>(), true, "a slime link outside the board passed validation.");
             ExpectDefinitionFailure(oneSticky, validLinks, Array.Empty<int>(), false, "slime without a neighborhood passed validation.");

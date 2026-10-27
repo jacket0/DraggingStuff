@@ -14,7 +14,8 @@ public static class TimedLevelVariantGenerator
     private const int MaximumSeedAttempts = 10000;
     private const int MaximumKeyLockSeedAttempts = 60000;
     private const int CycleDeadlockProbeMatchCount = 4;
-    private const int SlimeSolverNodeLimit = 20000;
+    private const int SlimeSolutionAttempts = 8;
+    private const int SlimeSolutionMoveLimitFactor = 2;
     private const int MinimumSlimeCleanCount = 1;
 
     [MenuItem("Tools/Timed Levels/Generate All Variants")]
@@ -315,7 +316,7 @@ public static class TimedLevelVariantGenerator
 
             if (definition.HasSlime)
             {
-                CandidateRejection? slimeRejection = CheckSlime(definition, ref generation);
+                CandidateRejection? slimeRejection = CheckSlime(definition, seed, ref generation);
 
                 if (slimeRejection.HasValue)
                 {
@@ -406,20 +407,19 @@ public static class TimedLevelVariantGenerator
         return null;
     }
 
-    private static CandidateRejection? CheckSlime(TimedLevelDefinition definition, ref TimedLevelGenerationResult generation)
+    private static CandidateRejection? CheckSlime(TimedLevelDefinition definition, int seed, ref TimedLevelGenerationResult generation)
     {
         BoardStateSnapshot layout = definition.AddSlime(generation.State);
         SlimeLayoutMetrics metrics = SlimeLayoutMetrics.Measure(layout, generation.SolutionMoves);
 
         if (!metrics.IsReplayed)
         {
-            TimedLevelSolver solver = new TimedLevelSolver(generation.SolutionMoves.Count, SlimeSolverNodeLimit, TimeSpan.FromSeconds(2));
-            TimedLevelSolveResult solveResult = solver.Solve(layout);
+            IReadOnlyList<TimedLevelMove> slimeSolution = SlimeSolutionFinder.Find(layout, seed, SlimeSolutionAttempts, generation.SolutionMoves.Count * SlimeSolutionMoveLimitFactor);
 
-            if (solveResult.Status != TimedLevelSolveStatus.Solved)
+            if (slimeSolution == null)
                 return CandidateRejection.SlimeNotSolved;
 
-            generation = new TimedLevelGenerationResult(generation.State, solveResult.Moves);
+            generation = new TimedLevelGenerationResult(generation.State, slimeSolution);
             metrics = SlimeLayoutMetrics.Measure(layout, generation.SolutionMoves);
         }
 

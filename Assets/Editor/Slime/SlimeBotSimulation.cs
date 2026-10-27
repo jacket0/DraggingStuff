@@ -46,23 +46,34 @@ public sealed class SlimeBotSimulation
             }
 
             List<SlimeBotMove> moves = SlimeMoveFinder.FindMoves(board);
-
-            if (_policy == Policy.Skilled)
-                moves = KeepSafeMoves(board, moves);
-
             BoardMoveSimulation simulation = null;
             SlimeBotMove chosenMove = null;
+            BoardMoveSimulation unsafeSimulation = null;
+            SlimeBotMove unsafeMove = null;
 
             while (moves.Count > 0 && simulation == null)
             {
                 SlimeBotMove move = ChooseMove(moves);
                 moves.Remove(move);
 
-                if (_simulator.TrySimulate(board, move.Source, move.Target, out BoardMoveSimulation candidate) && candidate.IsAllowed)
+                if (!_simulator.TrySimulate(board, move.Source, move.Target, out BoardMoveSimulation candidate) || !candidate.IsAllowed)
+                    continue;
+
+                if (_policy == Policy.Skilled && !IsSafe(candidate))
                 {
-                    simulation = candidate;
-                    chosenMove = move;
+                    unsafeSimulation ??= candidate;
+                    unsafeMove ??= move;
+                    continue;
                 }
+
+                simulation = candidate;
+                chosenMove = move;
+            }
+
+            if (simulation == null && unsafeSimulation != null)
+            {
+                simulation = unsafeSimulation;
+                chosenMove = unsafeMove;
             }
 
             if (simulation == null)
@@ -72,6 +83,7 @@ public sealed class SlimeBotSimulation
             }
 
             result.MoveCount++;
+            result.Moves.Add(new TimedLevelMove(chosenMove.Source, chosenMove.Target));
             result.MatchingMoveCount += simulation.MatchCount > 0 ? 1 : 0;
             result.CleanedColumnCount += simulation.CleanedColumns.Count;
             result.StuckItemCount += chosenMove.SticksItem ? 1 : 0;
@@ -96,17 +108,8 @@ public sealed class SlimeBotSimulation
 
     private static int CountSticky(BoardStateSnapshot board) => board.HasSlime ? board.Slime.StickyColumns.Count : 0;
 
-    private List<SlimeBotMove> KeepSafeMoves(BoardStateSnapshot board, List<SlimeBotMove> moves)
+    private static bool IsSafe(BoardMoveSimulation simulation)
     {
-        List<SlimeBotMove> safeMoves = moves.Where(move => IsSafe(board, move)).ToList();
-        return safeMoves.Count > 0 ? safeMoves : moves;
-    }
-
-    private bool IsSafe(BoardStateSnapshot board, SlimeBotMove move)
-    {
-        if (!_simulator.TrySimulate(board, move.Source, move.Target, out BoardMoveSimulation simulation) || !simulation.IsAllowed)
-            return false;
-
         if (SlimeRule.HasHopelessShelf(simulation.State))
             return false;
 
@@ -156,6 +159,7 @@ public sealed class SlimeBotResult
     public bool IsDeadlocked { get; set; }
     public int FirstHopelessMove { get; set; } = -1;
     public List<int> StickyAfterMove { get; } = new List<int>();
+    public List<TimedLevelMove> Moves { get; } = new List<TimedLevelMove>();
     public int MoveCount { get; set; }
     public int MatchingMoveCount { get; set; }
     public int GrowthCount { get; set; }

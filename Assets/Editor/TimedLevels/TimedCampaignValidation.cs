@@ -10,8 +10,8 @@ using UnityEngine.UI;
 public static class TimedCampaignValidation
 {
     private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
-    private const int ExpectedLevelCount = 30;
-    private const int ChapterCount = 6;
+    private const int ExpectedLevelCount = 35;
+    private const int ChapterCount = 7;
     private const int LevelsPerChapter = 5;
     private const string FirstClosedShelfDefinitionPath = "Assets/Levels/Timed/TimedLevel_C3_01.asset";
     private const string LevelResultWindowPath = "Assets/Prefabs/UI/Level/LevelResultWindow.prefab";
@@ -25,7 +25,8 @@ public static class TimedCampaignValidation
         { LevelMechanic.ClosedShelves, "FourthLevel" },
         { LevelMechanic.Conveyor, "FifthLevel" },
         { LevelMechanic.KeyLocks, "SixthLevel" },
-        { LevelMechanic.CyclicShelves, "SeventhLevel" }
+        { LevelMechanic.CyclicShelves, "SeventhLevel" },
+        { LevelMechanic.Slime, "EighthLevel" }
     };
 
     [MenuItem("Tools/Timed Levels/Validate Campaign")]
@@ -113,13 +114,14 @@ public static class TimedCampaignValidation
     private static void ValidateSolution(LevelEntry level, TimedLevelVariant variant)
     {
         BoardMoveSimulator simulator = new BoardMoveSimulator();
-        BoardStateSnapshot state = level.Definition.AddCyclicShelves(variant.CreateLayout());
+        bool hasSlime = level.Definition.HasSlime;
+        BoardStateSnapshot state = hasSlime ? level.Definition.AddSlime(variant.CreateLayout()) : level.Definition.AddCyclicShelves(variant.CreateLayout());
 
         foreach (TimedLevelMove move in variant.CreateSolution())
         {
             if (!simulator.TrySimulate(state, move.Source, move.Target, out BoardMoveSimulation simulation)
                 || !simulation.IsAllowed
-                || simulation.MatchCount != (simulation.IsSwap ? 0 : 1))
+                || !hasSlime && simulation.MatchCount != (simulation.IsSwap ? 0 : 1))
             {
                 throw new InvalidOperationException($"Level {level.Number}, seed {variant.Seed}: invalid solution.");
             }
@@ -616,7 +618,32 @@ public static class TimedCampaignValidation
             ValidatePrefabInstance(sceneName, result.gameObject, LevelResultWindowPath);
             ValidateResultLayout(sceneName, result);
             ValidateShelfFilterScene(sceneName, scene, catalog.Levels.Where(level => level.SceneName == sceneName && level.Definition.HasShelfFilters));
+            ValidateSlimeScene(sceneName, scene, catalog.Levels.Where(level => level.SceneName == sceneName && level.Definition.HasSlime));
         }
+    }
+
+    private static void ValidateSlimeScene(string sceneName, Scene scene, IEnumerable<LevelEntry> slimeLevels)
+    {
+        SlimeNeighborhood[] neighborhoods = slimeLevels.Select(level => level.Definition.Slime.Neighborhood).Distinct().ToArray();
+
+        if (neighborhoods.Length == 0)
+            return;
+
+        if (neighborhoods.Length != 1)
+            throw new InvalidOperationException($"{sceneName}: slime levels must share one neighborhood.");
+
+        if (!(FindInScene<LevelSession>(scene) is SlimeLevelSession session))
+            throw new InvalidOperationException($"{sceneName}: slime levels need a {nameof(SlimeLevelSession)}.");
+
+        RequireReference(session, "_slime");
+        SlimeController controller = FindAllInScene<SlimeController>(scene).Single();
+
+        foreach (string field in new[] { "_session", "_shelfBoard", "_dragController", "_view" })
+            RequireReference(controller, field);
+
+        ShelfBoard board = GetReference<ShelfBoard>(controller, "_shelfBoard");
+        board.Initialize();
+        SlimeNeighborhoodGeometry.Validate(board, neighborhoods[0]);
     }
 
     private static void ValidateShelfFilterScene(string sceneName, Scene scene, IEnumerable<LevelEntry> filterLevels)

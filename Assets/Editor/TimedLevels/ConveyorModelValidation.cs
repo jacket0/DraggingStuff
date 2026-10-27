@@ -223,7 +223,7 @@ public static class ConveyorModelValidation
                 {
                     if (!simulator.TrySimulate(state, move.Source, move.Target, out BoardMoveSimulation simulation)
                         || simulation.ConveyorsShifted
-                        || simulation.MatchCount != (simulation.IsSwap ? 0 : 1))
+                        || !level.Definition.HasSlime && simulation.MatchCount != (simulation.IsSwap ? 0 : 1))
                     {
                         throw new InvalidOperationException($"Conveyor M12: level {level.Number}, seed {variant.Seed} no longer replays with one match per placement.");
                     }

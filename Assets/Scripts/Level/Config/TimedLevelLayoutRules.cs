@@ -12,7 +12,7 @@ public static class TimedLevelLayoutRules
     public const int MinimumCyclicShelfCount = 2;
     public const int MaximumCyclicShelfCount = 4;
     public const int MinimumStickyColumnCount = 0;
-    public const int MaximumStickyColumnCount = 4;
+    public const int MaximumStickyColumnCount = 8;
     public const int MinimumAlwaysOpenShelfCount = 2;
     public const int MaximumAcceptedTypeCount = ShelfStateSnapshot.MaximumAcceptedTypeCount;
 
