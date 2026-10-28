@@ -236,6 +236,7 @@ public static class TimedLevelVariantGenerator
         int medianMoveCount = GetMedian(candidates.Select(variant => variant.MoveCount));
         List<TimedLevelVariant> accepted = candidates
             .Where(variant => IsWithinDifficultyRange(variant.MoveCount, medianMoveCount))
+            .OrderBy(variant => Math.Abs(variant.MoveCount - medianMoveCount))
             .Take(RequiredVariantCount)
             .ToList();
         rejections[CandidateRejection.DifficultySpread] = candidates.Count(variant => !IsWithinDifficultyRange(variant.MoveCount, medianMoveCount));
@@ -246,6 +247,9 @@ public static class TimedLevelVariantGenerator
             throw new InvalidOperationException(
                 $"Level {levelNumber}: only {accepted.Count} variants are within 10% of median {medianMoveCount}.");
         }
+
+        if (!HasAcceptableMoveSpread(accepted.Select(variant => variant.MoveCount).ToArray()))
+            throw new InvalidOperationException($"Level {levelNumber}: accepted variants spread more than 10% around their own median.");
 
         WriteVariants(definition, accepted);
     }
@@ -432,6 +436,9 @@ public static class TimedLevelVariantGenerator
         if (metrics.CleanedColumnCount < MinimumSlimeCleanCount)
             return CandidateRejection.SlimeNeverCleaned;
 
+        if (SlimeEarlyLossCheck.HasEarlyLoss(layout))
+            return CandidateRejection.SlimeEarlyLoss;
+
         return null;
     }
 
@@ -485,6 +492,12 @@ public static class TimedLevelVariantGenerator
             return string.Empty;
 
         return $", median {GetMedian(variants.Select(CountFilteredMoves))} filtered moves";
+    }
+
+    public static bool HasAcceptableMoveSpread(IReadOnlyList<int> moveCounts)
+    {
+        int median = moveCounts.OrderBy(value => value).ElementAt(moveCounts.Count / 2);
+        return moveCounts.All(moveCount => Math.Abs(moveCount - median) <= median * 0.1f);
     }
 
     private static bool IsWithinDifficultyRange(int moveCount, int medianMoveCount)
@@ -602,6 +615,7 @@ public static class TimedLevelVariantGenerator
         CycleDeadlockProbe,
         SlimeNotSolved,
         SlimeDeadlockOnPath,
-        SlimeNeverCleaned
+        SlimeNeverCleaned,
+        SlimeEarlyLoss
     }
 }

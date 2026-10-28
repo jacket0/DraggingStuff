@@ -13,6 +13,7 @@ public sealed class LevelRunResult
     public int Stars { get; }
     public int Seed { get; }
     public int VariantIndex { get; }
+    public LevelDefeatReason DefeatReason { get; }
 
     public LevelRunResult(
         int levelNumber,
@@ -24,7 +25,8 @@ public sealed class LevelRunResult
         int collectedItemCount,
         int stars,
         int seed,
-        int variantIndex)
+        int variantIndex,
+        LevelDefeatReason defeatReason)
     {
         if (levelNumber <= 0)
             throw new ArgumentOutOfRangeException(nameof(levelNumber));
@@ -50,6 +52,9 @@ public sealed class LevelRunResult
         if (variantIndex < 0)
             throw new ArgumentOutOfRangeException(nameof(variantIndex));
 
+        if (won != (defeatReason == LevelDefeatReason.None))
+            throw new ArgumentOutOfRangeException(nameof(defeatReason));
+
         LevelNumber = levelNumber;
         Won = won;
         Score = score;
@@ -60,5 +65,6 @@ public sealed class LevelRunResult
         Stars = stars;
         Seed = seed;
         VariantIndex = variantIndex;
+        DefeatReason = defeatReason;
     }
 }

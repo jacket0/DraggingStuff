@@ -38,6 +38,7 @@ public static class SlimeModelValidation
         ValidateDefinitionErrors(catalog);
         ValidateVariantRoundTrip(catalog);
         ValidateIntroHintLevels(catalog);
+        ValidateNoEarlyLoss(catalog);
     }
 
     private static void ValidateSnapshotErrors()
@@ -436,6 +437,21 @@ public static class SlimeModelValidation
 
         if (!chapterStarts.SequenceEqual(new[] { 31 }))
             throw new InvalidOperationException($"Slime S16: the intro hint must start on level 31, found [{string.Join(",", chapterStarts)}].");
+    }
+
+    private static void ValidateNoEarlyLoss(LevelCatalog catalog)
+    {
+        foreach (LevelEntry level in catalog.Levels.Where(level => level.Definition != null && level.Definition.HasSlime))
+        {
+            for (int index = 0; index < level.Definition.Variants.Count; index++)
+            {
+                BoardStateSnapshot layout = level.Definition.AddSlime(level.Definition.Variants[index].CreateLayout());
+                int earlyLosses = SlimeEarlyLossCheck.CountEarlyLosses(layout);
+
+                if (earlyLosses > 0)
+                    throw new InvalidOperationException($"Slime S17: level {level.Number} variant {index} is lost by bots {earlyLosses} times before move {SlimeEarlyLossCheck.MinimumMovesBeforeLoss}.");
+            }
+        }
     }
 
     private static void ValidateDefinitionErrors(LevelCatalog catalog)

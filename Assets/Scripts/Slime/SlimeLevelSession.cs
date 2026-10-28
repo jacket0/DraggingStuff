@@ -23,7 +23,7 @@ public sealed class SlimeLevelSession : LevelSession
         if (lostShelf != null)
         {
             _slime.ReportShelfLost(lostShelf);
-            FinishRun(false);
+            FinishRun(false, LevelDefeatReason.ShelfLost);
             return;
         }
 
@@ -31,6 +31,6 @@ public sealed class SlimeLevelSession : LevelSession
             return;
 
         _slime.ReportDeadlock();
-        FinishRun(false);
+        FinishRun(false, LevelDefeatReason.NoMoves);
     }
 }

@@ -48,12 +48,12 @@ public class LevelSession : GameSession
     {
         if (State == LevelState.Ending)
         {
-            FinishRun(isBoardCleared);
+            FinishRunOnTime(isBoardCleared);
             return;
         }
 
         if (State == LevelState.Playing && isBoardCleared)
-            FinishRun(true);
+            FinishRun(true, LevelDefeatReason.None);
     }
 
     protected override void HandleMoveAccepted(MoveOutcome move)
@@ -85,10 +85,12 @@ public class LevelSession : GameSession
         BeginEnding();
 
         if (!IsResolvingMove)
-            FinishRun(ShelfBoard.IsCleared);
+            FinishRunOnTime(ShelfBoard.IsCleared);
     }
 
-    protected void FinishRun(bool won)
+    private void FinishRunOnTime(bool won) => FinishRun(won, won ? LevelDefeatReason.None : LevelDefeatReason.TimeUp);
+
+    protected void FinishRun(bool won, LevelDefeatReason defeatReason)
     {
         if (_result != null)
             return;
@@ -109,7 +111,8 @@ public class LevelSession : GameSession
             _collectedItemCount,
             stars,
             _buildResult.Seed,
-            _buildResult.VariantIndex);
+            _buildResult.VariantIndex,
+            defeatReason);
 
         if (won)
             CompleteAsWon();

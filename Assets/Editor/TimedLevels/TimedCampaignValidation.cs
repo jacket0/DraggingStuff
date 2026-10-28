@@ -104,9 +104,7 @@ public static class TimedCampaignValidation
                 ValidateSolution(level, variant);
             }
 
-            int median = level.Definition.Variants.Select(variant => variant.MoveCount).OrderBy(value => value).ElementAt(level.Definition.Variants.Count / 2);
-
-            if (level.Definition.Variants.Any(variant => Math.Abs(variant.MoveCount - median) > median * 0.1f))
+            if (!TimedLevelVariantGenerator.HasAcceptableMoveSpread(level.Definition.Variants.Select(variant => variant.MoveCount).ToArray()))
                 throw new InvalidOperationException($"Level {level.Number}: move count spread");
         }
     }
@@ -602,18 +600,8 @@ public static class TimedCampaignValidation
             RequireReference(result, "_bestScoreResult");
             RequireReference(result, "_lightRays");
             RequireReference(result, "_victoryPanel");
-            RequireReference(result, "_defeatPanel");
-            DefeatResultView defeat = GetReference<DefeatResultView>(result, "_defeatPanel");
-            RequireReference(defeat, "_restartButton");
-            RequireReference(defeat, "_menuButton");
-            RequireReference(defeat, "_collectedResult");
-            RequireReference(defeat, "_collectedFill");
-            RequireReference(defeat, "_scoreResult");
-            RequireReference(defeat, "_bestScoreResult");
-            RequireReference(defeat, "_lightRays");
-            RequireReference(defeat, "_clock");
-            RequireReference(defeat, "_defeatClip");
-            RequireReference(defeat, "_outputAudioMixerGroup");
+            RequireReference(result, "_timeUpPanel");
+            RequireDefeatPanelReferences(GetReference<DefeatResultView>(result, "_timeUpPanel"));
             ValidateCampaignHud(sceneName, timerView);
             ValidatePrefabInstance(sceneName, result.gameObject, LevelResultWindowPath);
             ValidateResultLayout(sceneName, result);
@@ -638,12 +626,47 @@ public static class TimedCampaignValidation
         RequireReference(session, "_slime");
         SlimeController controller = FindAllInScene<SlimeController>(scene).Single();
 
-        foreach (string field in new[] { "_session", "_shelfBoard", "_dragController", "_view" })
+        foreach (string field in new[] { "_session", "_shelfBoard", "_dragController", "_view", "_columnRaycaster", "_audio" })
             RequireReference(controller, field);
 
         ShelfBoard board = GetReference<ShelfBoard>(controller, "_shelfBoard");
         board.Initialize();
         SlimeNeighborhoodGeometry.Validate(board, neighborhoods[0]);
+        ValidateMechanicDefeatPanel(sceneName, FindInScene<LevelResultView>(scene), LevelDefeatReason.NoMoves, LevelDefeatReason.ShelfLost);
+    }
+
+    private static void RequireDefeatPanelReferences(DefeatResultView panel)
+    {
+        foreach (string field in new[] { "_restartButton", "_menuButton", "_collectedResult", "_collectedFill", "_scoreResult", "_bestScoreResult", "_lightRays", "_icon", "_defeatClip", "_outputAudioMixerGroup" })
+            RequireReference(panel, field);
+    }
+
+    private static void ValidateMechanicDefeatPanel(string sceneName, LevelResultView result, params LevelDefeatReason[] reasons)
+    {
+        DefeatResultView panel = GetReference<DefeatResultView>(result, "_mechanicDefeatPanel");
+
+        if (panel == null || panel == GetReference<DefeatResultView>(result, "_timeUpPanel"))
+            throw new InvalidOperationException($"{sceneName}: mechanic defeat panel is missing.");
+
+        RequireDefeatPanelReferences(panel);
+        SerializedProperty captions = new SerializedObject(panel).FindProperty("_reasonCaptions");
+        List<LevelDefeatReason> captionReasons = new List<LevelDefeatReason>();
+
+        for (int index = 0; index < captions.arraySize; index++)
+        {
+            SerializedProperty caption = captions.GetArrayElementAtIndex(index);
+
+            if (caption.FindPropertyRelative("_caption").objectReferenceValue == null)
+                throw new InvalidOperationException($"{sceneName}: defeat caption {index} has no object.");
+
+            captionReasons.Add((LevelDefeatReason)caption.FindPropertyRelative("_reason").enumValueIndex);
+        }
+
+        foreach (LevelDefeatReason reason in reasons)
+        {
+            if (captionReasons.Count(captionReason => captionReason == reason) != 1)
+                throw new InvalidOperationException($"{sceneName}: mechanic defeat panel needs one caption for {reason}.");
+        }
     }
 
     private static void ValidateShelfFilterScene(string sceneName, Scene scene, IEnumerable<LevelEntry> filterLevels)

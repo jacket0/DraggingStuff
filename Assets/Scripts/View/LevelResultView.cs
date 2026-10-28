@@ -2,6 +2,7 @@ using System;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 using YG.LanguageLegacy;
 
@@ -22,7 +23,9 @@ public sealed class LevelResultView : MonoBehaviour
     [SerializeField] private RectTransform _lightRays;
     [SerializeField] private GameObject _sparkles;
     [SerializeField] private GameObject _victoryPanel;
-    [SerializeField] private DefeatResultView _defeatPanel;
+    [FormerlySerializedAs("_defeatPanel")]
+    [SerializeField] private DefeatResultView _timeUpPanel;
+    [SerializeField] private DefeatResultView _mechanicDefeatPanel;
 
     private Tween _raysTween;
 
@@ -42,8 +45,8 @@ public sealed class LevelResultView : MonoBehaviour
         _menuButton.onClick.AddListener(MenuButtonClicked);
         _reviewButton.onClick.AddListener(ReviewButtonClicked);
         _nextButton.onClick.AddListener(NextButtonClicked);
-        _defeatPanel.RestartRequested += RestartButtonClicked;
-        _defeatPanel.MenuRequested += MenuButtonClicked;
+        Subscribe(_timeUpPanel);
+        Subscribe(_mechanicDefeatPanel);
     }
 
     private void OnDisable()
@@ -53,11 +56,8 @@ public sealed class LevelResultView : MonoBehaviour
         _reviewButton?.onClick.RemoveListener(ReviewButtonClicked);
         _nextButton?.onClick.RemoveListener(NextButtonClicked);
 
-        if (_defeatPanel != null)
-        {
-            _defeatPanel.RestartRequested -= RestartButtonClicked;
-            _defeatPanel.MenuRequested -= MenuButtonClicked;
-        }
+        Unsubscribe(_timeUpPanel);
+        Unsubscribe(_mechanicDefeatPanel);
 
         _raysTween?.Kill();
         _raysTween = null;
@@ -74,7 +74,7 @@ public sealed class LevelResultView : MonoBehaviour
         if (result.Won)
             ShowVictory(result, bestTimeMilliseconds, bestScore, isReviewAvailable, opensEndlessMode, isNewRecord);
         else
-            _defeatPanel.Show(result, bestScore);
+            SelectDefeatPanel(result.DefeatReason).Show(result, bestScore);
     }
 
     public void Hide()
@@ -93,7 +93,39 @@ public sealed class LevelResultView : MonoBehaviour
         _menuButton.interactable = interactable;
         _reviewButton.interactable = interactable;
         _nextButton.interactable = interactable;
-        _defeatPanel.SetInteractable(interactable);
+        _timeUpPanel.SetInteractable(interactable);
+
+        if (_mechanicDefeatPanel != null)
+            _mechanicDefeatPanel.SetInteractable(interactable);
+    }
+
+    private DefeatResultView SelectDefeatPanel(LevelDefeatReason reason)
+    {
+        if (reason == LevelDefeatReason.TimeUp)
+            return _timeUpPanel;
+
+        if (_mechanicDefeatPanel == null)
+            throw new InvalidOperationException($"{nameof(_mechanicDefeatPanel)} is required for {reason}.");
+
+        return _mechanicDefeatPanel;
+    }
+
+    private void Subscribe(DefeatResultView panel)
+    {
+        if (panel == null)
+            return;
+
+        panel.RestartRequested += RestartButtonClicked;
+        panel.MenuRequested += MenuButtonClicked;
+    }
+
+    private void Unsubscribe(DefeatResultView panel)
+    {
+        if (panel == null)
+            return;
+
+        panel.RestartRequested -= RestartButtonClicked;
+        panel.MenuRequested -= MenuButtonClicked;
     }
 
     private void ShowVictory(LevelRunResult result, long bestTimeMilliseconds, long bestScore, bool isReviewAvailable, bool opensEndlessMode, bool isNewRecord)
@@ -117,9 +149,10 @@ public sealed class LevelResultView : MonoBehaviour
         _victoryPanel.SetActive(won);
         _lightRays.gameObject.SetActive(won);
         _sparkles.SetActive(won);
+        _timeUpPanel.Hide();
 
-        if (won)
-            _defeatPanel.Hide();
+        if (_mechanicDefeatPanel != null)
+            _mechanicDefeatPanel.Hide();
     }
 
     private void StartRaysAnimation(int stars)
@@ -176,7 +209,7 @@ public sealed class LevelResultView : MonoBehaviour
         if (_nextLevelLocalization == null || _endlessModeLocalization == null)
             throw new InvalidOperationException(nameof(LanguageYG));
 
-        if (_earnedStars == null || _lightRays == null || _sparkles == null || _victoryPanel == null || _defeatPanel == null)
+        if (_earnedStars == null || _lightRays == null || _sparkles == null || _victoryPanel == null || _timeUpPanel == null)
             throw new InvalidOperationException(nameof(LevelResultView));
     }
 }
