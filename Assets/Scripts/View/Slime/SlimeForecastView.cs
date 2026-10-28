@@ -15,6 +15,7 @@ public sealed class SlimeForecastView : MonoBehaviour
     private Tween _pulse;
 
     public int MovesToGrowth { get; private set; }
+    public int MaxMovesToGrowth => _digitMeshes.Length;
 
     private void Awake()
     {
@@ -37,13 +38,13 @@ public sealed class SlimeForecastView : MonoBehaviour
 
     public void Show(Vector3 position, int movesToGrowth)
     {
-        if (movesToGrowth < 1)
+        if (movesToGrowth < 1 || movesToGrowth > MaxMovesToGrowth)
             throw new ArgumentOutOfRangeException(nameof(movesToGrowth));
 
         transform.position = position;
         gameObject.SetActive(true);
         MovesToGrowth = movesToGrowth;
-        Mesh mesh = _digitMeshes[Mathf.Min(movesToGrowth, _digitMeshes.Length) - 1];
+        Mesh mesh = _digitMeshes[movesToGrowth - 1];
         _digit.sharedMesh = mesh;
         _digitOutline.sharedMesh = mesh;
         StopPulse();

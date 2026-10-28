@@ -35,6 +35,7 @@ public static class TimedCampaignPlayModeValidation
     private static BoardStateSnapshot _expectedState;
     private static MoveSuggestionProvider _suggestionProvider;
     private static ConveyorController _conveyorController;
+    private static SlimeController _slimeController;
     private static int _pendingBoardChangeFrameCount;
     private static int _shiftCount;
     private static int _shiftStartItemCount;
@@ -154,7 +155,7 @@ public static class TimedCampaignPlayModeValidation
 
         ValidatePendingBoardChanges();
 
-        if (!_session.IsBoardSettled)
+        if (!_session.IsBoardSettled || _slimeController != null && _slimeController.IsGrowing)
             return;
 
         if (!_isFramingValidated)
@@ -223,7 +224,8 @@ public static class TimedCampaignPlayModeValidation
 
         BoardStateSnapshot runtimeState = _board.CreateSnapshot();
         TimedLevelVariant variant = _session.CurrentLevel.Definition.Variants[_session.CurrentVariantIndex];
-        string expectedLayoutHash = BoardStateFingerprint.CreateHash(_session.CurrentLevel.Definition.AddCyclicShelves(variant.CreateLayout()));
+        TimedLevelDefinition definition = _session.CurrentLevel.Definition;
+        string expectedLayoutHash = BoardStateFingerprint.CreateHash(definition.AddSlime(definition.AddCyclicShelves(variant.CreateLayout())));
 
         if (BoardStateFingerprint.CreateHash(runtimeState) != expectedLayoutHash)
             throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: runtime layout differs from the generated layout.");
@@ -234,6 +236,7 @@ public static class TimedCampaignPlayModeValidation
         _moves = variant.CreateSolution();
         _expectedState = runtimeState;
         _suggestionProvider = UnityEngine.Object.FindObjectOfType<MoveSuggestionProvider>();
+        _slimeController = UnityEngine.Object.FindObjectOfType<SlimeController>();
         BeginConveyorObservation();
         _isFramingValidated = false;
         _moveIndex = 0;
@@ -641,8 +644,14 @@ public static class TimedCampaignPlayModeValidation
 
         _resultFrameCount++;
 
+        if (_resultFrameCount == 2)
+            ValidateNextButton();
+
         if (_resultFrameCount == 2 && _session.CurrentLevel.Number == 1)
             ScreenCapture.CaptureScreenshot($"{OutputDirectory}/level-01-result.png", 1);
+
+        if (_resultFrameCount == 2 && IsLastLevelOfChapter(_session.CurrentLevel))
+            ScreenCapture.CaptureScreenshot($"{OutputDirectory}/level-{_session.CurrentLevel.Number:00}-result.png", 1);
 
         if (_resultFrameCount < 8)
             return;
@@ -666,6 +675,39 @@ public static class TimedCampaignPlayModeValidation
         _board = null;
         _moves = null;
         SceneManager.LoadScene(nextLevel.SceneName);
+    }
+
+    private static void ValidateNextButton()
+    {
+        int levelNumber = _session.CurrentLevel.Number;
+        LevelResultView resultView = UnityEngine.Object.FindObjectOfType<LevelResultView>();
+
+        if (resultView == null)
+            throw new InvalidOperationException($"Level {levelNumber}: the result window is not shown after the victory.");
+
+        SerializedObject serializedView = new SerializedObject(resultView);
+        UnityEngine.UI.Button nextButton = (UnityEngine.UI.Button)serializedView.FindProperty("_nextButton").objectReferenceValue;
+        YG.LanguageLegacy.LanguageYG nextLevelText = (YG.LanguageLegacy.LanguageYG)serializedView.FindProperty("_nextLevelLocalization").objectReferenceValue;
+        YG.LanguageLegacy.LanguageYG endlessModeText = (YG.LanguageLegacy.LanguageYG)serializedView.FindProperty("_endlessModeLocalization").objectReferenceValue;
+
+        if (!nextButton.gameObject.activeInHierarchy || !nextButton.interactable)
+            throw new InvalidOperationException($"Level {levelNumber}: the next button is hidden or disabled after the victory.");
+
+        LevelCatalog catalog = LoadCatalog();
+        bool hasNextLevel = catalog.TryGetNext(_session.CurrentLevel, out LevelEntry nextLevel);
+        YG.LanguageLegacy.LanguageYG expectedText = hasNextLevel ? nextLevelText : endlessModeText;
+        string shownText = nextButton.GetComponentInChildren<TMPro.TMP_Text>(true).text;
+
+        if (!expectedText.enabled || shownText != expectedText.ru && shownText != expectedText.en && shownText != expectedText.tr)
+            throw new InvalidOperationException($"Level {levelNumber}: the next button says \"{shownText}\", expected the {(hasNextLevel ? "next level" : "endless mode")} text.");
+
+        if (hasNextLevel && IsLastLevelOfChapter(_session.CurrentLevel))
+            Debug.Log($"CHAPTER_TRANSITION level {levelNumber} -> {nextLevel.Number} ({nextLevel.SceneName}): \"{shownText}\"");
+    }
+
+    private static bool IsLastLevelOfChapter(LevelEntry level)
+    {
+        return LoadCatalog().Chapters.Any(chapter => chapter.Levels.Count > 0 && chapter.Levels[chapter.Levels.Count - 1] == level);
     }
 
     private static void FinishEditorRun()

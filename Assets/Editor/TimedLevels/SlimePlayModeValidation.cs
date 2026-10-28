@@ -129,6 +129,7 @@ public static class SlimePlayModeValidation
             ValidatePlacementIntoSlime,
             ValidateOwnShelfCleaning,
             ValidateGrowthOnPlainMoves,
+            ValidateForecastLimit,
             ValidateFullPathStopsGrowth,
             ValidateGrowthCancelsDrag,
             ValidateTwoOverlappingMoves,
@@ -335,6 +336,19 @@ public static class SlimePlayModeValidation
         foreach (object step in WaitUntilViewsMatch("P5")) yield return step;
     }
 
+    private static IEnumerable ValidateForecastLimit()
+    {
+        foreach (object step in LoadScenarioLevel()) yield return step;
+
+        int maximum = _view.Forecast.MaxMovesToGrowth;
+        ColumnPosition[] columns = { new ColumnPosition(3, 0), new ColumnPosition(4, 0), new ColumnPosition(7, 0) };
+        _view.ShowForecast(columns, new[] { 1, maximum, maximum + 1 });
+        int[] shown = UnityEngine.Object.FindObjectsOfType<SlimeForecastView>().Select(forecast => forecast.MovesToGrowth).OrderBy(moves => moves).ToArray();
+
+        Expect(_view.ForecastCount >= columns.Length, "P13: the scene must show at least three forecasts");
+        Expect(shown.SequenceEqual(new[] { 1, maximum }), $"P13: forecasts beyond {maximum} moves must stay hidden, shown {string.Join(" ", shown)}");
+    }
+
     private static IEnumerable ValidateFullPathStopsGrowth()
     {
         foreach (object step in LoadScenarioLevel()) yield return step;
@@ -449,7 +463,7 @@ public static class SlimePlayModeValidation
         }
 
         ExpectBoard(expected, "P8");
-        Expect(deadlockCount == 1 && _session.Result != null && !_session.Result.Won, "P8: a deadlock must end the level as a defeat once");
+        Expect(deadlockCount == 1 && _session.Result != null && !_session.Result.Won && _session.Result.DefeatReason == LevelDefeatReason.NoMoves, "P8: a deadlock must end the level as a defeat once");
     }
 
     private static IEnumerable ValidateShelfLostDefeat()
@@ -481,7 +495,7 @@ public static class SlimePlayModeValidation
         }
 
         ExpectBoard(expected, "P12");
-        Expect(lostShelves.SequenceEqual(new[] { _board.Shelves[3] }) && !_session.Result.Won, "P12: a hopeless shelf must end the level as a defeat once");
+        Expect(lostShelves.SequenceEqual(new[] { _board.Shelves[3] }) && !_session.Result.Won && _session.Result.DefeatReason == LevelDefeatReason.ShelfLost, "P12: a hopeless shelf must end the level as a defeat once");
     }
 
     private static IEnumerable ValidatePauseDuringGrowth()

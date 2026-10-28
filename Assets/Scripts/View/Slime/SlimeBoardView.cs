@@ -139,19 +139,11 @@ public sealed class SlimeBoardView : MonoBehaviour
         if (movesToGrowth == null || movesToGrowth.Count != columns.Count)
             throw new ArgumentException("Every forecast column needs its moves to growth.", nameof(movesToGrowth));
 
-        if (columns.Count == 0)
+        for (int index = 0; index < _forecastCount; index++)
         {
-            HideForecast();
-            return;
-        }
+            SlimeForecastView forecast = index == 0 ? _forecast : GetExtraForecast(index - 1);
 
-        _forecast.Show(GetAnchorPosition(columns[0]) + _forecastOffset, movesToGrowth[0]);
-
-        for (int index = 1; index < _forecastCount; index++)
-        {
-            SlimeForecastView forecast = GetExtraForecast(index - 1);
-
-            if (index < columns.Count)
+            if (index < columns.Count && movesToGrowth[index] <= forecast.MaxMovesToGrowth)
                 forecast.Show(GetAnchorPosition(columns[index]) + _forecastOffset, movesToGrowth[index]);
             else
                 forecast.Hide();
