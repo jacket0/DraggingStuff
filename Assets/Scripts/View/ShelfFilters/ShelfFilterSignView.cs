@@ -14,6 +14,7 @@ public sealed class ShelfFilterSignView : MonoBehaviour
     [SerializeField] private SpriteRenderer _rightNail;
     [SerializeField] private List<SpriteRenderer> _icons = new List<SpriteRenderer>();
     [SerializeField] private List<SpriteRenderer> _iconBackings = new List<SpriteRenderer>();
+    [SerializeField] private List<SpriteRenderer> _brackets = new List<SpriteRenderer>();
     [SerializeField] private Color _dimmedTint = new Color(0.55f, 0.55f, 0.55f, 0.7f);
     [SerializeField, Min(0.01f)] private float _iconSize = 0.085f;
     [SerializeField, Min(0.01f)] private float _iconSpacing = 0.1f;
@@ -50,7 +51,7 @@ public sealed class ShelfFilterSignView : MonoBehaviour
     private void Awake()
     {
         if (_shelf == null || _root == null || _plate == null || _frame == null || _leftNail == null || _rightNail == null || _icons.Count == 0 || _icons.Contains(null)
-            || _iconBackings.Count != _icons.Count || _iconBackings.Contains(null))
+            || _iconBackings.Count != _icons.Count || _iconBackings.Contains(null) || _brackets.Count == 0 || _brackets.Contains(null))
         {
             throw new InvalidOperationException($"{name}: invalid shelf filter sign wiring.");
         }
@@ -58,8 +59,8 @@ public sealed class ShelfFilterSignView : MonoBehaviour
         foreach (SpriteRenderer spriteRenderer in new[] { _plate, _frame, _leftNail, _rightNail })
             _baseColors.Add(spriteRenderer, spriteRenderer.color);
 
-        foreach (SpriteRenderer icon in _icons.Concat(_iconBackings))
-            _baseColors.Add(icon, icon.color);
+        foreach (SpriteRenderer spriteRenderer in _icons.Concat(_iconBackings).Concat(_brackets))
+            _baseColors.Add(spriteRenderer, spriteRenderer.color);
 
         _baseScale = transform.localScale;
         _rootBaseScale = _root.transform.localScale;
