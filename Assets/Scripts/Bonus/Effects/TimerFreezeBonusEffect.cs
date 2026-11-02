@@ -17,6 +17,9 @@ public class TimerFreezeBonusEffect : BonusEffect
 
     private Coroutine _completionCoroutine;
 
+    public float FreezeDuration => _freezeDuration;
+    public float RemainingFreezeTime { get; private set; }
+
     private void OnDisable()
     {
         StopCompletionCoroutine();
@@ -50,7 +53,13 @@ public class TimerFreezeBonusEffect : BonusEffect
 
     private IEnumerator CompleteAfterFreezeDuration()
     {
-        yield return new WaitForSeconds(_freezeDuration);
+        RemainingFreezeTime = _freezeDuration;
+
+        while (RemainingFreezeTime > 0f)
+        {
+            yield return null;
+            RemainingFreezeTime = Mathf.Max(0f, RemainingFreezeTime - Time.deltaTime);
+        }
 
         _completionCoroutine = null;
 
@@ -73,5 +82,6 @@ public class TimerFreezeBonusEffect : BonusEffect
 
         StopCoroutine(_completionCoroutine);
         _completionCoroutine = null;
+        RemainingFreezeTime = 0f;
     }
 }
