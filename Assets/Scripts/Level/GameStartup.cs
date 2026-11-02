@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using YG;
 
 public sealed class GameStartup : MonoBehaviour
 {
@@ -28,6 +29,10 @@ public sealed class GameStartup : MonoBehaviour
         Canvas.ForceUpdateCanvases();
         yield return null;
 
+        while (!YG2.isSDKEnabled)
+            yield return null;
+
+        YG2.GameReadyAPI();
         Destroy(gameObject);
     }
 }

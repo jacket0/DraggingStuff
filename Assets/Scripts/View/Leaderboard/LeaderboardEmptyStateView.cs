@@ -106,7 +106,6 @@ public sealed class LeaderboardEmptyStateView : MonoBehaviour
         _loadingLocalization.enabled = selectedLocalization == _loadingLocalization;
         _emptyLocalization.enabled = selectedLocalization == _emptyLocalization;
         _errorLocalization.enabled = selectedLocalization == _errorLocalization;
-        selectedLocalization.SwitchLanguage();
     }
 
     private void StopTimeout()

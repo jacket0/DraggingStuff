@@ -112,7 +112,6 @@ public class AudioSettingsPanel : MonoBehaviour
         if (muted)
         {
             mutedLocalization.enabled = true;
-            mutedLocalization.SwitchLanguage();
             return;
         }
 
