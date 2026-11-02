@@ -137,8 +137,37 @@ public class LevelSelectionController : MonoBehaviour
 
         RefreshEndlessCard();
 
-        if (currentChapterIndex >= 0 && currentChapterIndex != _scrolledChapterIndex)
-            ScrollToChapter(currentChapterIndex);
+        int targetChapterIndex = SelectTargetChapterIndex(currentChapterIndex);
+
+        if (targetChapterIndex >= 0 && targetChapterIndex != _scrolledChapterIndex)
+            ScrollToChapter(targetChapterIndex);
+    }
+
+    private int SelectTargetChapterIndex(int currentChapterIndex)
+    {
+        if (!_selectionState.TryGetSelected(out LevelEntry playedLevel))
+            return currentChapterIndex;
+
+        bool unlockedNextLevel = _progress.IsCompleted(playedLevel)
+            && _catalog.TryGetNext(playedLevel, out LevelEntry nextLevel)
+            && _progress.IsUnlocked(nextLevel)
+            && !_progress.IsCompleted(nextLevel);
+
+        if (unlockedNextLevel && currentChapterIndex >= 0)
+            return currentChapterIndex;
+
+        return FindChapterIndex(playedLevel);
+    }
+
+    private int FindChapterIndex(LevelEntry level)
+    {
+        for (int chapterIndex = 0; chapterIndex < _catalog.Chapters.Count; chapterIndex++)
+        {
+            if (_catalog.Chapters[chapterIndex].Levels.Contains(level))
+                return chapterIndex;
+        }
+
+        return -1;
     }
 
     private LevelChapter FindSecondaryMechanicChapter(LevelEntry level, LevelChapter chapter)
