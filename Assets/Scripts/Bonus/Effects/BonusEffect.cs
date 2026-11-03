@@ -8,6 +8,7 @@ public abstract class BonusEffect : MonoBehaviour, IBonusEffect
     public BonusDefinition Definition => _definition;
     public bool IsActive { get; private set; }
 
+    public event Action<IBonusEffect> Activated;
     public event Action<IBonusEffect> Completed;
 
     public bool CanActivate()
@@ -25,6 +26,7 @@ public abstract class BonusEffect : MonoBehaviour, IBonusEffect
 
         IsActive = true;
         ActivateEffect();
+        Activated?.Invoke(this);
     }
 
     protected void CompleteEffect()

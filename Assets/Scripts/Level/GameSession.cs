@@ -32,6 +32,7 @@ public abstract class GameSession : MonoBehaviour
 
     public event Action<MatchResolution> MatchSucceeded;
     public event Action<LevelState> StateChanged;
+    public event Action<MoveOutcome> MoveStarted;
     public event Action<IReadOnlyList<Shelf>> MatchingMoveResolved;
     public event Action<IReadOnlyList<Shelf>> MoveResolved;
     public event Action<IReadOnlyList<Shelf>> CascadeMatchesResolved;
@@ -115,6 +116,7 @@ public abstract class GameSession : MonoBehaviour
             CompleteInitialAnimation();
         };
 
+        MoveStarted?.Invoke(outcome);
         return outcome;
     }
 
