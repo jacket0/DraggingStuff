@@ -20,7 +20,7 @@ public static class ShelfFilterPlayModeValidation
     private const string ScenePath = "Assets/Scenes/ThirdLevel.unity";
     private const string SceneName = "ThirdLevel";
     private const int ScenarioSeed = 600001;
-    private const int ScenarioLevelNumber = 6;
+    private const int ScenarioLevelNumber = 11;
     private const int MaximumWaitFrames = 3000;
     private const float ScenarioTimeScale = 3f;
 

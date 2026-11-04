@@ -24,8 +24,24 @@ public static class ConveyorPlayModeValidation
     private const float ScenarioTimeScale = 3f;
     private const float ExpiringCountdownRate = 100000f;
     private const int LevelWithoutFiltersSeed = 2099001;
+    private const int LevelWithBoxSeed = 2000001;
+    private const int ScenarioEmptyColumnCount = 5;
+    private const int BoxScenarioSwapCount = 3;
+    private const int ScenarioSeedCount = 50;
     private const int BoxShelfIndex = 1;
     private const int BeltShelfIndex = 8;
+    private static readonly int[] ScenarioConveyorShelfIndices = { 8, 9, 10, 11 };
+    private static readonly (ItemType Type, int GroupCount)[] ScenarioItemGroups =
+    {
+        (ItemType.Ball, 3),
+        (ItemType.Bear, 3),
+        (ItemType.Plant, 4),
+        (ItemType.Lamp, 4),
+        (ItemType.MapBall, 4),
+        (ItemType.Beauty, 4),
+        (ItemType.Toy, 4),
+        (ItemType.TrainToy, 4)
+    };
 
     private static readonly BoardMoveSimulator Simulator = new BoardMoveSimulator();
     private static IEnumerator _scenarios;
@@ -38,6 +54,7 @@ public static class ConveyorPlayModeValidation
     private static MoveSuggestionProvider _suggestions;
     private static ShelfFilterSignView[] _signs;
     private static LevelEntry _levelWithoutFilters;
+    private static LevelEntry _levelWithBox;
 
     static ConveyorPlayModeValidation()
     {
@@ -57,7 +74,7 @@ public static class ConveyorPlayModeValidation
         SessionState.SetBool(FailedKey, false);
         SessionState.SetBool(RunInBackgroundKey, Application.runInBackground);
         Application.runInBackground = true;
-        SelectLevel(LoadFilterLevel());
+        SelectLevel(LoadConveyorLevel());
         EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         EditorApplication.isPlaying = true;
     }
@@ -342,7 +359,7 @@ public static class ConveyorPlayModeValidation
 
     private static IEnumerable ValidateFilterSolutionReplay()
     {
-        LevelEntry level = LoadFilterLevel();
+        LevelEntry level = GetLevelWithBox();
 
         foreach (object step in LoadLevel(level)) yield return step;
 
@@ -350,7 +367,7 @@ public static class ConveyorPlayModeValidation
         BoardStateSnapshot expected = _board.CreateSnapshot();
         string layoutHash = BoardStateFingerprint.CreateHash(expected);
         TimedLevelVariant variant = level.Definition.Variants.FirstOrDefault(candidate => candidate.LayoutHash == layoutHash);
-        Expect(variant != null, "C-F1: the runtime board must start from a variant of level 20");
+        Expect(variant != null, "C-F1: the runtime board must start from a variant of the box level");
 
         foreach (TimedLevelMove move in variant.CreateSolution())
         {
@@ -367,7 +384,7 @@ public static class ConveyorPlayModeValidation
 
     private static IEnumerable ValidateRejectedDropFromConveyor()
     {
-        foreach (object step in LoadLevel(LoadFilterLevel())) yield return step;
+        foreach (object step in LoadLevel(GetLevelWithBox())) yield return step;
 
         BoardStateSnapshot expected = Arrange(
             Shelf(BoxShelfIndex, Column(), Column(ItemType.Lamp), Column(ItemType.Ball)),
@@ -402,7 +419,7 @@ public static class ConveyorPlayModeValidation
 
     private static IEnumerable ValidateStuckTripleFromShift()
     {
-        foreach (object step in LoadLevel(LoadFilterLevel())) yield return step;
+        foreach (object step in LoadLevel(GetLevelWithBox())) yield return step;
 
         BoardStateSnapshot expected = Arrange(
             Shelf(0, Column(ItemType.Plant), Column(ItemType.Plant), Column()),
@@ -451,7 +468,7 @@ public static class ConveyorPlayModeValidation
 
     private static IEnumerable ValidateSuggestionSkipsTripleOnConveyor()
     {
-        foreach (object step in LoadLevel(LoadFilterLevel())) yield return step;
+        foreach (object step in LoadLevel(GetLevelWithBox())) yield return step;
 
         Arrange(
             Shelf(BoxShelfIndex, Column(ItemType.Lamp), Column(), Column(ItemType.Ball)),
@@ -468,7 +485,7 @@ public static class ConveyorPlayModeValidation
     private static void ExpectFilterOnBox(string scenario)
     {
         Shelf box = _board.Shelves[BoxShelfIndex];
-        Expect(_board.Shelves.Count(_board.IsFiltered) == 1 && _board.GetAcceptedTypes(box).SequenceEqual(new[] { ItemType.Lamp }), $"{scenario}: level 20 must have one Lamp box on shelf {BoxShelfIndex}");
+        Expect(_board.Shelves.Count(_board.IsFiltered) == 1 && _board.GetAcceptedTypes(box).SequenceEqual(new[] { ItemType.Lamp }), $"{scenario}: the box level must have one Lamp box on shelf {BoxShelfIndex}");
 
         foreach (ShelfFilterSignView sign in _signs)
             Expect(sign.IsShown == (sign.Shelf == box), $"{scenario}: the sign on {sign.Shelf.name} must be shown only on the box");
@@ -636,55 +653,111 @@ public static class ConveyorPlayModeValidation
 
     private static ColumnStateSnapshot Column(params ItemType[] items) => new ColumnStateSnapshot(items);
 
-    private static LevelEntry LoadFilterLevel()
+    private static LevelEntry LoadConveyorLevel()
     {
         LevelEntry level = AssetDatabase.LoadAssetAtPath<LevelEntry>(LevelEntryPath);
 
-        if (level == null || !level.Definition.HasShelfFilters)
-            throw new InvalidOperationException("Conveyor scenarios need level 20 with its box.");
+        if (level == null || !level.Definition.HasConveyors)
+            throw new InvalidOperationException("Conveyor scenarios need the last conveyor level.");
 
         return level;
     }
 
     private static LevelEntry GetLevelWithoutFilters()
     {
-        if (_levelWithoutFilters != null)
-            return _levelWithoutFilters;
+        _levelWithoutFilters ??= CreateScenarioLevel("ConveyorScenario", Array.Empty<ItemType>(), 0, LevelWithoutFiltersSeed);
+        return _levelWithoutFilters;
+    }
 
-        LevelEntry filterLevel = LoadFilterLevel();
-        BoardStateSnapshot boardShape = new BoardStateSnapshot(filterLevel.Definition.Variants[0].CreateLayout().Shelves
+    private static LevelEntry GetLevelWithBox()
+    {
+        _levelWithBox ??= CreateScenarioLevel("ConveyorBoxScenario", new[] { ItemType.Lamp }, BoxScenarioSwapCount, LevelWithBoxSeed);
+        return _levelWithBox;
+    }
+
+    private static LevelEntry CreateScenarioLevel(string name, ItemType[] boxTypes, int swapCount, int firstSeed)
+    {
+        LevelEntry conveyorLevel = LoadConveyorLevel();
+
+        BoardStateSnapshot boardShape = new BoardStateSnapshot(conveyorLevel.Definition.Variants[0].CreateLayout().Shelves
             .Select(shelf => new ShelfStateSnapshot(shelf.Columns.Select(_ => new ColumnStateSnapshot(Array.Empty<ItemType>())).ToArray()))
             .ToArray());
-        TimedLevelDefinition definition = UnityEngine.Object.Instantiate(filterLevel.Definition);
-        definition.name = "ConveyorScenarioDefinition";
+        TimedLevelDefinition definition = UnityEngine.Object.Instantiate(conveyorLevel.Definition);
+        definition.name = name + "Definition";
         definition.hideFlags = HideFlags.HideAndDontSave;
         SerializedObject serializedDefinition = new SerializedObject(definition);
-        serializedDefinition.FindProperty("_shelfFilters").arraySize = 0;
-        serializedDefinition.FindProperty("_filteredEmptyColumnCount").intValue = 0;
-        serializedDefinition.FindProperty("_shuffleSwapCount").intValue = 0;
-        serializedDefinition.ApplyModifiedPropertiesWithoutUndo();
-        TimedLevelGenerationResult generation = new TimedLevelLayoutGenerator().GenerateWithSolution(definition, boardShape, LevelWithoutFiltersSeed);
-        TimedLevelVariantGenerator.WriteVariants(definition, new[]
+        SerializedProperty itemGroups = serializedDefinition.FindProperty("_itemGroups");
+        itemGroups.arraySize = ScenarioItemGroups.Length;
+
+        for (int index = 0; index < ScenarioItemGroups.Length; index++)
         {
-            new TimedLevelVariant(
-                LevelWithoutFiltersSeed,
-                TimedLevelLayoutRules.GeneratorVersion,
-                generation.SolutionMoves.Count,
-                BoardStateFingerprint.CreateHash(generation.State),
-                generation.State,
-                generation.SolutionMoves)
-        });
+            SerializedProperty group = itemGroups.GetArrayElementAtIndex(index);
+            group.FindPropertyRelative("_type").intValue = (int)ScenarioItemGroups[index].Type;
+            group.FindPropertyRelative("_groupCount").intValue = ScenarioItemGroups[index].GroupCount;
+        }
+
+        serializedDefinition.FindProperty("_emptyColumnCount").intValue = ScenarioEmptyColumnCount;
+        SerializedProperty conveyorShelves = serializedDefinition.FindProperty("_conveyorShelfIndices");
+        conveyorShelves.arraySize = ScenarioConveyorShelfIndices.Length;
+
+        for (int index = 0; index < ScenarioConveyorShelfIndices.Length; index++)
+            conveyorShelves.GetArrayElementAtIndex(index).intValue = ScenarioConveyorShelfIndices[index];
+
+        SerializedProperty shelfFilters = serializedDefinition.FindProperty("_shelfFilters");
+        shelfFilters.arraySize = boxTypes.Length > 0 ? 1 : 0;
+
+        if (boxTypes.Length > 0)
+        {
+            SerializedProperty box = shelfFilters.GetArrayElementAtIndex(0);
+            box.FindPropertyRelative("_shelfIndex").intValue = BoxShelfIndex;
+            SerializedProperty acceptedTypes = box.FindPropertyRelative("_acceptedTypes");
+            acceptedTypes.arraySize = boxTypes.Length;
+
+            for (int index = 0; index < boxTypes.Length; index++)
+                acceptedTypes.GetArrayElementAtIndex(index).intValue = (int)boxTypes[index];
+        }
+
+        serializedDefinition.FindProperty("_filteredEmptyColumnCount").intValue = boxTypes.Length > 0 ? 1 : 0;
+        serializedDefinition.FindProperty("_shuffleSwapCount").intValue = swapCount;
+        serializedDefinition.ApplyModifiedPropertiesWithoutUndo();
+        TimedLevelVariant variant = GenerateScenarioVariant(definition, boardShape, firstSeed);
+        TimedLevelVariantGenerator.WriteVariants(definition, new[] { variant });
         LevelEntry level = ScriptableObject.CreateInstance<LevelEntry>();
-        level.name = "ConveyorScenarioLevel";
+        level.name = name + "Level";
         level.hideFlags = HideFlags.HideAndDontSave;
         SerializedObject serializedLevel = new SerializedObject(level);
-        serializedLevel.FindProperty("_number").intValue = filterLevel.Number;
+        serializedLevel.FindProperty("_number").intValue = conveyorLevel.Number;
         serializedLevel.FindProperty("_sceneName").stringValue = SceneName;
         serializedLevel.FindProperty("_definition").objectReferenceValue = definition;
         serializedLevel.FindProperty("_available").boolValue = true;
         serializedLevel.ApplyModifiedPropertiesWithoutUndo();
-        _levelWithoutFilters = level;
         return level;
+    }
+
+    private static TimedLevelVariant GenerateScenarioVariant(TimedLevelDefinition definition, BoardStateSnapshot boardShape, int firstSeed)
+    {
+        TimedLevelValidator.ValidateForGeneration(definition, boardShape);
+        TimedLevelLayoutGenerator generator = new TimedLevelLayoutGenerator();
+
+        for (int seed = firstSeed; seed < firstSeed + ScenarioSeedCount; seed++)
+        {
+            try
+            {
+                TimedLevelGenerationResult generation = generator.GenerateWithSolution(definition, boardShape, seed);
+                return new TimedLevelVariant(
+                    seed,
+                    TimedLevelLayoutRules.GeneratorVersion,
+                    generation.SolutionMoves.Count,
+                    BoardStateFingerprint.CreateHash(generation.State),
+                    generation.State,
+                    generation.SolutionMoves);
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
+
+        throw new InvalidOperationException($"{definition.name}: no layout from seeds {firstSeed}-{firstSeed + ScenarioSeedCount - 1}.");
     }
 
     private static void SelectLevel(LevelEntry level)
