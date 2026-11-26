@@ -12,9 +12,9 @@ public sealed class EndlessTimerView : MonoBehaviour
     [SerializeField] private Image _progressImage;
     [SerializeField] private Image _frameImage;
     [SerializeField] private Image _vignetteImage;
-    [SerializeField] private Color _normalColor = new Color(1f, 0.72f, 0.1f);
-    [SerializeField] private Color _warningColor = new Color(1f, 0.35f, 0.05f);
-    [SerializeField] private Color _criticalColor = new Color(0.8f, 0.05f, 0.02f);
+    [SerializeField] private Color _normalColor = new Color32(0xD2, 0xB2, 0x81, 0xFF);
+    [SerializeField] private Color _warningColor = new Color32(0xE8, 0x83, 0x3F, 0xFF);
+    [SerializeField] private Color _criticalColor = new Color32(0xF7, 0x79, 0x6E, 0xFF);
     [SerializeField, Min(0f)] private float _minimumPulseSpeed = 1f;
     [SerializeField, Min(0f)] private float _maximumPulseSpeed = 5f;
     [SerializeField, Range(0f, 1f)] private float _vignetteStartNormalizedTime = 0.3f;

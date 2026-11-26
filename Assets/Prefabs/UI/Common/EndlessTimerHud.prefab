@@ -304,7 +304,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0.72, b: 0.1, a: 1}
+  m_Color: {r: 0.8235294, g: 0.69803923, b: 0.5058824, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -466,9 +466,9 @@ MonoBehaviour:
   _progressImage: {fileID: 6631823540382598085}
   _frameImage: {fileID: 580604804167819481}
   _vignetteImage: {fileID: 0}
-  _normalColor: {r: 1, g: 0.8901961, b: 0.65882355, a: 1}
-  _warningColor: {r: 0.9411765, g: 0.5411765, b: 0.20392157, a: 1}
-  _criticalColor: {r: 0.8862745, g: 0.3372549, b: 0.12156863, a: 1}
+  _normalColor: {r: 0.8235294, g: 0.69803923, b: 0.5058824, a: 1}
+  _warningColor: {r: 0.9098039, g: 0.5137255, b: 0.24705882, a: 1}
+  _criticalColor: {r: 0.96862745, g: 0.4745098, b: 0.43137255, a: 1}
   _minimumPulseSpeed: 1
   _maximumPulseSpeed: 5
   _vignetteStartNormalizedTime: 0.3

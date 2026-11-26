@@ -11,7 +11,7 @@ public sealed class CampaignTimerView : MonoBehaviour
     [SerializeField] private StarRatingView _availableStars;
     [SerializeField] private Image _frameImage;
     [SerializeField] private Image _clockImage;
-    [SerializeField] private Color _criticalColor = new Color(1f, 0.35f, 0.05f);
+    [SerializeField] private Color _criticalColor = new Color32(0xF7, 0x79, 0x6E, 0xFF);
     [SerializeField, Range(0f, 1f)] private float _criticalTimeRatio = 0.2f;
     [SerializeField, Min(0.01f)] private float _pulseDuration = 0.55f;
     [SerializeField, Min(1f)] private float _pulseScale = 1.06f;

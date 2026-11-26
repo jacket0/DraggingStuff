@@ -151,7 +151,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 1, g: 0.94509804, b: 0.76862746, a: 1}
+  m_fontColor: {r: 1, g: 0.9647059, b: 0.8901961, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -513,6 +513,9 @@ MonoBehaviour:
   _emptySprite: {fileID: 21300000, guid: e8d7a8eb6885e40459a032fc431a1022, type: 3}
   _shineImage: {fileID: 0}
   _revealDuration: 0.3
+  _revealClips: []
+  _outputAudioMixerGroup: {fileID: 0}
+  _revealVolume: 0.6
 --- !u!1 &3578797022235872195
 GameObject:
   m_ObjectHideFlags: 0
@@ -572,7 +575,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.16470589, g: 0.078431375, b: 0.05490196, a: 0.82}
+  m_Color: {r: 0.1882353, g: 0.10980392, b: 0.078431375, a: 0.82}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -820,8 +823,7 @@ MonoBehaviour:
   _availableStars: {fileID: 2092832182882232511}
   _frameImage: {fileID: 7976654189078007941}
   _clockImage: {fileID: 2215289190257869783}
-  _normalColor: {r: 1, g: 0.8901961, b: 0.65882355, a: 1}
-  _criticalColor: {r: 0.9411765, g: 0.5411765, b: 0.20392157, a: 1}
+  _criticalColor: {r: 0.96862745, g: 0.4745098, b: 0.43137255, a: 1}
   _criticalTimeRatio: 0.2
   _pulseDuration: 0.55
   _pulseScale: 1.05

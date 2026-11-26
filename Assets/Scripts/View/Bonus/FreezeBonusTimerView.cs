@@ -9,7 +9,7 @@ public sealed class FreezeBonusTimerView : MonoBehaviour
     [SerializeField] private TimerFreezeBonusEffect _freezeEffect;
     [SerializeField] private CanvasGroup _canvasGroup;
     [SerializeField] private TMP_Text _timeText;
-    [SerializeField] private Color _criticalColor = new Color(0.886f, 0.271f, 0.227f);
+    [SerializeField] private Color _criticalColor = new Color32(0xF7, 0x79, 0x6E, 0xFF);
     [SerializeField, Min(0.1f)] private float _criticalTime = 1.5f;
     [SerializeField, Min(0f)] private float _fadeDuration = 0.2f;
     [SerializeField, Min(0.01f)] private float _pulseDuration = 0.3f;

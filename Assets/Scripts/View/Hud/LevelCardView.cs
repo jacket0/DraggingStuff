@@ -16,6 +16,7 @@ public class LevelCardView : MonoBehaviour
     [SerializeField] private GameObject _playRoot;
     [SerializeField] private GameObject _currentHighlight;
     [SerializeField] private GameObject _newRibbon;
+    [SerializeField] private GameObject _completedBadge;
     [SerializeField] private CanvasGroup _sticker;
     [SerializeField] private Image _stickerIcon;
     [SerializeField] private TMP_Text _stickerCountText;
@@ -66,6 +67,7 @@ public class LevelCardView : MonoBehaviour
         _currentHighlight.SetActive(isCurrent);
         _lockIcon.SetActive(!canBeStarted);
         _newRibbon.SetActive(state.IsNew);
+        _completedBadge.SetActive(hasCompletion);
         BindMechanic(state, hasMechanic, canBeStarted);
     }
 

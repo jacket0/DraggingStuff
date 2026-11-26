@@ -19,8 +19,8 @@ public sealed class LevelChapterHeaderView : MonoBehaviour
     [SerializeField] private TMP_Text _starsText;
     [SerializeField] private GameObject _lockedRoot;
     [SerializeField] private TMP_Text _unlockText;
-    [SerializeField] private Color _openIconColor = new Color32(0xF4, 0xA7, 0x2C, 0xFF);
-    [SerializeField] private Color _lockedIconColor = new Color32(0xB9, 0x80, 0x3F, 0xFF);
+    [SerializeField] private Color _openIconColor = new Color32(0xF3, 0xA5, 0x2B, 0xFF);
+    [SerializeField] private Color _lockedIconColor = new Color32(0x8D, 0x72, 0x4F, 0xFF);
     [SerializeField, Range(0f, 1f)] private float _lockedContentAlpha = 0.72f;
     [SerializeField, Min(0f)] private float _bobHeight = 4f;
     [SerializeField, Min(0.01f)] private float _bobHalfPeriod = 1.2f;
