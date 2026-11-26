@@ -1088,7 +1088,7 @@ public static class TimedCampaignValidation
         if (texture == null || texture.width != width || texture.height != height)
             throw new InvalidOperationException(path);
 
-        if (AssetImporter.GetAtPath(path) is not TextureImporter importer || importer.textureType != TextureImporterType.Sprite || importer.mipmapEnabled || !importer.alphaIsTransparency)
+        if (AssetImporter.GetAtPath(path) is not TextureImporter importer || importer.textureType != TextureImporterType.Sprite || !importer.mipmapEnabled || !importer.alphaIsTransparency)
             throw new InvalidOperationException(path);
     }
 

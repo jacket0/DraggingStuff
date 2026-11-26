@@ -124,7 +124,8 @@ public static class ItemIconBaker
         importer.textureType = TextureImporterType.Sprite;
         importer.spriteImportMode = SpriteImportMode.Single;
         importer.alphaIsTransparency = true;
-        importer.mipmapEnabled = false;
+        importer.mipmapEnabled = true;
+        importer.mipmapFilter = TextureImporterMipFilter.KaiserFilter;
         importer.SaveAndReimport();
     }
 

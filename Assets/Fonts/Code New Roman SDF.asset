@@ -76,11 +76,11 @@ MonoBehaviour:
     m_Scale: 1
     m_UnitsPerEM: 0
     m_LineHeight: 51.51953
-    m_AscentLine: 32.677734
+    m_AscentLine: 36.5
     m_CapLine: 29
     m_MeanLine: 22
     m_Baseline: 0
-    m_DescentLine: -11.322266
+    m_DescentLine: -7.5
     m_SuperscriptOffset: 32.677734
     m_SuperscriptSize: 0.5
     m_SubscriptOffset: -11.322266
