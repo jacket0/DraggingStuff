@@ -8,11 +8,13 @@ public class MoveSuggestion
     public ShelfColumnView SourceColumn { get; }
     public ShelfColumnView TargetColumn { get; }
     public IReadOnlyList<ShelfItem> TargetMatchingItems => _targetMatchingItems;
+    public bool IsSwap { get; }
 
     public MoveSuggestion(ShelfColumnView sourceColumn, ShelfColumnView targetColumn, IReadOnlyList<ShelfItem> targetMatchingItems)
     {
         SourceColumn = sourceColumn ?? throw new ArgumentNullException(nameof(sourceColumn));
         TargetColumn = targetColumn ?? throw new ArgumentNullException(nameof(targetColumn));
+        IsSwap = !targetColumn.IsEmpty;
 
         if (targetMatchingItems == null)
             throw new ArgumentNullException(nameof(targetMatchingItems));

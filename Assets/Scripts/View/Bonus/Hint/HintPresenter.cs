@@ -11,23 +11,24 @@ public sealed class HintPresenter : MonoBehaviour, IHintPresenter
     [SerializeField] private ParticleSystem[] _matchingHighlights;
     [SerializeField] private ParticleSystem _targetHighlight;
     [SerializeField] private ParticleSystem _movementParticles;
+    [SerializeField] private HintHandView _hand;
     [SerializeField] private Ease _movementEase = Ease.InOutSine;
     [SerializeField, Min(0.01f)] private float _itemMoveDuration = 0.35f;
     [SerializeField, Min(0f)] private float _targetHoldDuration = 0.2f;
 
     private Sequence _presentationSequence;
     private Action _completed;
-    private ShelfItem _animatedItem;
-    private Transform _originalParent;
-    private Vector3 _originalLocalPosition;
-    private Quaternion _originalLocalRotation;
-    private Vector3 _originalLocalScale;
+    private ItemPose _animatedItem;
+    private ItemPose _displacedItem;
     private readonly List<ParticleSystem> _matchingHighlightPool = new List<ParticleSystem>();
 
     public bool IsPlaying => _presentationSequence != null;
 
     private void Awake()
     {
+        if (_hand == null)
+            throw new InvalidOperationException(nameof(_hand));
+
         foreach (ParticleSystem matchingHighlight in _matchingHighlights)
         {
             if (matchingHighlight == null || _matchingHighlightPool.Contains(matchingHighlight))
@@ -59,21 +60,18 @@ public sealed class HintPresenter : MonoBehaviour, IHintPresenter
         if (suggestion.SourceColumn.IsEmpty)
             throw new InvalidOperationException("Исходный слот подсказки больше не содержит предмет.");
 
-        if (!suggestion.TargetColumn.IsEmpty)
-            throw new InvalidOperationException("Целевой слот подсказки уже занят.");
+        if (suggestion.IsSwap == suggestion.TargetColumn.IsEmpty)
+            throw new InvalidOperationException("Целевой слот подсказки изменился.");
 
         EnsureMatchingHighlightCapacity(suggestion.TargetMatchingItems.Count);
 
         StopParticleSystems();
 
-        _animatedItem = suggestion.SourceColumn.FrontItem;
-        _originalParent = _animatedItem.transform.parent;
-        _originalLocalPosition = _animatedItem.transform.localPosition;
-        _originalLocalRotation = _animatedItem.transform.localRotation;
-        _originalLocalScale = _animatedItem.transform.localScale;
+        _animatedItem = new ItemPose(suggestion.SourceColumn.FrontItem);
+        _displacedItem = suggestion.IsSwap ? new ItemPose(suggestion.TargetColumn.FrontItem) : null;
 
-        Vector3 sourcePosition = _animatedItem.transform.position;
-        Vector3 targetPosition = suggestion.TargetColumn.ItemAnchor.TransformPoint(_originalLocalPosition);
+        Vector3 sourcePosition = _animatedItem.Item.transform.position;
+        Vector3 targetPosition = suggestion.TargetColumn.ItemAnchor.TransformPoint(_animatedItem.LocalPosition);
 
         PlayAtPosition(_sourceHighlight, sourcePosition);
 
@@ -85,12 +83,33 @@ public sealed class HintPresenter : MonoBehaviour, IHintPresenter
         _completed = completed;
         _movementParticles.transform.position = sourcePosition;
         _movementParticles.Play(false);
+        _hand.Show(_animatedItem.Item.transform);
 
         _presentationSequence = DOTween.Sequence();
-        _presentationSequence.Append(_animatedItem.transform.DOMove(targetPosition, _itemMoveDuration).SetEase(_movementEase));
+        _presentationSequence.AppendInterval(_hand.AppearDuration);
+        _presentationSequence.AppendCallback(_hand.Grab);
+        _presentationSequence.AppendInterval(_hand.PressDuration);
+        _presentationSequence.Append(_animatedItem.Item.transform.DOMove(targetPosition, _itemMoveDuration).SetEase(_movementEase));
         _presentationSequence.Join(_movementParticles.transform.DOMove(targetPosition, _itemMoveDuration).SetEase(_movementEase));
+
+        Vector3 displacedPosition = Vector3.zero;
+
+        if (_displacedItem != null)
+        {
+            displacedPosition = _displacedItem.Item.transform.position;
+            Vector3 displacedTargetPosition = suggestion.SourceColumn.ItemAnchor.TransformPoint(_displacedItem.LocalPosition);
+            _presentationSequence.Join(_displacedItem.Item.transform.DOMove(displacedTargetPosition, _itemMoveDuration).SetEase(_movementEase));
+        }
+
+        _presentationSequence.AppendCallback(_hand.Release);
         _presentationSequence.AppendInterval(Mathf.Max(_targetHoldDuration, GetHighlightRemainingDuration()));
-        _presentationSequence.Append(_animatedItem.transform.DOMove(sourcePosition, _itemMoveDuration).SetEase(_movementEase));
+        _presentationSequence.AppendCallback(_hand.Hide);
+        _presentationSequence.AppendInterval(_hand.AppearDuration);
+        _presentationSequence.Append(_animatedItem.Item.transform.DOMove(sourcePosition, _itemMoveDuration).SetEase(_movementEase));
+
+        if (_displacedItem != null)
+            _presentationSequence.Join(_displacedItem.Item.transform.DOMove(displacedPosition, _itemMoveDuration).SetEase(_movementEase));
+
         _presentationSequence.OnComplete(CompletePresentation);
         _presentationSequence.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
     }
@@ -98,7 +117,7 @@ public sealed class HintPresenter : MonoBehaviour, IHintPresenter
     public void Stop()
     {
         _presentationSequence?.Kill();
-        RestoreAnimatedItem();
+        RestoreItems();
         CompletePresentation();
     }
 
@@ -116,7 +135,8 @@ public sealed class HintPresenter : MonoBehaviour, IHintPresenter
         foreach (ParticleSystem matchingHighlight in _matchingHighlightPool)
             duration = Mathf.Max(duration, matchingHighlight.main.duration);
 
-        float remainingDuration = Mathf.Max(MinimumPresentationDuration, duration) - _itemMoveDuration;
+        float elapsedDuration = _hand.AppearDuration + _hand.PressDuration + _itemMoveDuration;
+        float remainingDuration = Mathf.Max(MinimumPresentationDuration, duration) - elapsedDuration;
         return Mathf.Max(0f, remainingDuration);
     }
 
@@ -124,27 +144,24 @@ public sealed class HintPresenter : MonoBehaviour, IHintPresenter
     {
         Action completed = _completed;
 
-        RestoreAnimatedItem();
+        RestoreItems();
         _completed = null;
         _presentationSequence = null;
 
         StopParticleSystems();
+
+        if (_hand != null)
+            _hand.HideImmediately();
+
         completed?.Invoke();
     }
 
-    private void RestoreAnimatedItem()
+    private void RestoreItems()
     {
-        if (_animatedItem == null)
-            return;
-
-        Transform itemTransform = _animatedItem.transform;
-        itemTransform.SetParent(_originalParent, false);
-        itemTransform.localPosition = _originalLocalPosition;
-        itemTransform.localRotation = _originalLocalRotation;
-        itemTransform.localScale = _originalLocalScale;
-
+        _animatedItem?.Restore();
+        _displacedItem?.Restore();
         _animatedItem = null;
-        _originalParent = null;
+        _displacedItem = null;
     }
 
     private void StopParticleSystems()
@@ -166,6 +183,37 @@ public sealed class HintPresenter : MonoBehaviour, IHintPresenter
             ParticleSystem matchingHighlight = Instantiate(template, template.transform.parent);
             matchingHighlight.name = $"MatchingHighlight{_matchingHighlightPool.Count + 1}";
             _matchingHighlightPool.Add(matchingHighlight);
+        }
+    }
+
+    private sealed class ItemPose
+    {
+        private readonly Transform _parent;
+        private readonly Quaternion _localRotation;
+        private readonly Vector3 _localScale;
+
+        public ShelfItem Item { get; }
+        public Vector3 LocalPosition { get; }
+
+        public ItemPose(ShelfItem item)
+        {
+            Item = item;
+            _parent = item.transform.parent;
+            LocalPosition = item.transform.localPosition;
+            _localRotation = item.transform.localRotation;
+            _localScale = item.transform.localScale;
+        }
+
+        public void Restore()
+        {
+            if (Item == null)
+                return;
+
+            Transform itemTransform = Item.transform;
+            itemTransform.SetParent(_parent, false);
+            itemTransform.localPosition = LocalPosition;
+            itemTransform.localRotation = _localRotation;
+            itemTransform.localScale = _localScale;
         }
     }
 }

@@ -32,7 +32,7 @@ public sealed class ClosedShelfIntroHint : MonoBehaviour
     [SerializeField, Min(0.01f)] private float _fadeDuration = 0.25f;
     [SerializeField] private Vector2 _bubbleOffset = new Vector2(0f, -24f);
     [SerializeField] private LocalizedHintText _collectText = new LocalizedHintText(
-        "Соберите предметы с бирки, чтобы открыть полку",
+        "Собери предметы с бирки, чтобы открыть полку",
         "Collect the items shown on the tag to open the shelf",
         "Rafı açmak için etiketteki eşyaları topla");
     [SerializeField] private LocalizedHintText _refillText = new LocalizedHintText(
@@ -40,7 +40,7 @@ public sealed class ClosedShelfIntroHint : MonoBehaviour
         "While a shelf is closed, new items keep appearing",
         "Raf kapalıyken yeni eşyalar gelmeye devam eder");
     [SerializeField] private LocalizedHintText _shelfMatchesText = new LocalizedHintText(
-        "Собирайте тройки на подсвеченной полке",
+        "Собирай тройки на подсвеченной полке",
         "Make matches on the highlighted shelf",
         "Vurgulanan rafta üçlü yap");
 

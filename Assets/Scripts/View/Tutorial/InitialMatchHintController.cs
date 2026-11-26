@@ -11,11 +11,13 @@ public sealed class InitialMatchHintController : MonoBehaviour
 
     private bool _isEligible;
     private bool _wasShown;
+    private bool _needsCheck;
 
     private void OnEnable()
     {
         _session.SessionStarted += HandleSessionStarted;
         _session.StateChanged += HandleStateChanged;
+        _session.BoardSettled += HandleBoardSettled;
         _dragController.DragStarting += HandleDragStarting;
     }
 
@@ -23,19 +25,22 @@ public sealed class InitialMatchHintController : MonoBehaviour
     {
         _session.SessionStarted -= HandleSessionStarted;
         _session.StateChanged -= HandleStateChanged;
+        _session.BoardSettled -= HandleBoardSettled;
         _dragController.DragStarting -= HandleDragStarting;
         _idleMovePrompt.enabled = true;
     }
 
     private void Update()
     {
-        if (!_isEligible || _wasShown || !_session.CanInteract || !_session.IsBoardSettled || Time.timeScale <= 0f || _presenter.IsPlaying)
+        if (!_isEligible || _wasShown || !_needsCheck || !_session.CanInteract || !_session.IsBoardSettled || Time.timeScale <= 0f || _presenter.IsPlaying)
             return;
 
-        if (!_suggestionProvider.TryGetSuggestion(out MoveSuggestion suggestion))
+        _needsCheck = false;
+
+        if (!_suggestionProvider.TryGetSuggestion(false, out MoveSuggestion suggestion))
             return;
 
-        if (!suggestion.TargetColumn.IsEmpty || suggestion.TargetMatchingItems.Count != suggestion.TargetColumn.Shelf.Capacity - 1)
+        if (suggestion.TargetMatchingItems.Count != suggestion.TargetColumn.Shelf.Capacity - 1)
             return;
 
         _wasShown = true;
@@ -46,9 +51,15 @@ public sealed class InitialMatchHintController : MonoBehaviour
     {
         _isEligible = _session.CurrentLevel.Number == _levelNumber;
         _wasShown = false;
+        _needsCheck = true;
 
         if (_isEligible)
             _idleMovePrompt.enabled = false;
+    }
+
+    private void HandleBoardSettled()
+    {
+        _needsCheck = true;
     }
 
     private void HandlePresentationCompleted()

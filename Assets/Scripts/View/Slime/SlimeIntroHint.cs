@@ -39,7 +39,7 @@ public sealed class SlimeIntroHint : MonoBehaviour
         "Items in the slime are stuck and can't be picked up",
         "Balçıktaki eşyalar yapıştı, onları alamazsın");
     [SerializeField] private LocalizedHintText _cleanText = new LocalizedHintText(
-        "Соберите тройку на этой полке, чтобы смыть слизь",
+        "Собери тройку на этой полке, чтобы смыть слизь",
         "Make a match on this shelf to wash the slime away",
         "Balçığı temizlemek için bu rafta üçlü yap");
     [SerializeField] private LocalizedHintText _forecastText = new LocalizedHintText(
