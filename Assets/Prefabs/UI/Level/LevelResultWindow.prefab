@@ -2664,7 +2664,8 @@ MonoBehaviour:
   _lightRays: {fileID: 4660581874951294708}
   _sparkles: {fileID: 3357480816061927513}
   _victoryPanel: {fileID: 5661270508784491451}
-  _defeatPanel: {fileID: 913035802193520059}
+  _timeUpPanel: {fileID: 913035802193520059}
+  _mechanicDefeatPanel: {fileID: 0}
 --- !u!223 &7938800557512306241
 Canvas:
   m_ObjectHideFlags: 0
@@ -8007,6 +8008,12 @@ MonoBehaviour:
   _emptySprite: {fileID: 21300000, guid: e8d7a8eb6885e40459a032fc431a1022, type: 3}
   _shineImage: {fileID: 2345473402856112823}
   _revealDuration: 0.3
+  _revealClips:
+  - {fileID: 8300000, guid: e7d77b2318956f54da8e29653d73d831, type: 3}
+  - {fileID: 8300000, guid: 46c6763f63c02c646a762b12a6d8d112, type: 3}
+  - {fileID: 8300000, guid: 706de713238ccd449961e3783578402a, type: 3}
+  _outputAudioMixerGroup: {fileID: -2202310126120427073, guid: b541543115fcfbe4893c0262ea97557e, type: 2}
+  _revealVolume: 0.6
 --- !u!1 &6342777239325013858
 GameObject:
   m_ObjectHideFlags: 0
@@ -10253,10 +10260,11 @@ MonoBehaviour:
   _scoreResult: {fileID: 5223640249743967210}
   _bestScoreResult: {fileID: 1163713885100873567}
   _lightRays: {fileID: 5881107705538448249}
-  _clock: {fileID: 1900273528090388795}
+  _icon: {fileID: 1900273528090388795}
   _defeatClip: {fileID: 8300000, guid: d1367f54f4754fa4fb73d2990beb52a1, type: 3}
   _outputAudioMixerGroup: {fileID: -2202310126120427073, guid: b541543115fcfbe4893c0262ea97557e, type: 2}
   _defeatVolume: 0.7
+  _reasonCaptions: []
 --- !u!1 &7849978495660897957
 GameObject:
   m_ObjectHideFlags: 0

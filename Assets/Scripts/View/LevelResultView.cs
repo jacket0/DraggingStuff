@@ -8,6 +8,9 @@ using YG.LanguageLegacy;
 
 public sealed class LevelResultView : MonoBehaviour
 {
+    private const float VictoryBounceStartScale = 0.8f;
+    private const float VictoryBounceDuration = 0.35f;
+
     [SerializeField] private Button _restartButton;
     [SerializeField] private Button _menuButton;
     [SerializeField] private TMP_Text _finalScoreResult;
@@ -28,11 +31,13 @@ public sealed class LevelResultView : MonoBehaviour
     [SerializeField] private DefeatResultView _mechanicDefeatPanel;
 
     private Tween _raysTween;
+    private Tween _victoryBounceTween;
 
     public event Action MenuRequested;
     public event Action RestartRequested;
     public event Action ReviewRequested;
     public event Action NextRequested;
+    public event Action<int> StarRevealed;
 
     private void Awake()
     {
@@ -45,6 +50,7 @@ public sealed class LevelResultView : MonoBehaviour
         _menuButton.onClick.AddListener(MenuButtonClicked);
         _reviewButton.onClick.AddListener(ReviewButtonClicked);
         _nextButton.onClick.AddListener(NextButtonClicked);
+        _earnedStars.StarRevealed += HandleStarRevealed;
         Subscribe(_timeUpPanel);
         Subscribe(_mechanicDefeatPanel);
     }
@@ -56,11 +62,16 @@ public sealed class LevelResultView : MonoBehaviour
         _reviewButton?.onClick.RemoveListener(ReviewButtonClicked);
         _nextButton?.onClick.RemoveListener(NextButtonClicked);
 
+        if (_earnedStars != null)
+            _earnedStars.StarRevealed -= HandleStarRevealed;
+
         Unsubscribe(_timeUpPanel);
         Unsubscribe(_mechanicDefeatPanel);
 
         _raysTween?.Kill();
         _raysTween = null;
+        _victoryBounceTween?.Kill(true);
+        _victoryBounceTween = null;
     }
 
     public void Show(LevelRunResult result, long bestTimeMilliseconds, long bestScore, bool isReviewAvailable, bool opensEndlessMode, bool isNewRecord)
@@ -140,8 +151,26 @@ public sealed class LevelResultView : MonoBehaviour
             _newRecordRoot.SetActive(isNewRecord);
 
         SetNextButtonText(opensEndlessMode);
-        _earnedStars.RevealRating(result.Stars);
+        PlayVictoryBounce();
+        _earnedStars.RevealRating(result.Stars, VictoryBounceDuration);
         StartRaysAnimation(result.Stars);
+    }
+
+    private void PlayVictoryBounce()
+    {
+        _victoryBounceTween?.Kill();
+        Transform panel = _victoryPanel.transform;
+        panel.localScale = Vector3.one * VictoryBounceStartScale;
+        _victoryBounceTween = panel
+            .DOScale(Vector3.one, VictoryBounceDuration)
+            .SetEase(Ease.OutBack)
+            .SetUpdate(true)
+            .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+    }
+
+    private void HandleStarRevealed(int starIndex)
+    {
+        StarRevealed?.Invoke(starIndex);
     }
 
     private void SetResultMode(bool won)

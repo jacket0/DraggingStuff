@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.Audio;
 using UnityEngine.UI;
 
 public sealed class StarRatingView : MonoBehaviour
@@ -11,8 +12,13 @@ public sealed class StarRatingView : MonoBehaviour
     [SerializeField] private Sprite _emptySprite;
     [SerializeField] private Image _shineImage;
     [SerializeField, Min(0.01f)] private float _revealDuration = 0.3f;
+    [SerializeField] private List<AudioClip> _revealClips = new List<AudioClip>(3);
+    [SerializeField] private AudioMixerGroup _outputAudioMixerGroup;
+    [SerializeField, Range(0f, 1f)] private float _revealVolume = 0.6f;
 
     private Sequence _revealSequence;
+
+    public event Action<int> StarRevealed;
 
     public void SetRating(int rating)
     {
@@ -32,20 +38,27 @@ public sealed class StarRatingView : MonoBehaviour
             _stars[i].sprite = i < rating ? _filledSprite : _emptySprite;
     }
 
-    public void RevealRating(int rating)
+    public void RevealRating(int rating, float delay)
     {
+        if (delay < 0f)
+            throw new ArgumentOutOfRangeException(nameof(delay));
+
         SetRating(rating);
         _revealSequence?.Kill();
 
-        Sequence sequence = DOTween.Sequence();
+        Sequence sequence = DOTween.Sequence().AppendInterval(delay);
 
         for (int i = 0; i < _stars.Count; i++)
         {
             RectTransform star = _stars[i].rectTransform;
             star.localScale = i < rating ? Vector3.zero : Vector3.one;
 
-            if (i < rating)
-                sequence.Append(star.DOScale(Vector3.one, _revealDuration).SetEase(Ease.OutBack));
+            if (i >= rating)
+                continue;
+
+            int starIndex = i;
+            sequence.AppendCallback(() => HandleStarRevealStarted(starIndex));
+            sequence.Append(star.DOScale(Vector3.one, _revealDuration).SetEase(Ease.OutBack));
         }
 
         if (_shineImage != null && rating > 0)
@@ -67,5 +80,13 @@ public sealed class StarRatingView : MonoBehaviour
     {
         _revealSequence?.Kill();
         _revealSequence = null;
+    }
+
+    private void HandleStarRevealStarted(int starIndex)
+    {
+        if (starIndex < _revealClips.Count)
+            UiAudioPlayer.Play(_revealClips[starIndex], _outputAudioMixerGroup, _revealVolume);
+
+        StarRevealed?.Invoke(starIndex);
     }
 }

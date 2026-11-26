@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
@@ -8,6 +9,7 @@ public class LevelUiController : MonoBehaviour
     private const string MainMenuSceneName = "MainMenu";
     private const string EndlessLevelSceneName = "EndlessLevel";
     private const int ReviewLevelNumber = 3;
+    private const int ExtraConfettiStarIndex = 2;
 
     [SerializeField] private PauseWindowView _pauseWindowView;
     [SerializeField] private LevelHudView _levelHudView;
@@ -18,11 +20,20 @@ public class LevelUiController : MonoBehaviour
     [SerializeField] private YandexInterstitialAdService _interstitialAdService;
     [SerializeField] private LevelCatalog _levelCatalog;
     [SerializeField] private LevelSelectionState _levelSelectionState;
+    [SerializeField] private VictoryCelebrationView _victoryCelebration;
+    [SerializeField, Min(0f)] private float _victoryWindowDelay = 0.7f;
 
     private bool _isTransitionPending;
+    private Coroutine _victoryWindowRoutine;
 
     private IGameReviewService GameReviewService => _gameReviewService;
     private IInterstitialAdService InterstitialAdService => _interstitialAdService;
+
+    private void Awake()
+    {
+        if (_victoryCelebration == null)
+            throw new InvalidOperationException(nameof(_victoryCelebration));
+    }
 
     private void Start()
     {
@@ -42,6 +53,7 @@ public class LevelUiController : MonoBehaviour
         _levelResultView.NextRequested += HandleNextLevelRequest;
         _pauseWindowView.MenuRequested += HandleMenuRequest;
         _levelResultView.ReviewRequested += HandleReviewRequested;
+        _levelResultView.StarRevealed += HandleStarRevealed;
     }
 
     private void OnDisable()
@@ -55,6 +67,13 @@ public class LevelUiController : MonoBehaviour
         _levelResultView.NextRequested -= HandleNextLevelRequest;
         _pauseWindowView.MenuRequested -= HandleMenuRequest;
         _levelResultView.ReviewRequested -= HandleReviewRequested;
+        _levelResultView.StarRevealed -= HandleStarRevealed;
+
+        if (_victoryWindowRoutine != null)
+        {
+            StopCoroutine(_victoryWindowRoutine);
+            _victoryWindowRoutine = null;
+        }
     }
 
     private void Update()
@@ -111,7 +130,30 @@ public class LevelUiController : MonoBehaviour
 
         _levelHudView.Hide();
         _pauseWindowView.Hide();
+
+        if (!result.Won)
+        {
+            _levelResultView.Show(result, bestTime, bestScore, isReviewAvailable, opensEndlessMode, isNewRecord);
+            return;
+        }
+
+        _victoryCelebration.Play();
+        _victoryWindowRoutine = StartCoroutine(ShowVictoryWindowAfterDelay(result, bestTime, bestScore, isReviewAvailable, opensEndlessMode, isNewRecord));
+    }
+
+    private IEnumerator ShowVictoryWindowAfterDelay(LevelRunResult result, long bestTime, long bestScore, bool isReviewAvailable, bool opensEndlessMode, bool isNewRecord)
+    {
+        yield return new WaitForSecondsRealtime(_victoryWindowDelay);
+
+        _victoryWindowRoutine = null;
         _levelResultView.Show(result, bestTime, bestScore, isReviewAvailable, opensEndlessMode, isNewRecord);
+        _victoryCelebration.PlayFanfare();
+    }
+
+    private void HandleStarRevealed(int starIndex)
+    {
+        if (starIndex == ExtraConfettiStarIndex)
+            _victoryCelebration.PlayExtraBurst();
     }
 
     private void HandleMenuRequest()

@@ -15,6 +15,7 @@ public static class TimedCampaignValidation
     private const int LevelsPerChapter = 5;
     private const string FirstClosedShelfDefinitionPath = "Assets/Levels/Timed/TimedLevel_C3_01.asset";
     private const string LevelResultWindowPath = "Assets/Prefabs/UI/Level/LevelResultWindow.prefab";
+    private const string VictoryCelebrationPath = "Assets/Prefabs/UI/Level/VictoryCelebration.prefab";
     private const string CampaignTimerPrefabPath = "Assets/Prefabs/UI/Common/CampaignTimerHud.prefab";
     private const string EndlessTimerPrefabPath = "Assets/Prefabs/UI/Common/EndlessTimerHud.prefab";
 
@@ -47,6 +48,7 @@ public static class TimedCampaignValidation
         KeyLockModelValidation.Run(catalog);
         CyclicShelfModelValidation.Run(catalog);
         SlimeModelValidation.Run(catalog);
+        TutorialLayoutValidation.Run();
         ValidateTripleRefillGenerator();
         ValidateRevealedShelfLatinSquare();
         ValidateCampaignScenes(catalog);
@@ -79,6 +81,7 @@ public static class TimedCampaignValidation
         KeyLockModelValidation.Run(catalog);
         CyclicShelfModelValidation.Run(catalog);
         SlimeModelValidation.Run(catalog);
+        TutorialLayoutValidation.Run();
         ValidateTripleRefillGenerator();
         ValidateRevealedShelfLatinSquare();
         ValidateSwapHoverViews();
@@ -605,9 +608,22 @@ public static class TimedCampaignValidation
             ValidateCampaignHud(sceneName, timerView);
             ValidatePrefabInstance(sceneName, result.gameObject, LevelResultWindowPath);
             ValidateResultLayout(sceneName, result);
+            ValidateVictoryCelebration(sceneName, scene);
             ValidateShelfFilterScene(sceneName, scene, catalog.Levels.Where(level => level.SceneName == sceneName && level.Definition.HasShelfFilters));
             ValidateSlimeScene(sceneName, scene, catalog.Levels.Where(level => level.SceneName == sceneName && level.Definition.HasSlime));
         }
+    }
+
+    private static void ValidateVictoryCelebration(string sceneName, Scene scene)
+    {
+        LevelUiController controller = FindInScene<LevelUiController>(scene);
+        RequireReference(controller, "_victoryCelebration");
+        VictoryCelebrationView celebration = GetReference<VictoryCelebrationView>(controller, "_victoryCelebration");
+
+        foreach (string field in new[] { "_leftBurst", "_rightBurst", "_extraBurst", "_levelMusic", "_fanfareClip", "_outputAudioMixerGroup" })
+            RequireReference(celebration, field);
+
+        ValidatePrefabInstance(sceneName, celebration.gameObject, VictoryCelebrationPath);
     }
 
     private static void ValidateSlimeScene(string sceneName, Scene scene, IEnumerable<LevelEntry> slimeLevels)
