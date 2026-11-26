@@ -12,6 +12,7 @@ public sealed class SlimeController : MonoBehaviour
     [SerializeField] private SlimeBoardView _view;
     [SerializeField] private SlimeAudioPlayer _audio;
 
+    private readonly HashSet<ColumnPosition> _pendingGrowthColumns = new HashSet<ColumnPosition>();
     private int _growthCount;
 
     public bool IsGrowing => _growthCount > 0;
@@ -69,6 +70,7 @@ public sealed class SlimeController : MonoBehaviour
     private void HandleSessionStarted()
     {
         _growthCount = 0;
+        _pendingGrowthColumns.Clear();
 
         if (!_shelfBoard.HasSlime)
         {
@@ -102,11 +104,8 @@ public sealed class SlimeController : MonoBehaviour
         if (!_shelfBoard.HasSlime)
             return;
 
-        Clean(matchedShelves);
-
-        foreach (ColumnPosition grownColumn in _shelfBoard.AdvanceSlimeGrowth())
-            RequestGrowth(grownColumn);
-
+        ShowCleaning();
+        ShowGrowth();
         RefreshForecast();
     }
 
@@ -115,7 +114,7 @@ public sealed class SlimeController : MonoBehaviour
         if (!_shelfBoard.HasSlime)
             return;
 
-        Clean(matchedShelves);
+        ShowCleaning();
         RefreshForecast();
     }
 
@@ -161,11 +160,15 @@ public sealed class SlimeController : MonoBehaviour
         SwapRejected?.Invoke(frontItem);
     }
 
-    private void Clean(IReadOnlyList<Shelf> matchedShelves)
+    private void ShowCleaning()
     {
-        IReadOnlyList<ColumnPosition> cleanedColumns = _shelfBoard.CleanSlime(matchedShelves);
+        ColumnPosition[] cleanedColumns = _view.GetPresentSpots()
+            .Where(column => !_shelfBoard.Slime.IsSticky(column))
+            .OrderBy(column => column.ShelfIndex)
+            .ThenBy(column => column.ColumnIndex)
+            .ToArray();
 
-        if (cleanedColumns.Count == 0)
+        if (cleanedColumns.Length == 0)
             return;
 
         _view.PlayCleaned(cleanedColumns);
@@ -173,15 +176,28 @@ public sealed class SlimeController : MonoBehaviour
         SlimeCleaned?.Invoke(cleanedColumns);
     }
 
+    private void ShowGrowth()
+    {
+        ColumnPosition[] grownColumns = _shelfBoard.Slime.StickyColumns
+            .Where(column => !_view.IsSpotPresent(column) && !_pendingGrowthColumns.Contains(column))
+            .ToArray();
+
+        foreach (ColumnPosition column in grownColumns)
+            RequestGrowth(column);
+    }
+
     private void RequestGrowth(ColumnPosition column)
     {
         Shelf shelf = _shelfBoard.Shelves[column.ShelfIndex];
         _growthCount++;
+        _pendingGrowthColumns.Add(column);
         _session.RequestBoardChange(new[] { shelf }, completed => PlayGrowth(column, completed));
     }
 
     private void PlayGrowth(ColumnPosition column, Action completed)
     {
+        _pendingGrowthColumns.Remove(column);
+
         if (!_shelfBoard.Slime.IsSticky(column))
         {
             _growthCount--;

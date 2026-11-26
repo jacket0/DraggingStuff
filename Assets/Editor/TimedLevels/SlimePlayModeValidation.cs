@@ -401,8 +401,11 @@ public static class SlimePlayModeValidation
         Vector2 pressPosition = GetScreenCenter(draggedItem);
         Expect(_drag.TryBeginDrag(draggedItem, pressPosition), "P6: a drag from the growth target shelf must start");
         _drag.UpdateDrag(pressPosition + new Vector2(120f, -60f));
+        Expect(_board.IsSticky(_board.GetColumn(GrowthTarget)), "P6: the growth must reach the model when the move is accepted");
 
-        while (!_board.IsSticky(_board.GetColumn(GrowthTarget)) || _slime.IsGrowing)
+        foreach (object step in WaitUntil(() => _slime.IsGrowing, "P6 growth")) yield return step;
+
+        while (_slime.IsGrowing)
         {
             Expect(!_drag.IsDragging || !_board.IsShelfLocked(targetShelf), "P6: the growth reservation must cancel the drag");
             yield return null;

@@ -241,29 +241,6 @@ public sealed class ShelfBoard : MonoBehaviour
         _slime = slime;
     }
 
-    public IReadOnlyList<ColumnPosition> CleanSlime(IEnumerable<Shelf> matchedShelves)
-    {
-        if (matchedShelves == null)
-            throw new ArgumentNullException(nameof(matchedShelves));
-
-        if (!HasSlime)
-            return Array.Empty<ColumnPosition>();
-
-        BoardStateSnapshot cleanedBoard = SlimeRule.Clean(CreateSnapshot(), matchedShelves.Select(GetShelfIndex), out IReadOnlyList<ColumnPosition> cleanedColumns);
-        _slime = cleanedBoard.Slime;
-        return cleanedColumns;
-    }
-
-    public IReadOnlyList<ColumnPosition> AdvanceSlimeGrowth()
-    {
-        if (!HasSlime)
-            return Array.Empty<ColumnPosition>();
-
-        BoardStateSnapshot grownBoard = SlimeRule.AdvanceGrowth(CreateSnapshot(), out IReadOnlyList<ColumnPosition> grownColumns);
-        _slime = grownBoard.Slime;
-        return grownColumns;
-    }
-
     public bool IsStuckInSlime() => HasSlime && SlimeRule.IsStuck(CreateSnapshot(), _simulator);
 
     public Shelf FindShelfLostToSlime()
@@ -345,12 +322,15 @@ public sealed class ShelfBoard : MonoBehaviour
 
     public MoveOutcome TryMove(ShelfColumn source, ShelfColumn target)
     {
-        if (!TrySimulateMove(source, target, out _))
+        if (!TrySimulateMove(source, target, out BoardMoveSimulation simulation))
             return MoveOutcome.Rejected();
 
         Shelf sourceShelf = GetView(source).Shelf;
         Shelf targetShelf = GetView(target).Shelf;
         Shelf[] affected = _shelves.Where(shelf => shelf == sourceShelf || shelf == targetShelf).ToArray();
+
+        if (HasSlime)
+            _slime = simulation.State.Slime;
 
         if (target.IsEmpty)
         {

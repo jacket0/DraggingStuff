@@ -5,6 +5,7 @@ using UnityEngine;
 
 public sealed class FreezeBonusTimerView : MonoBehaviour
 {
+    [SerializeField] private GameSession _session;
     [SerializeField] private TimerFreezeBonusEffect _freezeEffect;
     [SerializeField] private CanvasGroup _canvasGroup;
     [SerializeField] private TMP_Text _timeText;
@@ -22,7 +23,7 @@ public sealed class FreezeBonusTimerView : MonoBehaviour
 
     private void Awake()
     {
-        if (_freezeEffect == null || _canvasGroup == null || _timeText == null)
+        if (_session == null || _freezeEffect == null || _canvasGroup == null || _timeText == null)
             throw new InvalidOperationException(nameof(FreezeBonusTimerView));
 
         _normalColor = _timeText.color;
@@ -43,7 +44,7 @@ public sealed class FreezeBonusTimerView : MonoBehaviour
     private void Update()
     {
         float remainingTime = _freezeEffect.RemainingFreezeTime;
-        bool isActive = remainingTime > 0f;
+        bool isActive = remainingTime > 0f && _session.State != LevelState.Won && _session.State != LevelState.Lost;
         SetVisible(isActive);
 
         if (!isActive)

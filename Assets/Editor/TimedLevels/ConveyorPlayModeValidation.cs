@@ -665,13 +665,17 @@ public static class ConveyorPlayModeValidation
 
     private static LevelEntry GetLevelWithoutFilters()
     {
-        _levelWithoutFilters ??= CreateScenarioLevel("ConveyorScenario", Array.Empty<ItemType>(), 0, LevelWithoutFiltersSeed);
+        if (_levelWithoutFilters == null || _levelWithoutFilters.Definition == null)
+            _levelWithoutFilters = CreateScenarioLevel("ConveyorScenario", Array.Empty<ItemType>(), 0, LevelWithoutFiltersSeed);
+
         return _levelWithoutFilters;
     }
 
     private static LevelEntry GetLevelWithBox()
     {
-        _levelWithBox ??= CreateScenarioLevel("ConveyorBoxScenario", new[] { ItemType.Lamp }, BoxScenarioSwapCount, LevelWithBoxSeed);
+        if (_levelWithBox == null || _levelWithBox.Definition == null)
+            _levelWithBox = CreateScenarioLevel("ConveyorBoxScenario", new[] { ItemType.Lamp }, BoxScenarioSwapCount, LevelWithBoxSeed);
+
         return _levelWithBox;
     }
 
@@ -738,6 +742,7 @@ public static class ConveyorPlayModeValidation
     {
         TimedLevelValidator.ValidateForGeneration(definition, boardShape);
         TimedLevelLayoutGenerator generator = new TimedLevelLayoutGenerator();
+        InvalidOperationException lastFailure = null;
 
         for (int seed = firstSeed; seed < firstSeed + ScenarioSeedCount; seed++)
         {
@@ -752,12 +757,13 @@ public static class ConveyorPlayModeValidation
                     generation.State,
                     generation.SolutionMoves);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException exception)
             {
+                lastFailure = exception;
             }
         }
 
-        throw new InvalidOperationException($"{definition.name}: no layout from seeds {firstSeed}-{firstSeed + ScenarioSeedCount - 1}.");
+        throw new InvalidOperationException($"{definition.name}: no layout from seeds {firstSeed}-{firstSeed + ScenarioSeedCount - 1}.", lastFailure);
     }
 
     private static void SelectLevel(LevelEntry level)

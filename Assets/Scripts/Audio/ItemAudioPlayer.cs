@@ -26,6 +26,7 @@ public sealed class ItemAudioPlayer : MonoBehaviour
     private AudioSource[] _voices;
     private int _nextVoice;
     private ShelfColumn _dragSourceColumn;
+    private ItemType _draggedType;
 
     private void Awake()
     {
@@ -53,6 +54,7 @@ public sealed class ItemAudioPlayer : MonoBehaviour
     private void OnEnable()
     {
         _dragController.DragStarting += HandleDragStarting;
+        _dragController.DragStarted += HandleDragStarted;
         _dragController.DropRejected += HandleDropRejected;
         _session.MoveStarted += HandleMoveStarted;
     }
@@ -60,6 +62,7 @@ public sealed class ItemAudioPlayer : MonoBehaviour
     private void OnDisable()
     {
         _dragController.DragStarting -= HandleDragStarting;
+        _dragController.DragStarted -= HandleDragStarted;
         _dragController.DropRejected -= HandleDropRejected;
         _session.MoveStarted -= HandleMoveStarted;
     }
@@ -67,12 +70,14 @@ public sealed class ItemAudioPlayer : MonoBehaviour
     private void HandleDragStarting(ShelfItem item)
     {
         _dragSourceColumn = item.Column;
-        Play(PickRandom(_pickUpClips), _pickUpVolume, 0f);
+        _draggedType = item.Type;
     }
+
+    private void HandleDragStarted(ShelfItem item) => Play(PickRandom(_pickUpClips), _pickUpVolume, 0f);
 
     private void HandleMoveStarted(MoveOutcome outcome)
     {
-        int matchingShelfCount = outcome.AffectedShelves.Distinct().Count(shelf => shelf.HasMatch());
+        int matchingShelfCount = outcome.AffectedShelves.Distinct().Count(_shelfBoard.CanMatch);
 
         if (matchingShelfCount == 0)
             Play(PickRandom(_placeClips), _placeVolume, _placeDelay);
@@ -82,7 +87,7 @@ public sealed class ItemAudioPlayer : MonoBehaviour
 
     private void HandleDropRejected(Vector2 pointerPosition)
     {
-        if (!_columnRaycaster.TryGetShelf(pointerPosition, out Shelf shelf) || _shelfBoard.IsShelfClosed(shelf) || _shelfBoard.IsFiltered(shelf))
+        if (!_columnRaycaster.TryGetShelf(pointerPosition, out Shelf shelf) || _shelfBoard.IsShelfClosed(shelf) || !_shelfBoard.Accepts(shelf, _draggedType))
             return;
 
         if (_columnRaycaster.TryGetColumnUnderPointer(pointerPosition, out ShelfColumnView column)

@@ -13,6 +13,7 @@ public class ShelfItemDragController : MonoBehaviour
     private bool _isDragging;
 
     public event Action<ShelfItem> DragStarting;
+    public event Action<ShelfItem> DragStarted;
     public event Action DragEnded;
     public event Action<Shelf> HoveredShelfChanged;
     public event Action InteractionOccurred;
@@ -71,6 +72,7 @@ public class ShelfItemDragController : MonoBehaviour
         _sourceColumn = sourceColumn;
         _hoveredShelf = sourceColumn.Shelf;
         _isDragging = true;
+        DragStarted?.Invoke(item);
         InteractionOccurred?.Invoke();
 
         return true;

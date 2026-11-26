@@ -21,6 +21,7 @@ public sealed class SlimeSpotView : MonoBehaviour
     private Tween _transition;
     private Tween _wobble;
     private Tween _bridgeTween;
+    private Action _appearCompleted;
     private bool _isVanishing;
     private bool _isBridgeShown;
 
@@ -49,6 +50,7 @@ public sealed class SlimeSpotView : MonoBehaviour
 
     private void OnDestroy()
     {
+        _appearCompleted = null;
         Cancel();
         ResetBridge();
     }
@@ -109,11 +111,12 @@ public sealed class SlimeSpotView : MonoBehaviour
         Sequence growth = DOTween.Sequence();
         growth.Join(_blob.DOScale(_restScale, _appearDuration).SetEase(Ease.OutBack));
         growth.Join(_blob.DOLocalMove(Vector3.zero, _appearDuration).SetEase(Ease.OutSine));
+        _appearCompleted = completed;
         _transition = growth.OnComplete(() =>
         {
             _transition = null;
             StartWobble();
-            completed?.Invoke();
+            CompleteAppear();
         });
     }
 
@@ -167,6 +170,14 @@ public sealed class SlimeSpotView : MonoBehaviour
         _transition = null;
         _wobble?.Kill();
         _wobble = null;
+        CompleteAppear();
+    }
+
+    private void CompleteAppear()
+    {
+        Action completed = _appearCompleted;
+        _appearCompleted = null;
+        completed?.Invoke();
     }
 
     private void ResetBridge()

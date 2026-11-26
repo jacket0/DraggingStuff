@@ -12,12 +12,14 @@ public sealed class ShelfItemOutlineView : MonoBehaviour
 
     private Material _defaultMaterial;
     private Material _stickyMaterial;
-    private int _requestCount;
+    private int _defaultRequestCount;
+    private int _stickyRequestCount;
     private bool _isInitialized;
 
     private void OnDisable()
     {
-        _requestCount = 0;
+        _defaultRequestCount = 0;
+        _stickyRequestCount = 0;
         SetVisible(false);
     }
 
@@ -39,17 +41,40 @@ public sealed class ShelfItemOutlineView : MonoBehaviour
     public void Show(bool isSticky)
     {
         EnsureInitialized();
-        ApplyMaterial(isSticky ? _stickyMaterial : _defaultMaterial);
-        _requestCount++;
-        SetVisible(true);
+
+        if (isSticky)
+            _stickyRequestCount++;
+        else
+            _defaultRequestCount++;
+
+        Refresh();
     }
 
-    public void Hide()
-    {
-        _requestCount = Mathf.Max(0, _requestCount - 1);
+    public void Hide() => Hide(false);
 
-        if (_requestCount == 0)
+    public void Hide(bool isSticky)
+    {
+        if (isSticky)
+            _stickyRequestCount = Mathf.Max(0, _stickyRequestCount - 1);
+        else
+            _defaultRequestCount = Mathf.Max(0, _defaultRequestCount - 1);
+
+        Refresh();
+    }
+
+    private void Refresh()
+    {
+        if (!_isInitialized)
+            return;
+
+        if (_stickyRequestCount + _defaultRequestCount == 0)
+        {
             SetVisible(false);
+            return;
+        }
+
+        ApplyMaterial(_stickyRequestCount > 0 ? _stickyMaterial : _defaultMaterial);
+        SetVisible(true);
     }
 
     private void EnsureInitialized()

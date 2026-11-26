@@ -19,6 +19,7 @@ public static class TimedCampaignPlayModeValidation
     private const string CatalogPath = "Assets/Levels/Menu/MainLevelCatalog.asset";
     private const string SelectionPath = "Assets/Levels/Menu/CurrentLevelSelection.asset";
     private const string OutputFolderName = "LocalOutput/timed-campaign-playmode";
+    private const float ResultWindowTimeoutSeconds = 3f;
 
     private static LevelSession _session;
     private static ShelfBoard _board;
@@ -26,6 +27,7 @@ public static class TimedCampaignPlayModeValidation
     private static int _moveIndex;
     private static int _settledFrameCount;
     private static int _resultFrameCount;
+    private static float _resultWaitStartTime = -1f;
     private static int _swapPhase;
     private static ColumnPosition _swapSource;
     private static ColumnPosition _swapTarget;
@@ -242,6 +244,7 @@ public static class TimedCampaignPlayModeValidation
         _moveIndex = 0;
         _settledFrameCount = 0;
         _resultFrameCount = 0;
+        _resultWaitStartTime = -1f;
         _swapPhase = _session.CurrentLevel.Number == 1 ? 0 : 3;
         _initialLayoutHash = expectedLayoutHash;
         _swapHoverView = UnityEngine.Object.FindObjectOfType<ShelfItemDragController>()?.GetComponent<ShelfSwapHoverView>();
@@ -633,14 +636,25 @@ public static class TimedCampaignPlayModeValidation
         if (!_session.Result.Won || _session.State != LevelState.Won || !_board.IsCleared)
             throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: did not finish as a cleared victory.");
 
-        if (_resultFrameCount == 0)
+        if (_resultWaitStartTime < 0f)
+        {
             ValidateConveyorObservation();
+            _resultWaitStartTime = Time.realtimeSinceStartup;
+        }
 
         if (UnityEngine.Object.FindObjectsOfType<ClosedShelfCoverView>().Length != 0)
             throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: won with closed shelf covers still present.");
 
         if (_session.Result.Seed != _session.CurrentSeed || _session.Result.VariantIndex != _session.CurrentVariantIndex)
             throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: result variant metadata differs.");
+
+        if (_resultFrameCount == 0 && UnityEngine.Object.FindObjectOfType<LevelResultView>() == null)
+        {
+            if (Time.realtimeSinceStartup - _resultWaitStartTime > ResultWindowTimeoutSeconds)
+                throw new InvalidOperationException($"Level {_session.CurrentLevel.Number}: the result window is not shown {ResultWindowTimeoutSeconds} s after the victory.");
+
+            return;
+        }
 
         _resultFrameCount++;
 

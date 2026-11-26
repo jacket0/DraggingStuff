@@ -75,6 +75,8 @@ public class LeaderboardScoreSynchronizer : MonoBehaviour
     {
         if (ReceivedLeaderboards.TryGetValue(_leaderboard.nameLB, out LBData receivedLeaderboard))
             TrySubmitScore(receivedLeaderboard);
+        else if (YG2.isSDKEnabled)
+            SendLeaderboardRequest();
     }
 
     private void HandleLeaderboardReceived(LBData leaderboardData)
