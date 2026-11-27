@@ -1079,6 +1079,18 @@ public static class TimedCampaignValidation
         ValidateImage("Assets/Sprites/UI/TimedLevels/Timer/CampaignClockIcon-512.png", 512, 512);
         ValidateImage("Assets/Sprites/UI/TimedLevels/Result/ResultLightRays-1024.png", 1024, 1024);
         ValidateImage("Assets/Sprites/UI/TimedLevels/Result/ResultSparkle-256.png", 256, 256);
+        ValidateIconImports("Assets/Sprites/UI/Icons");
+    }
+
+    private static void ValidateIconImports(string folder)
+    {
+        foreach (string guid in AssetDatabase.FindAssets("t:Texture2D", new[] { folder }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+
+            if (AssetImporter.GetAtPath(path) is not TextureImporter importer || !importer.mipmapEnabled || importer.filterMode != FilterMode.Trilinear || importer.textureCompression != TextureImporterCompression.Uncompressed)
+                throw new InvalidOperationException(path);
+        }
     }
 
     private static void ValidateImage(string path, int width, int height)
@@ -1088,7 +1100,7 @@ public static class TimedCampaignValidation
         if (texture == null || texture.width != width || texture.height != height)
             throw new InvalidOperationException(path);
 
-        if (AssetImporter.GetAtPath(path) is not TextureImporter importer || importer.textureType != TextureImporterType.Sprite || !importer.mipmapEnabled || !importer.alphaIsTransparency)
+        if (AssetImporter.GetAtPath(path) is not TextureImporter importer || importer.textureType != TextureImporterType.Sprite || !importer.mipmapEnabled || importer.filterMode != FilterMode.Trilinear || !importer.alphaIsTransparency)
             throw new InvalidOperationException(path);
     }
 

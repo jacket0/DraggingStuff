@@ -126,6 +126,8 @@ public static class ItemIconBaker
         importer.alphaIsTransparency = true;
         importer.mipmapEnabled = true;
         importer.mipmapFilter = TextureImporterMipFilter.KaiserFilter;
+        importer.filterMode = FilterMode.Trilinear;
+        importer.textureCompression = TextureImporterCompression.Uncompressed;
         importer.SaveAndReimport();
     }
 
