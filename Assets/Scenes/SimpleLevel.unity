@@ -10831,7 +10831,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _definition: {fileID: 11400000, guid: 35416ad4464751a4da638d92fb5ad230, type: 2}
   _primaryTarget: {fileID: 1072028347}
-  _additionalTargets: []
+  _additionalTargets:
+  - {fileID: 1965460508}
   _freezeDuration: 4
 --- !u!114 &181166394
 MonoBehaviour:
@@ -38926,6 +38927,7 @@ GameObject:
   - component: {fileID: 1965460504}
   - component: {fileID: 1965460507}
   - component: {fileID: 1965460506}
+  - component: {fileID: 1965460508}
   m_Layer: 0
   m_Name: LevelSession
   m_TagString: Untagged
@@ -38993,6 +38995,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _shelfBoard: {fileID: 4747417877561742387}
   _keyPrefab: {fileID: 0}
+--- !u!114 &1965460508
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1965460503}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8738208c47576c4ca4ad1a6230f8a3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _timer: {fileID: 1965460506}
 --- !u!1 &1966020696
 GameObject:
   m_ObjectHideFlags: 0
