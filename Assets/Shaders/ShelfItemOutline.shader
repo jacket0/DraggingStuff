@@ -4,6 +4,7 @@ Shader "Game/Shelf Item Outline"
     {
         _Color ("Color", Color) = (1, 0.65, 0.05, 0.9)
         _WidthPixels ("Width In Pixels", Range(1, 4)) = 2
+        _DepthBias ("Depth Bias Toward Camera", Range(0, 0.5)) = 0.15
     }
 
     SubShader
@@ -28,6 +29,7 @@ Shader "Game/Shelf Item Outline"
 
         fixed4 _Color;
         float _WidthPixels;
+        float _DepthBias;
 
         struct appdata
         {
@@ -39,10 +41,19 @@ Shader "Game/Shelf Item Outline"
             float4 vertex : SV_POSITION;
         };
 
+        float4 PullDepthTowardCamera(float4 vertex, float4 clipPosition)
+        {
+            float3 viewPosition = UnityObjectToViewPos(vertex.xyz);
+            viewPosition.z += _DepthBias;
+            float4 biasedClipPosition = mul(UNITY_MATRIX_P, float4(viewPosition, 1.0));
+            clipPosition.z = biasedClipPosition.z / biasedClipPosition.w * clipPosition.w;
+            return clipPosition;
+        }
+
         v2f OffsetSilhouette(appdata input, float2 direction)
         {
             v2f output;
-            output.vertex = UnityObjectToClipPos(input.vertex);
+            output.vertex = PullDepthTowardCamera(input.vertex, UnityObjectToClipPos(input.vertex));
             output.vertex.xy += direction * (2.0 * _WidthPixels / _ScreenParams.xy) * output.vertex.w;
             return output;
         }
